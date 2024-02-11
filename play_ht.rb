@@ -6,7 +6,7 @@ HT_API_KEY=ENV["HT_API_KEY"]
 HT_USERNAME=ENV["HT_USERNAME"]
 
 
-def convert(htvoice, content)
+def convert_ht(htvoice, content)
     url = URI("https://play.ht/api/v1/convert")
   
     payload = {
