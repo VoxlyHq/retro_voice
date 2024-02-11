@@ -9,7 +9,7 @@ HT_USERNAME=ENV["HT_USERNAME"]
 lang = "en"
 OUTPUT_FOLDER="output_#{lang}_htplay"
 
-BASE_NAME = "ff4_prologue_"
+BASE_NAME = "ff4_v1_prologue_"
 MAX_NUMBER_FILES = 1000 # Adjust based on the maximum number of files you expect
 
 
@@ -75,7 +75,7 @@ def download_ht(transcriptionID, tries=0)
   
     #parse and get the url
     data = JSON.parse(response.body)
-    puts data
+    puts "-#{transcriptionID}---#{data}"
   
     converted = data["converted"]
     if converted == false
@@ -84,6 +84,17 @@ def download_ht(transcriptionID, tries=0)
       tries = tries +1
       return download_ht(transcriptionID, tries)
     end
+  
+    transcriped = data["transcriped"]
+    if transcriped == false
+      puts "not transcriped yet"
+      sleep 5 
+      tries = tries +1
+      return download_ht(transcriptionID, tries)
+    end
+
+
+
     turl = data["audioUrl"]
     audio_duration = 0
     if data["audioDuration"] != nil 
@@ -98,7 +109,9 @@ def download_ht(transcriptionID, tries=0)
         tries = tries +1
         return download_ht(transcriptionID, tries)
     end
+
     #download file
+    puts "about to download --#{turl}--"
     url = URI(turl)
     downloaded_file = url.open()
     tempfile = Tempfile.new(['prefix', '.mp3'])
@@ -118,7 +131,8 @@ def download_ht(transcriptionID, tries=0)
 
 def voice_over_parse()
     # Read dialogues from the JSON file
-    dialogues = JSON.parse(File.read("dialogues.json")) #_short.json"))
+#    dialogues = JSON.parse(File.read("dialogues.json"))
+    dialogues = JSON.parse(File.read("dialogues.json"))
 
     # Output the dialogues
     dialogues.each do |dialogue|
