@@ -1,11 +1,18 @@
 
+require 'json'
+
+
 
 def voice_over_parse()
-    res = File.readlines('voice_overs.txt').map do |line|
-        line.chomp.split(',')
+    # Read dialogues from the JSON file
+    dialogues = JSON.parse(File.read("dialogues.json"))
+
+    # Output the dialogues
+    dialogues.each do |dialogue|
+    puts "#{dialogue['name']} says: \"#{dialogue['dialogue']}\""
     end
 
-    res
+    dialogues
 end
 
 def voice_to_name()
