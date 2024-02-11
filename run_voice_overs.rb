@@ -15,8 +15,8 @@ OUTPUT_FOLDER="output_#{lang}_#{BACKEND_VOICE_PLATFORM}"
 
 def voice_over_parse()
     # Read dialogues from the JSON file
-#    dialogues = JSON.parse(File.read("dialogues.json"))
-    dialogues = JSON.parse(File.read("dialogues_short.json"))
+    dialogues = JSON.parse(File.read("dialogues.json"))
+    #dialogues = JSON.parse(File.read("dialogues_short.json"))
 
     # Output the dialogues
     dialogues.each do |dialogue|
@@ -126,7 +126,7 @@ voice_over_lines = voice_over_parse()
 
 # Array to hold the threads
 threads = []
-max_threads = 10
+max_threads = 2
 
 # Create a Queue and add tasks to it
 task_queue = Queue.new
