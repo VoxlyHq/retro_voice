@@ -85,9 +85,19 @@ def download_ht(transcriptionID, tries=0)
       return download_ht(transcriptionID, tries)
     end
     turl = data["audioUrl"]
-    audio_duration = data["audioDuration"] * 1000
+    audio_duration = 0
+    if data["audioDuration"] != nil 
+        audio_duration = data["audioDuration"] * 1000
+    end
     puts "audio_duration- #{audio_duration}"
 
+    if turl == nil || turl == "" 
+        puts "no url - #{transcriptionID}, should we try again?"
+        puts "not transcribed yet"
+        sleep 5 
+        tries = tries +1
+        return download_ht(transcriptionID, tries)
+    end
     #download file
     url = URI(turl)
     downloaded_file = url.open()
@@ -108,7 +118,7 @@ def download_ht(transcriptionID, tries=0)
 
 def voice_over_parse()
     # Read dialogues from the JSON file
-    dialogues = JSON.parse(File.read("dialogues_short.json"))
+    dialogues = JSON.parse(File.read("dialogues.json")) #_short.json"))
 
     # Output the dialogues
     dialogues.each do |dialogue|
@@ -135,7 +145,7 @@ def transcribe_voice(name, text)
     ht_voice = @voices.find { |voice| voice['name'] == name }['voiceover_name']
     puts "transcribing -#{text} - #{ht_voice}"
 
-    ht_voice = "en-US-MichelleNeural"
+#    ht_voice = "en-US-MichelleNeural"
     res_id = convert(ht_voice, text)
     puts "result = #{res_id}"
     return res_id
@@ -185,7 +195,7 @@ voice_over_lines = voice_over_parse()
 
 # Array to hold the threads
 threads = []
-max_threads = 3
+max_threads = 10
 
 # Create a Queue and add tasks to it
 task_queue = Queue.new
