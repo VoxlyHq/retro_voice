@@ -1,34 +1,34 @@
 [
   {
-    "original_name": "Baigan",
+    "name": "Baigan",
     "voiceover_name": "BaiganVoice"
   },
   {
-    "original_name": "Cecil",
+    "name": "Cecil",
     "voiceover_name": "CecilVoice"
   },
   {
-    "original_name": "King of Baron",
+    "name": "King of Baron",
     "voiceover_name": "King of BaronVoice"
   },
   {
-    "original_name": "Voice",
+    "name": "Voice",
     "voiceover_name": "VoiceVoice"
   },
   {
-    "original_name": "Kain",
+    "name": "Kain",
     "voiceover_name": "KainVoice"
   },
   {
-    "original_name": "Rosa",
+    "name": "Rosa",
     "voiceover_name": "RosaVoice"
   },
   {
-    "original_name": "Cid",
+    "name": "Cid",
     "voiceover_name": "CidVoice"
   },
   {
-    "original_name": "Maid",
+    "name": "Maid",
     "voiceover_name": "MaidVoice"
   }
 ]

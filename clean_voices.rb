@@ -47,7 +47,7 @@ end
 names = dialogues.map { |dialogue| dialogue[:name] }
 voiceover_names = names.uniq.map do |name|
     {
-      original_name: name,
+      name: name,
       voiceover_name: "#{name}Voice"
     }
   end
