@@ -1,0 +1,60 @@
+https://legendsoflocalization.com/final-fantasy-iv/intro/
+
+Guy that build translation tool that reads memory
+
+
+
+https://kwhazit.ucoz.net/trans/ff4/01intro.html
+
+Translation notes
+
+
+
+https://www.romhacking.net/forum/index.php?board=5.0
+Rom hacking, maybe good place to promote later
+
+
+https://gamefaqs.gamespot.com/ds/939425-final-fantasy-iv/faqs/53978 
+Game script
+
+http://notserious.info/ff4/index_en.html
+english/japanese script cleaned up
+
+
+https://docs.google.com/spreadsheets/d/1nbvcqnCPlyKUBlKC1yWMvqMBfIS2jgNS/edit#gid=652061352
+Spreadsheet of translations
+
+
+
+—
+
+How to script
+
+https://github.com/openai/retro?tab=readme-ov-file
+
+https://github.com/TylerLandowski/BrainHawk
+https://tasvideos.org/
+
+
+
+—
+
+https://github.com/libretro/ludo
+Libretro golang
+
+– 
+Manga scanner
+https://github.com/kha-white/manga-ocr/tree/master 
+
+
+—
+Manga scanner
+https://github.com/asewvtft545456/MangaTranslator
+https://github.com/blueaxis/Poricom
+
+https://github.com/zyddnys/manga-image-translator?tab=readme-ov-file
+
+https://huggingface.co/spaces/Detomo/Japanese_OCR
+
+Another retro AI tester env
+https://github.com/nadavbh12/Retro-Learning-Environment
