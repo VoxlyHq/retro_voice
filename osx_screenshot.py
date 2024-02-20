@@ -74,3 +74,8 @@ def capture_window_to_file(window_id, file_path):
         return pil_image         
     else:
         print("Failed to capture window.")
+
+if __name__ == "__main__":
+    x = find_window_id("RetroArch")
+    res = capture_window_to_file(x, "window_capture.jpg")
+    print(res)

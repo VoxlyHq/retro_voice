@@ -1,6 +1,7 @@
 [
   {
     "name": "Baigan",
+    "dialogue2": "Final Fantasy II",
     "dialogue": "Ah, the young lord returns triumphant! You did secure Mysidia's Crystal, did you not?"
   },
   {
@@ -29,7 +30,7 @@
   },
   {
     "name": "King of Baron",
-    "dialogue": "The kingdom of Baron hails your return, Cecil. You have brought me the Crystal, I trust?"
+    "dialogue": "King: We thank you for successfully completing the mission. Now, where is it"
   },
   {
     "name": "Cecil",

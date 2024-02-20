@@ -5,12 +5,37 @@
       "voiceover_psuedo": "Callum"
     },
     {
+      "name": "Black Wizard",
+      "voiceover_psuedo": "Harry",
+      "voiceover_name":"SOYHLrjzK2X1ezoPC6cr"
+    },
+    {
+      "name": "White Wizard",
+      "voiceover_name": "jsCqWAovK2LkecY7zXl4",
+      "voiceover_psuedo": "Freya"
+    },
+    {
+      "name": "Elder",
+      "voiceover_name": "pNInz6obpgDQGcFmaJgB",
+      "voiceover_psuedo": "Adam"
+    },
+    {
+      "name": "Crew",
+      "voiceover_name":"SOYHLrjzK2X1ezoPC6cr", 
+      "voiceover_psuedo": "Harry"
+    },
+    {
       "name": "Cecil",
       "voiceover_name":"2EiwWnXFnvU5JabPnv8n", 
       "voiceover_psuedo": "Clyde"
     },
     {
       "name": "King of Baron",
+      "voiceover_name":"CYw3kZ02Hs0563khs1Fj", 
+      "voiceover_psuedo": "Dave"
+    },
+    {
+      "name": "King",
       "voiceover_name":"CYw3kZ02Hs0563khs1Fj", 
       "voiceover_psuedo": "Dave"
     },

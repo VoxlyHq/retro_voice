@@ -1,0 +1,246 @@
+[
+  {
+    "name": "Crew",
+    "dialogue": "Captain Cecil, we are about to arrive!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Good."
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Why are we robbing crystals from innocent people?"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "That's our duty."
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Do we really have to keep doing this?"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Give us the Crystal of Water!"
+  },
+  {
+    "name": "Elder",
+    "dialogue": "What have we done?"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "The crystal or your life!"
+  },
+  {
+    "name": "Black Wizard",
+    "dialogue": "Never!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Then, take the crystal by force!"
+  },
+  {
+    "name": "Black Wizard",
+    "dialogue": "WAAAH!"
+  },
+  {
+    "name": "White Wizard",
+    "dialogue": "No! Don't!"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Dare to defy us?"
+  },
+  {
+    "name": "White Wizard",
+    "dialogue": "ARRRGH!"
+  },
+  {
+    "name": "Elder",
+    "dialogue": "My! All right... Take the crystal!"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "You should have said it earlier!"
+  },
+  {
+    "name": "Elder",
+    "dialogue": "Why is the King of Baron doing this? Why do you pursue the crystals so eagerly?"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "......"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "We take pride in being members of the Red Wings! Looting is out of the question!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Stop it!"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Captain!"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "We can't stand doing this anymore!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Listen! Possessing the crystal is an essential factor for our prosperity. Moreover, His Majesty judged that Mysidians know too much about the secret of the crystal. We are the Red Wings, the air force of the Kingdom Baron! The Royal Command is absolute. Crew: Captain!"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Monsters!!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Take up fighting positions!"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Ouch!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "You Okay?"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "More coming!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Watch out!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Everyone okay?"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Yes, sir!"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "But there are too many monsters these days..."
+  },
+  {
+    "name": "Crew",
+    "dialogue": "Too many, agreed."
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "What's happening?"
+  },
+  {
+    "name": "Crew",
+    "dialogue": "We are over Baron!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Make a landing."
+  },
+  {
+    "name": "Baigan",
+    "dialogue": "Oh, Cecil! Is it the Crystal of Water?"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "But Mysidians were so helpless."
+  },
+  {
+    "name": "Baigan",
+    "dialogue": "What are you trying to say? This way, Cecil."
+  },
+  {
+    "name": "Baigan",
+    "dialogue": "Please wait here."
+  },
+  {
+    "name": "Baigan",
+    "dialogue": "Your Majesty! I'm afraid Cecil has developed quite a rebellious air."
+  },
+  {
+    "name": "King",
+    "dialogue": "Truly!? Well done, Baigan! We must do something. Call him in! Baigan: Yes, Your Majesty."
+  },
+  {
+    "name": "Baigan",
+    "dialogue": "Cecil!  His Majesty summons you. Please come in."
+  },
+  {
+    "name": "King",
+    "dialogue": "We thank you for successfully completing the mission. Now, where is it?"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Here, My Liege. Hand over the crystal."
+  },
+  {
+    "name": "Baigan",
+    "dialogue": "Real crystal..."
+  },
+  {
+    "name": "King",
+    "dialogue": "Good!  Cecil...... You may leave now."
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Your Majesty!"
+  },
+  {
+    "name": "King",
+    "dialogue": "W... What?"
+  },
+  {
+    "name": "Baigan",
+    "dialogue": "W... What is it?"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "We do not understand the meaning of taking crystals away from honest people."
+  },
+  {
+    "name": "King",
+    "dialogue": "Disobeying me?"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "No, I don't."
+  },
+  {
+    "name": "King",
+    "dialogue": "We do know of your discontent, Cecil. If you cannot trust me, I can no longer place the Red Wings in your command. You are dismissed from your post!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Your Majesty!"
+  },
+  {
+    "name": "King",
+    "dialogue": "Go and hunt the Summoned Monsters of the Misty Valley! And... Take this Package to the Village Mist. You may depart tomorrow morning!"
+  },
+  {
+    "name": "Kain",
+    "dialogue": "Your Majesty!"
+  },
+  {
+    "name": "Kain",
+    "dialogue": "Cecil didn't..."
+  },
+  {
+    "name": "King",
+    "dialogue": "If you're concerned about Cecil that much, go with him, Kain!"
+  },
+  {
+    "name": "Cecil",
+    "dialogue": "Your Majesty!"
+  },
+  {
+    "name": "King",
+    "dialogue": "Now! Leave with the Package!"
+  }
+]

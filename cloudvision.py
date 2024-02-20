@@ -14,6 +14,7 @@ def detect_text_google(path):
     response = client.text_detection(image=image)
     texts = response.text_annotations
 
+    detected_texts = []
     print('Texts:')
 
     for text in texts:
@@ -23,12 +24,16 @@ def detect_text_google(path):
                      for vertex in text.bounding_poly.vertices])
 
         print('bounds: {}'.format(','.join(vertices)))
+        detected_texts.append(text.description)
 
     if response.error.message:
         raise Exception(
             '{}\nFor more info on error messages, check: '
             'https://cloud.google.com/apis/design/errors'.format(
                 response.error.message))
+    
+    return detected_texts
+
 
 def detect_text_and_draw_boxes(image_path):
     """Detects text in the image file and draws boxes around the text."""

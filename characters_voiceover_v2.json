@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Crew",
+    "voiceover_name": "CrewVoice"
+  },
+  {
+    "name": "Cecil",
+    "voiceover_name": "CecilVoice"
+  },
+  {
+    "name": "Elder",
+    "voiceover_name": "ElderVoice"
+  },
+  {
+    "name": "Black Wizard",
+    "voiceover_name": "Black WizardVoice"
+  },
+  {
+    "name": "White Wizard",
+    "voiceover_name": "White WizardVoice"
+  },
+  {
+    "name": "Baigan",
+    "voiceover_name": "BaiganVoice"
+  },
+  {
+    "name": "King",
+    "voiceover_name": "KingVoice"
+  },
+  {
+    "name": "Kain",
+    "voiceover_name": "KainVoice"
+  }
+]

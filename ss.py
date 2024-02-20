@@ -38,6 +38,8 @@ def load_dialogues():
     for number, entry in dialogues.items():
         print(f"{number}: Name: {entry['name']}, Dialogue: {entry['dialogue']}")
         print(format_filename(number))
+    
+    return dialogues
 
 def format_filename(number):
     # Format the number with leading zeros to ensure it's four digits
@@ -70,11 +72,13 @@ def play_audio_threaded(filename):
     thread.start()  # Start the thread
 
 def find_closest_entry(numbered_data, current_text):
+    print(f"find_closest_entry- current_text: {current_text}")
     for number, entry in numbered_data.items():
         dialogue = entry['dialogue']
         similarity_ratio = fuzz.ratio(current_text, dialogue) / 100.0  # Convert to a scale of 0 to 1
-        if similarity_ratio < 0.3:
-            return number  # Return the first entry with a fuzz ratio less than 0.3
+        print(f"dialogue: {dialogue} -- comparing to {current_text} -- similarity_ratio: {similarity_ratio} -- number {number}")
+        if similarity_ratio > 0.5:
+            return number  # Return the first entry with a fuzz ratio greater than 0.3
 
     return None  # Return None if no entry meets the criterion
 
@@ -107,6 +111,8 @@ def thefuzz_test(ocr_text):
 
 def run_ocr(image):
     global last_played
+    global dialogues
+
         # Use Tesseract to do OCR on the image
 #        text = pytesseract.image_to_string(img)
    
@@ -129,15 +135,16 @@ def run_ocr(image):
     start_time = time.time() # Record the start time
     # # Replace the path below with the path to your image file
     result = detect_text_google('window_capture.jpg')
+    filtered_array = [entry for entry in result if 'RetroArch' not in entry]
+    str = ' '.join(filtered_array)
     print("found text google----")
-    print(result)
+    print(str)
     print("----")
     end_time = time.time()
     print(f"Time taken: {end_time - start_time} seconds")
         
     #thefuzz_test(text)
-    res = find_closest_entry(dialogues, result)
-    res = 6
+    res = find_closest_entry(dialogues, str)
     if res != None:
         print("found entry ")
         print(res)
@@ -179,7 +186,9 @@ def timed_action():
         print(f"No window found with name containing '{window_name}'.")
 
 def main():
-    load_dialogues()
+    global dialogues
+    dialogues =load_dialogues()
+    print(dialogues)
     print("Press ESC to exit...")
     while True:
         timed_action()

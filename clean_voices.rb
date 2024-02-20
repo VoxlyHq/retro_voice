@@ -1,7 +1,7 @@
 require 'json'
 
 # Read the entire content of 'prologue_text.txt' into the text variable
-text = File.read("prologue_text.txt")
+text = File.read("ff2_prologue.txt")
 
 # Initialize an array to hold dialogues and the last speaker variable
 dialogues = []
@@ -39,7 +39,7 @@ dialogues.each do |dialogue|
 end
 
 # Save dialogues to a JSON file
-File.open("dialogues.json", "w") do |file|
+File.open("dialogues_v2.json", "w") do |file|
     file.write(JSON.pretty_generate(dialogues))
 end
 
@@ -53,6 +53,6 @@ voiceover_names = names.uniq.map do |name|
   end
   
   # Save the voiceover names to a JSON file
-  File.open("characters_voiceover.json", "w") do |file|
+  File.open("characters_voiceover_v2.json", "w") do |file|
     file.write(JSON.pretty_generate(voiceover_names))
   end

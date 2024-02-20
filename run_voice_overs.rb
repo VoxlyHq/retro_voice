@@ -11,11 +11,11 @@ BASE_NAME = "ff4_v1_prologue_"
 MAX_NUMBER_FILES = 1000 # Adjust based on the maximum number of files you expect
 
 BACKEND_VOICE_PLATFORM = "elevenlabs" #htplay, elevenlabs
-OUTPUT_FOLDER="output_#{lang}_#{BACKEND_VOICE_PLATFORM}"
+OUTPUT_FOLDER="output_v2_#{lang}_#{BACKEND_VOICE_PLATFORM}"
 
 def voice_over_parse()
     # Read dialogues from the JSON file
-    dialogues = JSON.parse(File.read("dialogues.json"))
+    dialogues = JSON.parse(File.read("dialogues_v2.json"))
     #dialogues = JSON.parse(File.read("dialogues_short.json"))
 
     # Output the dialogues
