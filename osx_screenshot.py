@@ -70,6 +70,7 @@ def capture_window_to_file(window_id, file_path):
             pil_image = pil_image.convert('RGB')
 
         pil_image.save('output.jpg')
-        pil_image.show()            
+        #pil_image.show()  
+        return pil_image         
     else:
         print("Failed to capture window.")
