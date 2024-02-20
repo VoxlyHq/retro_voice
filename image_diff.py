@@ -2,6 +2,8 @@ from PIL import Image
 import numpy as np
 
 def calculate_image_difference(img1, img2):
+    if img1 == None or img2 == None:
+        return 0
     img2 = img2.resize(img1.size, Image.NEAREST)
     
     # Convert images to NumPy arrays

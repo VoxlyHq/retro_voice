@@ -25,7 +25,7 @@ last_played = -1
 
 def load_dialogues():
     # File path to your JSON data
-    file_path = 'dialogues.json'
+    file_path = 'dialogues_v2.json'
 
     # Read JSON data from the file
     with open(file_path, 'r') as file:
@@ -56,7 +56,7 @@ def play_audio(filename):
     pygame.mixer.init()
     
     # Load the MP3 file
-    pygame.mixer.music.load(f"output_en_elevenlabs/{filename}")
+    pygame.mixer.music.load(f"output_v2_en_elevenlabs/{filename}")
     
     # Play the music
     pygame.mixer.music.play()
@@ -73,14 +73,23 @@ def play_audio_threaded(filename):
 
 def find_closest_entry(numbered_data, current_text):
     print(f"find_closest_entry- current_text: {current_text}")
+    
+    # Initialize variables to track the highest similarity and corresponding entry number
+    max_similarity_ratio = 0.33  # Start with your threshold
+    closest_entry_number = None
+    
     for number, entry in numbered_data.items():
         dialogue = entry['dialogue']
         similarity_ratio = fuzz.ratio(current_text, dialogue) / 100.0  # Convert to a scale of 0 to 1
-        print(f"dialogue: {dialogue} -- comparing to {current_text} -- similarity_ratio: {similarity_ratio} -- number {number}")
-        if similarity_ratio > 0.5:
-            return number  # Return the first entry with a fuzz ratio greater than 0.3
+        print(f"dialogue: {dialogue} -- similarity_ratio: {similarity_ratio} -- number {number}")
+        
+        # Update if this entry has a higher similarity ratio than current max and is above threshold
+        if similarity_ratio > max_similarity_ratio:
+            max_similarity_ratio = similarity_ratio
+            closest_entry_number = number
 
-    return None  # Return None if no entry meets the criterion
+    return closest_entry_number  # Return the entry number with the highest similarity ratio over 0.33
+
 
 
 previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
@@ -148,12 +157,14 @@ def run_ocr(image):
     if res != None:
         print("found entry ")
         print(res)
-        if res <= last_played:
+        if res == last_played:
             print("Already played this entry")
         else:
             last_played = res
+            start_time = time.time() # Record the start time
             play_audio_threaded(format_filename(res))
-
+            end_time = time.time()
+            print(f"Audio Time taken: {end_time - start_time} seconds")
 
 def timed_action():
     print("Action triggered by timer")
