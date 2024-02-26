@@ -46,6 +46,9 @@ def detect_text_and_draw_boxes(image_path):
     response = client.text_detection(image=image)
     texts = response.text_annotations
 
+    detected_texts = []
+    print('Texts:')
+
     if texts:
         # Load the original image to draw on
         img = Image.open(image_path)
@@ -59,6 +62,7 @@ def detect_text_and_draw_boxes(image_path):
         # Save or display the modified image
         img.save('output_image.jpg')
         img.show()
+        detected_texts.append(text.description)
 
     if response.error.message:
         raise Exception(
@@ -66,6 +70,7 @@ def detect_text_and_draw_boxes(image_path):
             'https://cloud.google.com/apis/design/errors'.format(
                 response.error.message))
 
+    return detected_texts
 
 
 if __name__ == "__main__":

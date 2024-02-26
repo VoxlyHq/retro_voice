@@ -7,10 +7,12 @@ import easyocr
 import pygame
 import time
 import threading
-
+import argparse
+import cv2 
+from PIL import Image
 
 from thefuzz import fuzz
-from cloudvision import detect_text_google
+from cloudvision import detect_text_google, detect_text_and_draw_boxes
 from image_diff import calculate_image_difference
 
 from PIL import Image
@@ -81,7 +83,7 @@ def find_closest_entry(numbered_data, current_text):
     for number, entry in numbered_data.items():
         dialogue = entry['dialogue']
         similarity_ratio = fuzz.ratio(current_text, dialogue) / 100.0  # Convert to a scale of 0 to 1
-        print(f"dialogue: {dialogue} -- similarity_ratio: {similarity_ratio} -- number {number}")
+        #print(f"dialogue: {dialogue} -- similarity_ratio: {similarity_ratio} -- number {number}")
         
         # Update if this entry has a higher similarity ratio than current max and is above threshold
         if similarity_ratio > max_similarity_ratio:
@@ -143,7 +145,9 @@ def run_ocr(image):
  
     start_time = time.time() # Record the start time
     # # Replace the path below with the path to your image file
-    result = detect_text_google('window_capture.jpg')
+    #result = detect_text_google('window_capture.jpg')
+    result = detect_text_and_draw_boxes('window_capture.jpg')
+
     filtered_array = [entry for entry in result if 'RetroArch' not in entry]
     str = ' '.join(filtered_array)
     print("found text google----")
@@ -166,9 +170,53 @@ def run_ocr(image):
             end_time = time.time()
             print(f"Audio Time taken: {end_time - start_time} seconds")
 
-def timed_action():
-    print("Action triggered by timer")
+def process_video(video_path):
+    # Open the video file
+    cap = cv2.VideoCapture(video_path)
+    
+    fps = cap.get(cv2.CAP_PROP_FPS)  # Get the frames per second of the video
+    frame_count = 0
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break  # Exit the loop if we've reached the end of the video
+
+        # Process one frame per second (approximately)
+        if frame_count % int(fps) == 0:
+            # Convert the frame (which is in BGR format) to RGB format for PIL
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(frame_rgb)
+            
+            # Save to disk
+            pil_image.save("window_capture.jpg")
+            print(f"Frame at {frame_count//fps} seconds saved as debug.jpg")
+            run_image(pil_image)
+        
+        frame_count += 1
+
+    cap.release()  # Release the video capture object
+
+
+def run_image(img):
     global previous_image
+
+    print("previous_image--{previous_image}")
+    print(previous_image)
+    print("-0--")
+    percent_diff = calculate_image_difference(img, previous_image)
+    print(f'Images differ by {percent_diff:.2f}%')
+
+    # Decide whether to call OCR based on the difference
+    if percent_diff > 10:
+        print("Images are more than 10% different. Proceed with OCR.")
+        run_ocr(img)
+        previous_image = img
+    else:
+        print("Difference is less than 10%. No need to call OCR again.")
+
+def timed_action_screencapture():
+    print("Action triggered by timer")
     global dialogues
 
     window_name = "RetroArch"  # Adjust this to the target window's name
@@ -176,37 +224,29 @@ def timed_action():
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
-
-
-        print("previous_image--{previous_image}")
-        print(previous_image)
-        print("-0--")
-        percent_diff = calculate_image_difference(img, previous_image)
-        print(f'Images differ by {percent_diff:.2f}%')
-
-        # Decide whether to call OCR based on the difference
-        if percent_diff > 10:
-            print("Images are more than 10% different. Proceed with OCR.")
-            run_ocr(img)
-            previous_image = img
-        else:
-            print("Difference is less than 10%. No need to call OCR again.")
-            
-
+        run_image(img)
     else:
         print(f"No window found with name containing '{window_name}'.")
 
 def main():
     global dialogues
+    print("Press ESC to exit...")
+    parser = argparse.ArgumentParser(description="Process a video or do a screencapture.")
+    parser.add_argument('-v', '--video', type=str, help="Path to the video file to process.")
+
+    args = parser.parse_args()
     dialogues =load_dialogues()
     print(dialogues)
-    print("Press ESC to exit...")
-    while True:
-        timed_action()
-        time.sleep(1)  # Wait for 1 second
-        if keyboard.is_pressed('esc'): #TODO this doesn't seem to work without root on osx?
-            print("Escape pressed, exiting...")
-            break
+
+    if args.video:
+        process_video(args.video)
+    else:
+        while True:
+            timed_action_screencapture()
+            time.sleep(1)  # Wait for 1 second
+            if keyboard.is_pressed('esc'): #TODO this doesn't seem to work without root on osx?
+                print("Escape pressed, exiting...")
+                break
 
 if __name__ == "__main__":
     try:
