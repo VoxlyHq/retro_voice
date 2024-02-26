@@ -10,6 +10,7 @@ import threading
 import argparse
 import cv2 
 from PIL import Image
+import concurrent.futures
 
 from thefuzz import fuzz
 from cloudvision import detect_text_google, detect_text_and_draw_boxes
@@ -170,33 +171,51 @@ def run_ocr(image):
             end_time = time.time()
             print(f"Audio Time taken: {end_time - start_time} seconds")
 
-def process_video(video_path):
-    # Open the video file
-    cap = cv2.VideoCapture(video_path)
+
+def process_frame(frame_rgb, frame_count, fps):
+    """
+    Process the frame: Save it to disk and possibly do more processing.
+    """
+    # Assume run_image is a function you want to run on the frame
+    # run_image(frame_rgb)
     
-    fps = cap.get(cv2.CAP_PROP_FPS)  # Get the frames per second of the video
+    # Save to disk
+    filename = f"frame_{frame_count//fps}.jpg"
+    frame_rgb.save(filename)
+    print(f"Frame at {frame_count//fps} seconds saved as {filename}")
+
+def process_video(video_path, max_workers=10):
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)  # Frames per second of the video
     frame_count = 0
     
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break  # Exit the loop if we've reached the end of the video
-
-        # Process one frame per second (approximately)
-        if frame_count % int(fps) == 0:
-            # Convert the frame (which is in BGR format) to RGB format for PIL
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            pil_image = Image.fromarray(frame_rgb)
-            
-            # Save to disk
-            pil_image.save("window_capture.jpg")
-            print(f"Frame at {frame_count//fps} seconds saved as debug.jpg")
-            run_image(pil_image)
+    # Use ThreadPoolExecutor to manage concurrency
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = []
         
-        frame_count += 1
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break  # Exit the loop if we've reached the end of the video
+
+            # Process one frame per second (approximately)
+            if frame_count % int(fps) == 0:
+                # Convert the frame (which is in BGR format) to RGB format for PIL
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                pil_image = Image.fromarray(frame_rgb)
+                
+                # Submit the frame for processing in a separate thread
+                future = executor.submit(process_frame, pil_image, frame_count, fps)
+                futures.append(future)
+            
+            frame_count += 1
+        
+        # Wait for all futures to complete processing
+        for future in concurrent.futures.as_completed(futures):
+            # You can check for exceptions if needed and handle them
+            pass
 
     cap.release()  # Release the video capture object
-
 
 def run_image(img):
     global previous_image
@@ -233,13 +252,14 @@ def main():
     print("Press ESC to exit...")
     parser = argparse.ArgumentParser(description="Process a video or do a screencapture.")
     parser.add_argument('-v', '--video', type=str, help="Path to the video file to process.")
+    parser.add_argument('-w', '--workers', type=int, default=10, help="Max workers for concurrent processing. Default is 10.")
 
     args = parser.parse_args()
     dialogues =load_dialogues()
     print(dialogues)
 
     if args.video:
-        process_video(args.video)
+        process_video(args.video, args.workers)
     else:
         while True:
             timed_action_screencapture()
