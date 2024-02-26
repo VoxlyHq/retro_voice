@@ -172,17 +172,14 @@ def run_ocr(image):
             print(f"Audio Time taken: {end_time - start_time} seconds")
 
 
-def process_frame(frame_rgb, frame_count, fps):
+def process_frame(frame_pil, frame_count, fps):
     """
     Process the frame: Save it to disk and possibly do more processing.
     """
     # Assume run_image is a function you want to run on the frame
-    # run_image(frame_rgb)
+    run_image(frame_pil)
     
-    # Save to disk
-    filename = f"frame_{frame_count//fps}.jpg"
-    frame_rgb.save(filename)
-    print(f"Frame at {frame_count//fps} seconds saved as {filename}")
+    print(f"Frame at {frame_count//fps} seconds")
 
 def process_video(video_path, max_workers=10):
     cap = cv2.VideoCapture(video_path)
