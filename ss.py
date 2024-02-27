@@ -181,7 +181,34 @@ def process_frame(frame_pil, frame_count, fps):
     
     print(f"Frame at {frame_count//fps} seconds")
 
-def process_video(video_path, max_workers=10):
+def process_video(video_path):
+    # Open the video file
+    cap = cv2.VideoCapture(video_path)
+    
+    fps = cap.get(cv2.CAP_PROP_FPS)  # Get the frames per second of the video
+    frame_count = 0
+    
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break  # Exit the loop if we've reached the end of the video
+
+        # Process one frame per second (approximately)
+        if frame_count % int(fps) == 0:
+            # Convert the frame (which is in BGR format) to RGB format for PIL
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(frame_rgb)
+            
+            # Save to disk
+            pil_image.save("window_capture.jpg")
+            print(f"Frame at {frame_count//fps} seconds saved as debug.jpg")
+            run_image(pil_image)
+        
+        frame_count += 1
+
+    cap.release()  # Release the video capture object
+
+def process_video_threaded(video_path, max_workers=10):
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)  # Frames per second of the video
     frame_count = 0
@@ -201,6 +228,8 @@ def process_video(video_path, max_workers=10):
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 pil_image = Image.fromarray(frame_rgb)
                 
+                #TODO need to bundle like 10 frames together, cause the previous image check isnt working threaded
+
                 # Submit the frame for processing in a separate thread
                 future = executor.submit(process_frame, pil_image, frame_count, fps)
                 futures.append(future)
@@ -256,7 +285,8 @@ def main():
     print(dialogues)
 
     if args.video:
-        process_video(args.video, args.workers)
+        process_video(args.video)
+        #process_video_threaded(args.video)
     else:
         while True:
             timed_action_screencapture()
