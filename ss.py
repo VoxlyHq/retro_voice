@@ -19,6 +19,8 @@ from image_diff import calculate_image_difference
 from PIL import Image
 import json
 
+from webserv import CustomHTTPRequestHandler, run_server, shared_data_put_data
+
 # Detect the operating system
 os_name = platform.system()
 #reader = easyocr.Reader(['en']) #(['ja', 'en']) 
@@ -272,17 +274,28 @@ def timed_action_screencapture():
         run_image(img)
     else:
         print(f"No window found with name containing '{window_name}'.")
+        shared_data_put_data(f"No window found with name containing '{window_name}'.")
 
 def main():
     global dialogues
     print("Press ESC to exit...")
     parser = argparse.ArgumentParser(description="Process a video or do a screencapture.")
     parser.add_argument('-v', '--video', type=str, help="Path to the video file to process.")
-    parser.add_argument('-w', '--workers', type=int, default=10, help="Max workers for concurrent processing. Default is 10.")
+    parser.add_argument('-t', '--threads', type=int, default=10, help="Max threads for concurrent processing. Default is 10.")
+    parser.add_argument('-w', '--webserver',  action='store_true', help="Enable Webserver")
 
     args = parser.parse_args()
     dialogues =load_dialogues()
     print(dialogues)
+
+    if args.webserver:
+        server_thread = threading.Thread(target=run_server, args=(CustomHTTPRequestHandler, 8000), daemon=True)
+        server_thread.start()
+
+        # Main thread: Put data into the shared queue
+        shared_data_put_data("Hello from the main thread!")
+
+
 
     if args.video:
         process_video(args.video)
