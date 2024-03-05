@@ -19,7 +19,7 @@ from image_diff import calculate_image_difference
 from PIL import Image
 import json
 
-from webserv import CustomHTTPRequestHandler, run_server, shared_data_put_data
+from webserv import CustomHTTPRequestHandler, run_server2, shared_data_put_data, shared_data_put_line
 
 # Detect the operating system
 os_name = platform.system()
@@ -167,6 +167,7 @@ def run_ocr(image):
         if res == last_played:
             print("Already played this entry")
         else:
+            shared_data_put_line(res)
             last_played = res
             start_time = time.time() # Record the start time
             play_audio_threaded(format_filename(res))
@@ -289,11 +290,12 @@ def main():
     print(dialogues)
 
     if args.webserver:
-        server_thread = threading.Thread(target=run_server, args=(CustomHTTPRequestHandler, 8000), daemon=True)
+        server_thread = threading.Thread(target=run_server2, args=(8000), daemon=True)
         server_thread.start()
 
         # Main thread: Put data into the shared queue
         shared_data_put_data("Hello from the main thread!")
+        shared_data_put_line(0)
 
 
 
