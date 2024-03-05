@@ -54,7 +54,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            response_message = f"Data from queue: {data}" if data else "No data in queue."
+            response_message = f"Data from queue: {data}" if data else ""
             self.wfile.write(response_message.encode())
         elif url_path == "/highlight":
             # Return a JSON object with highlightedLine set to 3
@@ -86,9 +86,8 @@ class MyHTTPServer(http.server.HTTPServer):
 
 
 # Use MyHTTPServer instead of HTTPServer
-def run_server2(port=8000):
+def run_server2(port=8000, dummy=""):
     global httpd
-    signal.signal(signal.SIGINT, signal_handler)
 
     server_address = ('', port)
     httpd = MyHTTPServer(server_address, CustomHTTPRequestHandler)
@@ -107,3 +106,4 @@ def signal_handler(sig, frame):
 if __name__ == "__main__":
     # Run the server
     run_server2()
+    signal.signal(signal.SIGINT, signal_handler)

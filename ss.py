@@ -1,5 +1,6 @@
 import os
 import platform
+import signal
 import time
 import keyboard
 import pytesseract
@@ -19,7 +20,7 @@ from image_diff import calculate_image_difference
 from PIL import Image
 import json
 
-from webserv import CustomHTTPRequestHandler, run_server2, shared_data_put_data, shared_data_put_line
+from webserv import CustomHTTPRequestHandler, run_server2, shared_data_put_data, shared_data_put_line, signal_handler
 
 # Detect the operating system
 os_name = platform.system()
@@ -167,7 +168,8 @@ def run_ocr(image):
         if res == last_played:
             print("Already played this entry")
         else:
-            shared_data_put_line(res)
+            print(f"shared_data_put_line---{res}")
+            shared_data_put_line(res+1)
             last_played = res
             start_time = time.time() # Record the start time
             play_audio_threaded(format_filename(res))
@@ -290,8 +292,10 @@ def main():
     print(dialogues)
 
     if args.webserver:
-        server_thread = threading.Thread(target=run_server2, args=(8000), daemon=True)
+        server_thread = threading.Thread(target=run_server2, args=(8000, ""), daemon=True)
         server_thread.start()
+        signal.signal(signal.SIGINT, signal_handler)
+
 
         # Main thread: Put data into the shared queue
         shared_data_put_data("Hello from the main thread!")

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Highlighter with Logs</title>
+    <style>
+        .highlighted {
+            color: red; /* Change as needed */
+            font-weight: bold;
+        }
+        #log-container {
+            height: 200px; /* Adjust based on your preference */
+            overflow-y: auto; /* Enables vertical scrolling */
+            background-color: #f0f0f0; /* Light grey background */
+            border: 1px solid #ddd; /* Light grey border */
+            padding: 10px;
+            margin-top: 20px; /* Adds some space between the script and the logs */
+        }
+    </style>
+</head>
+<body>
+    <div id="script-container"></div>
+    <div id="log-container"></div> <!-- Log container -->
+
+    <script>
+        // Display script lines
+        function displayScriptLines(scriptLines) {
+            const container = document.getElementById('script-container');
+            scriptLines.forEach(line => {
+                const lineElement = document.createElement('div');
+                lineElement.id = `line-${line.id}`;
+                lineElement.textContent = line.dialogue;
+                container.appendChild(lineElement);
+            });
+        }
+
+        // Highlight a line
+        function highlightLine(lineId) {
+            document.querySelectorAll('.highlighted').forEach(element => {
+                element.classList.remove('highlighted');
+            });
+
+            const lineElement = document.getElementById(`line-${lineId}`);
+            if (lineElement) {
+                lineElement.classList.add('highlighted');
+            }
+        }
+
+        // Load script lines
+        fetch('/script.json')
+            .then(response => response.json())
+            .then(data => {
+                displayScriptLines(data);
+            });
+
+        // Poll for the highlighted line
+        setInterval(() => {
+            fetch('/highlight')
+                .then(response => response.json())
+                .then(data => {
+                    highlightLine(data.highlightedLine);
+                })
+                .catch(error => console.error('Error fetching highlighted line:', error));
+        }, 1000);
+
+        // Poll for log updates
+        setInterval(() => {
+            fetch('/log')
+                .then(response => response.text()) // Assuming the endpoint returns raw text
+                .then(text => {
+                    if (text) { // Check if the response is not empty
+                        const logContainer = document.getElementById('log-container');
+                        const logEntry = document.createElement('div');
+                        logEntry.textContent = text;
+                        logContainer.appendChild(logEntry);
+                        logContainer.scrollTop = logContainer.scrollHeight; // Auto-scroll to the newest log entry
+                    }
+                })
+                .catch(error => console.error('Error fetching log:', error));
+        }, 1000); // Adjust interval as needed
+    </script>
+</body>
+</html>
