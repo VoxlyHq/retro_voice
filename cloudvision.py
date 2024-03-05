@@ -56,8 +56,8 @@ def detect_text_and_draw_boxes(image_path):
 
     if texts:
         # Increment the image counter for each invocation
-        output_image_filename = f'output_image_{image_counter}.jpg'
-        output_json_filename = f'detected_texts_{image_counter}.json'
+        output_image_filename = f'output/output_image_{image_counter}.jpg'
+        output_json_filename = f'output/detected_texts_{image_counter}.json'
         image_counter += 1
 
         # Load the original image to draw on
