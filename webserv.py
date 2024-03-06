@@ -28,7 +28,7 @@ class ThreadSafeData:
         return None
 
 
-dialog_file = "dialogues_web.json"
+dialog_file = "dialogues_en_web.json"
 
 def set_dialog_file(file):
     global dialog_file
