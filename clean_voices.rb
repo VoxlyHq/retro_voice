@@ -1,4 +1,5 @@
 require 'json'
+lang = ENV['LANG_VOICE_OVER'] || "en"
 
 # Read the entire content of 'prologue_text.txt' into the text variable
 text = File.read("ff2_prologue.txt")
@@ -39,7 +40,7 @@ dialogues.each do |dialogue|
 end
 
 # Save dialogues to a JSON file
-File.open("dialogues_v2.json", "w") do |file|
+File.open("dialogues_#{lang}_v2.json", "w") do |file|
     file.write(JSON.pretty_generate(dialogues))
 end
 

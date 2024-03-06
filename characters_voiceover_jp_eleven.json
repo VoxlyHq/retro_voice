@@ -1,18 +1,18 @@
 [
     {
       "name": "兵士",
-      "voiceover_name":"N2lVS1w4EtoT3dr4eOWO", 
-      "voiceover_psuedo": "Callum"
+      "voiceover_name":"ErXwobaYiN019PkySvjV", 
+      "voiceover_psuedo": "Antoni"
     },
     {
       "name": "セシル",
-      "voiceover_psuedo": "Harry",
-      "voiceover_name":"SOYHLrjzK2X1ezoPC6cr"
+      "voiceover_psuedo":"Josh",
+      "voiceover_name": "TxGEqnHWrfWFTfGW9XjX"
     },
     {
       "name": "長老",
-      "voiceover_name": "jsCqWAovK2LkecY7zXl4",
-      "voiceover_psuedo": "Freya"
+      "voiceover_name": "21m00Tcm4TlvDq8ikWAM",
+      "voiceover_psuedo": "Rachel"
     },
     {
       "name": "黒魔道士",
@@ -21,8 +21,8 @@
     },
     {
       "name": "白魔道士",
-      "voiceover_name":"SOYHLrjzK2X1ezoPC6cr", 
-      "voiceover_psuedo": "Harry"
+      "voiceover_pseudo":"Callum", 
+      "voiceover_name": "N2lVS1w4EtoT3dr4eOWO"
     },
     {
       "name": "ベイガン",

@@ -1,7 +1,7 @@
 import json
 
 # Load the JSON data from the file
-with open('dialogues_v2.json', 'r') as file:
+with open('dialogues_en_v2.json', 'r') as file:
     dialogues = json.load(file)
 
 # Add an 'id' field to each entry, incrementing for each

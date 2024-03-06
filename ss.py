@@ -29,7 +29,7 @@ os_name = platform.system()
 dialogues = {}
 last_played = -1
 
-dialog_file_path = "dialogues_v2.json"
+dialog_file_path = "dialogues_en_v2.json"
 lang = ""
 
 def load_dialogues():
@@ -299,7 +299,7 @@ def main():
 
     if args.japanese:
         set_dialog_file("dialogues_web_jp.json")
-        dialog_file_path = "dialogues_v2_jp.json"
+        dialog_file_path = "dialogues_jp_v2.json"
         lang = "jp_"
 
     dialogues =load_dialogues()
