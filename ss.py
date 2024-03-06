@@ -20,7 +20,7 @@ from image_diff import calculate_image_difference
 from PIL import Image
 import json
 
-from webserv import CustomHTTPRequestHandler, run_server2, shared_data_put_data, shared_data_put_line, signal_handler
+from webserv import CustomHTTPRequestHandler, run_server2, set_dialog_file, shared_data_put_data, shared_data_put_line, signal_handler
 
 # Detect the operating system
 os_name = platform.system()
@@ -29,9 +29,12 @@ os_name = platform.system()
 dialogues = {}
 last_played = -1
 
+dialog_file_path = "dialogues_v2.json"
+
 def load_dialogues():
+    global dialog_file_path
     # File path to your JSON data
-    file_path = 'dialogues_v2.json'
+    file_path = dialog_file_path
 
     # Read JSON data from the file
     with open(file_path, 'r') as file:
@@ -281,13 +284,21 @@ def timed_action_screencapture():
 
 def main():
     global dialogues
+    global dialog_file_path
+
     print("Press ESC to exit...")
     parser = argparse.ArgumentParser(description="Process a video or do a screencapture.")
     parser.add_argument('-v', '--video', type=str, help="Path to the video file to process.")
     parser.add_argument('-t', '--threads', type=int, default=10, help="Max threads for concurrent processing. Default is 10.")
     parser.add_argument('-w', '--webserver',  action='store_true', help="Enable Webserver")
+    parser.add_argument('-jp', '--japanese',  action='store_true', help="Enable Japanese")
 
     args = parser.parse_args()
+
+    if args.japanese:
+        set_dialog_file("dialogues_web_jp.json")
+        dialog_file_path = "dialogues_v2_jp.json"
+
     dialogues =load_dialogues()
     print(dialogues)
 
@@ -300,8 +311,6 @@ def main():
         # Main thread: Put data into the shared queue
         shared_data_put_data("Hello from the main thread!")
         shared_data_put_line(0)
-
-
 
     if args.video:
         process_video(args.video)

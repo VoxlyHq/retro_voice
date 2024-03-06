@@ -27,9 +27,16 @@ class ThreadSafeData:
             return self.queue.get()
         return None
 
+
+dialog_file = "dialogues_web.json"
+
+def set_dialog_file(file):
+    global dialog_file
+    dialog_file = file
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
+        global dialogfile
         # Parse the URL to get the path
         url_path = urlparse(self.path).path
 
@@ -41,7 +48,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         elif url_path == "/script.json":
             # Return the contents of the script.json file
             try:
-                with open("dialogues_web.json", "rb") as file:
+                with open(dialog_file, "rb") as file:
                     self.send_response(200)
                     self.send_header('Content-type', 'application/json')
                     self.end_headers()
