@@ -30,7 +30,7 @@ dialogues = {}
 last_played = -1
 
 dialog_file_path = "dialogues_en_v2.json"
-lang = ""
+lang = "en"
 
 def load_dialogues():
     global dialog_file_path
@@ -56,11 +56,12 @@ def format_filename(number):
     number_padded = f"{number:04d}"
 
     # Create the file name using the padded number
-    file_name = f"ff4_v1_prologue_{langnumber_padded}.mp3"
+    file_name = f"ff4_v1_prologue_{number_padded}.mp3"
 
     return file_name
 
 def play_audio(filename):
+    global lang
     print(f"output_en_elevenlabs/{filename}")
     # Initialize the mixer module
     pygame.mixer.init()
