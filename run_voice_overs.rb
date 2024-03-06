@@ -5,17 +5,19 @@ require 'net/http'
 load './play_ht.rb'
 load './eleven_labs.rb'
 
-lang = "en"
+lang = ENV['LANG_VOICE_OVER'] || "en"
 
 BASE_NAME = "ff4_v1_prologue_"
 MAX_NUMBER_FILES = 1000 # Adjust based on the maximum number of files you expect
 
 BACKEND_VOICE_PLATFORM = "elevenlabs" #htplay, elevenlabs
 OUTPUT_FOLDER="output_v2_#{lang}_#{BACKEND_VOICE_PLATFORM}"
+VOICE_E11_JSON_FILE="characters_voiceover_#{lang}_eleven.json"
+DIALOG_JSON_FILE="dialogues_#{lang}_v2.json"
 
 def voice_over_parse()
     # Read dialogues from the JSON file
-    dialogues = JSON.parse(File.read("dialogues_v2.json"))
+    dialogues = JSON.parse(File.read(DIALOG_JSON_FILE))
     #dialogues = JSON.parse(File.read("dialogues_short.json"))
 
     # Output the dialogues
@@ -40,7 +42,7 @@ end
 
 def voice_to_name_e11()
     # Read dialogues from the JSON file
-    voices = JSON.parse(File.read("characters_voiceover_eleven.json"))
+    voices = JSON.parse(File.read(VOICE_E11_JSON_FILE))
 
     # Output the dialogues
     voices.each do |voice|

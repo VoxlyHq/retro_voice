@@ -30,6 +30,7 @@ dialogues = {}
 last_played = -1
 
 dialog_file_path = "dialogues_v2.json"
+lang = ""
 
 def load_dialogues():
     global dialog_file_path
@@ -55,7 +56,7 @@ def format_filename(number):
     number_padded = f"{number:04d}"
 
     # Create the file name using the padded number
-    file_name = f"ff4_v1_prologue_{number_padded}.mp3"
+    file_name = f"ff4_v1_prologue_{langnumber_padded}.mp3"
 
     return file_name
 
@@ -65,7 +66,7 @@ def play_audio(filename):
     pygame.mixer.init()
     
     # Load the MP3 file
-    pygame.mixer.music.load(f"output_v2_en_elevenlabs/{filename}")
+    pygame.mixer.music.load(f"output_v2_{lang}_elevenlabs/{filename}")
     
     # Play the music
     pygame.mixer.music.play()
@@ -285,6 +286,7 @@ def timed_action_screencapture():
 def main():
     global dialogues
     global dialog_file_path
+    global lang
 
     print("Press ESC to exit...")
     parser = argparse.ArgumentParser(description="Process a video or do a screencapture.")
@@ -298,6 +300,7 @@ def main():
     if args.japanese:
         set_dialog_file("dialogues_web_jp.json")
         dialog_file_path = "dialogues_v2_jp.json"
+        lang = "jp_"
 
     dialogues =load_dialogues()
     print(dialogues)
