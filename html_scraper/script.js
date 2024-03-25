@@ -1,38 +1,45 @@
 document.getElementById('captureBtn').addEventListener('click', async () => {
     try {
-        // Request screen capture
         const captureStream = await navigator.mediaDevices.getDisplayMedia({video: true});
-
-        // Assuming you want to capture the full screen at a reasonable frame rate
         const videoTrack = captureStream.getVideoTracks()[0];
         const imageCapture = new ImageCapture(videoTrack);
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
 
-        // Set canvas size to match the video stream
-        const settings = videoTrack.getSettings();
-        canvas.width = settings.width;
-        canvas.height = settings.height;
+        // Function to capture and upload image
+        async function captureAndUpload() {
+            try {
+                const imageBitmap = await imageCapture.grabFrame();
+                const canvas = document.createElement('canvas');
+                canvas.width = imageBitmap.width;
+                canvas.height = imageBitmap.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(imageBitmap, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob(async (blob) => {
+                    const formData = new FormData();
+                    formData.append('image', blob, 'screenshot.png');
 
-        // Function to capture and send the image
-        const captureAndSend = async () => {
-            const bitmap = await imageCapture.grabFrame();
-            ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-            canvas.toBlob(async (blob) => {
-                const formData = new FormData();
-                formData.append('image', blob, 'screenshot.png');
+                    // Await the fetch to ensure it finishes before continuing
+                    await fetch('/upload_screenshot', {
+                        method: 'POST',
+                        body: formData,
+                    }).then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        console.log('Image uploaded successfully');
+                    }).catch(error => {
+                        console.error('There has been a problem with your fetch operation:', error);
+                    });
 
-                // Post the image blob to your server
-                await fetch('http://localhost:8000/upload_screenshot', {
-                    method: 'POST',
-                    body: formData,
-                });
-            }, 'image/png');
-        };
+                    // Wait for 1 second to pass before capturing and uploading the next image
+                    setTimeout(captureAndUpload, 1000);
+                }, 'image/png');
+            } catch (error) {
+                console.error('Error capturing or uploading image:', error);
+            }
+        }
 
-        // Capture and send the image every second
-        setInterval(captureAndSend, 1000);
-
+        // Start the capture and upload process
+        captureAndUpload();
     } catch (err) {
         console.error('Error: ', err);
     }
