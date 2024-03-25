@@ -44,7 +44,7 @@ def play_audio(filename):
     pygame.mixer.init()
     
     # Load the MP3 file
-    pygame.mixer.music.load(f"output_v2_{lang}_elevenlabs/{filename}")
+    pygame.mixer.music.load(f"output_v2_{frameProcessor.lang}_elevenlabs/{filename}")
     
     # Play the music
     pygame.mixer.music.play()
@@ -155,6 +155,7 @@ def timed_action_screencapture():
     if window_id:
         img = capture_window_to_file(window_id, file_path)
         closest_match, previous_image = frameProcessor.run_image(img)
+        print(f"Closest match: {closest_match}")
 
         if closest_match != None and closest_match != last_played:
             start_time = time.time() # Record the start time

@@ -126,6 +126,7 @@ class FrameProcessor:
                 print(f"shared_data_put_line---{res}")
                 shared_data_put_line(res+1)
                 self.last_played = res
+        return res
 
 
     def process_frame(self, frame_pil, frame_count, fps):
