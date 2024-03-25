@@ -9,8 +9,20 @@ def detect_text_google(path):
 
     with io.open(path, 'rb') as image_file:
         content = image_file.read()
+        return detect_text_google_pil(content)
+    
 
-    image = vision.Image(content=content)
+def detect_text_google_pil(image_pil):
+    """Detects text in the file."""
+    client = vision.ImageAnnotatorClient()
+
+    # Convert the PIL Image to bytes
+    byte_buffer = io.BytesIO()
+    image_pil.save(byte_buffer, format='JPEG')  # You can change format if needed
+    image_bytes = byte_buffer.getvalue()
+
+
+    image = vision.Image(content=image_bytes)
 
     response = client.text_detection(image=image)
     texts = response.text_annotations
@@ -34,7 +46,6 @@ def detect_text_google(path):
                 response.error.message))
     
     return detected_texts
-
 
 # Initialize a counter for the output image file names
 image_counter = 0

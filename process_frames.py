@@ -1,5 +1,5 @@
 
-from cloudvision import detect_text_google, detect_text_and_draw_boxes
+from cloudvision import detect_text_google_pil, detect_text_google, detect_text_and_draw_boxes
 from thefuzz import fuzz
 import pytesseract
 import easyocr
@@ -81,8 +81,6 @@ class FrameProcessor:
         print(score)  # This will print the similarity score as a percentage
 
     def run_ocr(self, image):
-        global dialogues
-
             # Use Tesseract to do OCR on the image
     #        text = pytesseract.image_to_string(img)
     
@@ -104,8 +102,8 @@ class FrameProcessor:
     
         start_time = time.time() # Record the start time
         # # Replace the path below with the path to your image file
-        #result = detect_text_google('window_capture.jpg')
-        result = detect_text_and_draw_boxes('window_capture.jpg')
+        result = detect_text_google_pil(image)
+        #result = detect_text_and_draw_boxes('window_capture.jpg')
 
         filtered_array = [entry for entry in result if 'RetroArch' not in entry]
         str = ' '.join(filtered_array)
@@ -150,6 +148,7 @@ class FrameProcessor:
         if percent_diff > 10:
             print("Images are more than 10% different. Proceed with OCR.")
             last_played = self.run_ocr(img)
+            print(f"finished ocr - {last_played} ")
             self.previous_image = img
             return last_played, self.previous_image
         else:

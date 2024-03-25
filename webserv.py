@@ -19,12 +19,12 @@ def set_dialog_file(file):
     global dialog_file
     dialog_file = file
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory="web", **kwargs)
-
+    def __init__(self, *args, custom_variable='default_value', **kwargs):
         #TODO make one per language
         self.frameProcessor =  FrameProcessor()
-        self.frameProcessor.main_webserver_startup()
+
+        # Call the superclass's __init__ method
+        super().__init__(*args, **kwargs)
 
     def do_POST(self):
         # Parse the URL to get the path
@@ -45,6 +45,10 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Convert to bytes and then to PIL Image
                         image_data = file_item.file.read()
                         image = Image.open(io.BytesIO(image_data))
+                        image = image.convert('RGB')
+                        image.save('saved_image.jpg')
+
+
                        # image.show()  # Or perform any other operation with the Pillow image
                         last_played, previous_image =  self.frameProcessor.run_image(image)
 
