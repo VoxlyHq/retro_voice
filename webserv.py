@@ -1,7 +1,6 @@
 import http.server
 import socketserver
 import threading
-import queue
 from urllib.parse import urlparse
 import signal
 import sys
@@ -11,25 +10,8 @@ from PIL import Image
 import cgi
 import io
 
-class ThreadSafeData:
-    def __init__(self):
-        self.queue = queue.Queue()
-        self.line = 0
-
-    def put_line(self, line):
-        self.line = line
-
-    def get_line(self):
-        return self.line
-
-    def put_data(self, data):
-        self.queue.put(data)
-
-    def get_data(self):
-        if not self.queue.empty():
-            return self.queue.get()
-        return None
-
+from process_frames import FrameProcessor
+from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
 
 dialog_file = "dialogues_en_web.json"
 
@@ -37,6 +19,12 @@ def set_dialog_file(file):
     global dialog_file
     dialog_file = file
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory="web", **kwargs)
+
+        #TODO make one per language
+        self.frameProcessor =  FrameProcessor()
+        self.frameProcessor.main_webserver_startup()
 
     def do_POST(self):
         # Parse the URL to get the path
@@ -57,12 +45,17 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         # Convert to bytes and then to PIL Image
                         image_data = file_item.file.read()
                         image = Image.open(io.BytesIO(image_data))
-                        image.show()  # Or perform any other operation with the Pillow image
+                       # image.show()  # Or perform any other operation with the Pillow image
+                        last_played, previous_image =  self.frameProcessor.run_image(image)
+
 
                         self.send_response(200)
                         self.send_header('Content-type', 'text/plain')
                         self.end_headers()
-                        self.wfile.write("Screenshot uploaded and processed successfully".encode())
+                        if None != last_played:
+                            self.wfile.write(f"Last played: {last_played}".encode())
+                        else:
+                            self.wfile.write("".encode())
                     else:
                         self.send_error(400, "File is missing in the form")
                 else:
@@ -118,16 +111,6 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         else:
             # For any other endpoint, return a 404 Not Found response
             self.send_error(404, 'File Not Found: %s' % self.path)
-
-
-# Create a shared data instance
-shared_data = ThreadSafeData()
-
-def shared_data_put_data(data):
-    shared_data.put_data(data)  # Put data into the shared queue
-
-def shared_data_put_line(line):
-    shared_data.put_line(line)  # Put data into the shared queue
 
 
 httpd = None
