@@ -7,6 +7,9 @@ import signal
 import sys
 import socket
 import json
+from PIL import Image
+import cgi
+import io
 
 class ThreadSafeData:
     def __init__(self):
@@ -35,6 +38,40 @@ def set_dialog_file(file):
     dialog_file = file
 class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
+    def do_POST(self):
+        # Parse the URL to get the path
+        url_path = urlparse(self.path).path
+        print(f"Received POST request for {url_path}")
+
+        if url_path == "/upload_screenshot":
+            # Handle screenshot upload
+            ctype, pdict = cgi.parse_header(self.headers.get('content-type'))
+            if ctype == 'multipart/form-data':
+                # Parse the multipart data
+                form = cgi.FieldStorage(fp=self.rfile, headers=self.headers,
+                                        environ={'REQUEST_METHOD': 'POST',
+                                                 'CONTENT_TYPE': self.headers['Content-Type']})
+                if 'image' in form:
+                    file_item = form['image']
+                    if file_item.filename:
+                        # Convert to bytes and then to PIL Image
+                        image_data = file_item.file.read()
+                        image = Image.open(io.BytesIO(image_data))
+                        image.show()  # Or perform any other operation with the Pillow image
+
+                        self.send_response(200)
+                        self.send_header('Content-type', 'text/plain')
+                        self.end_headers()
+                        self.wfile.write("Screenshot uploaded and processed successfully".encode())
+                    else:
+                        self.send_error(400, "File is missing in the form")
+                else:
+                    self.send_error(400, "Form is missing 'image' field")
+            else:
+                self.send_error(400, "Only 'multipart/form-data' is supported")
+        else:
+            self.send_error(404, 'File Not Found: %s' % self.path)
+
     def do_GET(self):
         global dialogfile
         # Parse the URL to get the path
@@ -45,6 +82,14 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             # Serve the index.html file for the root URL
             self.path = 'index.html'
             return http.server.SimpleHTTPRequestHandler.do_GET(self)
+        elif url_path == "/html_scrape.html":
+            # Serve the index.html file for the root URL
+            self.path = 'html_scraper/html_scrape.html'
+            return http.server.SimpleHTTPRequestHandler.do_GET(self)
+        elif url_path == "/script.js":
+            # Serve the index.html file for the root URL
+            self.path = 'html_scraper/script.js'
+            return http.server.SimpleHTTPRequestHandler.do_GET(self)        
         elif url_path == "/script.json":
             # Return the contents of the script.json file
             try:
@@ -111,6 +156,7 @@ def signal_handler(sig, frame):
 
 
 if __name__ == "__main__":
+#    set_dialog_file("dialogues_jp_web.json")
     # Run the server
     run_server2()
     signal.signal(signal.SIGINT, signal_handler)

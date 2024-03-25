@@ -84,6 +84,10 @@ def play_audio_threaded(filename):
 
 def find_closest_entry(numbered_data, current_text):
     print(f"find_closest_entry- current_text: {current_text}")
+    if "Contentless Cores Explore"   in current_text:
+        print(f"skipping menu")
+        return None
+
     
     # Initialize variables to track the highest similarity and corresponding entry number
     max_similarity_ratio = 0.33  # Start with your threshold
@@ -299,9 +303,9 @@ def main():
     args = parser.parse_args()
 
     if args.japanese:
-        set_dialog_file("dialogues_web_jp.json")
+        set_dialog_file("dialogues_jp_web.json")
         dialog_file_path = "dialogues_jp_v2.json"
-        lang = "jp_"
+        lang = "jp"
 
     dialogues =load_dialogues()
     print(dialogues)
