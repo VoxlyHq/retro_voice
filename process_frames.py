@@ -54,7 +54,7 @@ class FrameProcessor:
         return dialogues
 
 
-    def find_closest_entry(self, numbered_data, current_text):
+    def find_closest_entry(self, current_text):
         print(f"find_closest_entry- current_text: {current_text}")
         if "Contentless Cores Explore"   in current_text:
             print(f"skipping menu")
@@ -65,7 +65,7 @@ class FrameProcessor:
         max_similarity_ratio = 0.33  # Start with your threshold
         closest_entry_number = None
         
-        for number, entry in numbered_data.items():
+        for number, entry in self.dialogues.items():
             dialogue = entry['dialogue']
             similarity_ratio = fuzz.ratio(current_text, dialogue) / 100.0  # Convert to a scale of 0 to 1
             #print(f"dialogue: {dialogue} -- similarity_ratio: {similarity_ratio} -- number {number}")
@@ -164,6 +164,7 @@ class FrameProcessor:
         filename = f"frame_{timestamp}.png"
         # Convert the PIL Image to bytes
         byte_buffer = io.BytesIO()
+ 
         image.save(byte_buffer, format='JPEG')  # You can change format if needed
         image_bytes = byte_buffer.getvalue()
 
@@ -207,7 +208,7 @@ class FrameProcessor:
         print(f"Time taken: {end_time - start_time} seconds")
             
         #thefuzz_test(text)
-        res = self.find_closest_entry(self.dialogues, str)
+        res = self.find_closest_entry(str)
         if res != None:
             print("found entry ")
             print(res)
