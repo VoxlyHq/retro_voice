@@ -1,13 +1,21 @@
 
+from datetime import datetime
+import io
+import os
+import requests
 from cloudvision import detect_text_google_pil, detect_text_google, detect_text_and_draw_boxes
 from thefuzz import fuzz
 import pytesseract
 import easyocr
+import base64
 import json
 from PIL import Image
 from image_diff import calculate_image_difference
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
+
+
+OPENAI_API_KEY = os.environ.get("OPENAI_ACCESS_TOKEN")
 
 class FrameProcessor:
     def __init__(self, language='en'):
@@ -69,6 +77,53 @@ class FrameProcessor:
 
         return closest_entry_number  # Return the entry number with the highest similarity ratio over 0.33
 
+    def encode_image(self, image_path):
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode('utf-8')
+
+    def call_openai_vision_api(self, image_bytes):
+        # Getting the base64 string
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+
+        headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENAI_API_KEY}"
+        }
+
+        model_openai = "gpt-4-vision-preview"
+        model_local = "llava_v16"
+        model = model_local
+
+
+        payload = {
+        "model": model,
+        "messages": [
+            {
+            "role": "user",
+            "content": [
+                {
+                "type": "text",
+                "text": "What is the text in the photo?"
+                },
+                {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{base64_image}"
+                }
+                }
+            ]
+            }
+        ],
+        "max_tokens": 300
+        }
+
+        #openai_url = "https://api.openai.com/v1/chat/completions"
+        local_url = "http://localhost:8080/v1/chat/completions"
+        url = local_url
+
+        response = requests.post(url, headers=headers, json=payload)
+        print(response.json())
+        return response.json()
 
     @staticmethod
     def thefuzz_test(ocr_text):
@@ -80,9 +135,9 @@ class FrameProcessor:
 
         print(score)  # This will print the similarity score as a percentage
 
-    def run_ocr(self, image):
-            # Use Tesseract to do OCR on the image
-    #        text = pytesseract.image_to_string(img)
+    def ocr_tesseract(self, image_path):
+        # Use Tesseract to do OCR on the image
+        #        text = pytesseract.image_to_string(img)
     
         # start_time = time.time() # Record the start time
         # text = pytesseract.image_to_string('window_capture.jpg') #, lang='jpn')
@@ -91,7 +146,10 @@ class FrameProcessor:
         # print("----")
         # end_time = time.time() # Record the end time
         # print(f"Time taken: {end_time - start_time} seconds")
+        return None 
 
+
+    def ocr_easyocr(self, image_path):
         # start_time = time.time() # Record the start time
         # result = reader.readtext('window_capture.jpg')
         # print("found text easyocr----")
@@ -99,17 +157,52 @@ class FrameProcessor:
         # print("----")
         # end_time = time.time() # Record the end time
         # print(f"Time taken: {end_time - start_time} seconds")
+        return None        
+
+    def ocr_openai(self, image):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        filename = f"frame_{timestamp}.png"
+        # Convert the PIL Image to bytes
+        byte_buffer = io.BytesIO()
+        image.save(byte_buffer, format='JPEG')  # You can change format if needed
+        image_bytes = byte_buffer.getvalue()
+
+        result = self.call_openai_vision_api(image_bytes)
+
+        result_filename = f"result_{timestamp}.json"
+        with open(result_filename, 'w') as f:
+            json.dump(result, f, indent=4)
+        print(f"Saved analysis result to {result_filename}")
+        content =  result['choices'][0]['message']['content']
+        part_to_remove = " The text in the photo reads:"
+        part_to_remove2 = "The text in the photo is"
+        cleaned_string = content.replace(part_to_remove, "").replace(part_to_remove2, "").replace('"', '')    
+        print(cleaned_string)
+        return cleaned_string
     
-        start_time = time.time() # Record the start time
-        # # Replace the path below with the path to your image file
+    def ocr_google(self, image):
         result = detect_text_google_pil(image)
-        #result = detect_text_and_draw_boxes('window_capture.jpg')
+#        result = detect_text_and_draw_boxes('window_capture.jpg')
 
         filtered_array = [entry for entry in result if 'RetroArch' not in entry]
         str = ' '.join(filtered_array)
         print("found text google----")
         print(str)
         print("----")
+        return str
+    
+    def run_ocr(self, image):
+        start_time = time.time() # Record the start time
+
+        str = self.ocr_openai(image)
+#        str = self.ocr_google(image)
+        
+        print("found text ocr----")
+        print(str)
+        print("----")
+    
+
+
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
             
