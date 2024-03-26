@@ -34,6 +34,8 @@ class FrameProcessor:
         self.previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
         self.last_played = -1 #TODO this should be per user
 
+        self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
+
 
     def load_dialogues(self):
         # File path to your JSON data
@@ -149,23 +151,33 @@ class FrameProcessor:
         return None 
 
 
-    def ocr_easyocr(self, image_path):
-        # start_time = time.time() # Record the start time
-        # result = reader.readtext('window_capture.jpg')
-        # print("found text easyocr----")
-        # print(result)
-        # print("----")
-        # end_time = time.time() # Record the end time
-        # print(f"Time taken: {end_time - start_time} seconds")
-        return None        
+    def ocr_easyocr(self, image):
+        # Convert the PIL Image to bytes
+        byte_buffer = io.BytesIO()
+
+        image.save(byte_buffer, format='JPEG')  # You can change format if needed
+        image_bytes = byte_buffer.getvalue()
+
+
+        result =  self.reader.readtext(image_bytes,detail = 0) #change detail if you want the locations
+        filtered_array = [entry for entry in result if 'RetroArch' not in entry]
+        str = ' '.join(filtered_array)
+        return str
+
+
 
     def ocr_openai(self, image):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         filename = f"frame_{timestamp}.png"
         # Convert the PIL Image to bytes
         byte_buffer = io.BytesIO()
- 
-        image.save(byte_buffer, format='JPEG')  # You can change format if needed
+
+        width, height = image.size
+        new_height = height // 3
+
+        # Crop the top half
+        top_half = image.crop((0, 0, width, new_height))
+        top_half.save(byte_buffer, format='JPEG')  # You can change format if needed
         image_bytes = byte_buffer.getvalue()
 
         result = self.call_openai_vision_api(image_bytes)
@@ -195,7 +207,8 @@ class FrameProcessor:
     def run_ocr(self, image):
         start_time = time.time() # Record the start time
 
-        str = self.ocr_openai(image)
+        str = self.ocr_easyocr(image)
+#        str = self.ocr_openai(image)
 #        str = self.ocr_google(image)
         
         print("found text ocr----")
