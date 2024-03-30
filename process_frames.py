@@ -13,6 +13,7 @@ from PIL import Image
 from image_diff import calculate_image_difference
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
+from PIL import Image, ImageDraw, ImageFont
 
 
 OPENAI_API_KEY = os.environ.get("OPENAI_ACCESS_TOKEN")
@@ -29,7 +30,7 @@ class FrameProcessor:
             raise("Invalid language")   
 
         self.dialogues = self.load_dialogues()
-        print(self.dialogues)
+        #print(self.dialogues)
         #TODO remove this from this class and store this somewhere else, so its multi user
         self.previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
         self.last_played = -1 #TODO this should be per user
@@ -38,6 +39,7 @@ class FrameProcessor:
 
 
     def load_dialogues(self):
+        print("load_dialogues-")
         # File path to your JSON data
         file_path = self.dialog_file_path
 
@@ -150,6 +152,44 @@ class FrameProcessor:
         # print(f"Time taken: {end_time - start_time} seconds")
         return None 
 
+    def ocr_easyocr_and_highlight(self, image):
+        # Convert the PIL Image to bytes
+        byte_buffer = io.BytesIO()
+        image.save(byte_buffer, format='JPEG')  # Change format if needed
+        image_bytes = byte_buffer.getvalue()
+
+        # Now, we want the locations as well, so detail=1
+        result = self.reader.readtext(image_bytes, detail=1)
+
+        # Creating a drawable image
+        drawable_image = Image.open(io.BytesIO(image_bytes))
+        draw = ImageDraw.Draw(drawable_image)
+        
+        # Optionally, load a font.
+        # font = ImageFont.truetype("arial.ttf", 15)  # You might need to adjust the path and size
+
+        filtered_result = []
+        for (bbox, text, prob) in result:
+            if 'RetroArch' not in text:
+                filtered_result.append((bbox, text, prob))
+                
+                # Extracting min and max coordinates for the rectangle
+                top_left = bbox[0]
+                bottom_right = bbox[2]
+                
+                # Ensure the coordinates are in the correct format (floats or integers)
+                top_left = tuple(map(int, top_left))
+                bottom_right = tuple(map(int, bottom_right))
+                
+                # Draw the bounding box
+                draw.rectangle([top_left, bottom_right], outline="red", width=2)
+                
+                # Annotate text. Adjust the position if necessary.
+                draw.text(top_left, text, fill="yellow")
+                
+        # Assuming you want to return the concatenated text that doesn't include 'RetroArch'
+        filtered_text = ' '.join([text for (_, text, _) in filtered_result])
+        return filtered_text, drawable_image  # Now also returning the image with annotations
 
     def ocr_easyocr(self, image):
         # Convert the PIL Image to bytes
@@ -207,9 +247,10 @@ class FrameProcessor:
     def run_ocr(self, image):
         start_time = time.time() # Record the start time
 
-        str = self.ocr_easyocr(image)
+        str, highlighted_image = self.ocr_easyocr_and_highlight(image)
 #        str = self.ocr_openai(image)
 #        str = self.ocr_google(image)
+        
         
         print("found text ocr----")
         print(str)
@@ -231,7 +272,7 @@ class FrameProcessor:
                 print(f"shared_data_put_line---{res}")
                 shared_data_put_line(res+1)
                 self.last_played = res
-        return res
+        return res, highlighted_image
 
 
     def process_frame(self, frame_pil, frame_count, fps):
@@ -254,10 +295,10 @@ class FrameProcessor:
         # Decide whether to call OCR based on the difference
         if percent_diff > 10:
             print("Images are more than 10% different. Proceed with OCR.")
-            last_played = self.run_ocr(img)
+            last_played, highlighted_image = self.run_ocr(img)
             print(f"finished ocr - {last_played} ")
             self.previous_image = img
-            return last_played, self.previous_image
+            return last_played, self.previous_image, highlighted_image
         else:
             print("Difference is less than 10%. No need to call OCR again.")
-            return None, None
+            return None, None, None

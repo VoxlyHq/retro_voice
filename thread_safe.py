@@ -29,3 +29,6 @@ def shared_data_put_data(data):
 
 def shared_data_put_line(line):
     shared_data.put_line(line)  # Put data into the shared queue
+
+def shared_data_get_data():
+    return shared_data.get_data()  # Get data from the shared queue
