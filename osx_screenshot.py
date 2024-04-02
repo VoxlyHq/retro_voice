@@ -47,12 +47,14 @@ def find_window_id(window_name):
     window_list = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
     for window in window_list:
         if window_name.lower() in window.get('kCGWindowName', '').lower():
-            print(f"Found window '{window.get('kCGWindowName', '')}' with ID {window['kCGWindowNumber']}")
+            #print(f"Found window '{window.get('kCGWindowName', '')}' with ID {window['kCGWindowNumber']}")
             return window['kCGWindowNumber']
+    print(f"Window '{window_name}' not found.")
     return None
 
-def capture_window_to_file(window_id, file_path):
-    print(f"Capturing window {window_id} to {file_path}")
+
+def capture_window_to_pil(window_id, file_path):
+    #print(f"Capturing window {window_id}")
     #kCGWindowListOptionIncludingWindow
     image = CGWindowListCreateImage(CGRectNull, CG.kCGWindowListOptionIncludingWindow, window_id, 0)
     if image:
@@ -61,7 +63,6 @@ def capture_window_to_file(window_id, file_path):
         if destination:
             Quartz.CGImageDestinationAddImage(destination, image, None)
             Quartz.CGImageDestinationFinalize(destination)
-            print(f"Saved window capture to {file_path}")
         else:
             print("Failed to create image destination.")
         pil_image = cgimage_to_pil(image)
@@ -69,11 +70,18 @@ def capture_window_to_file(window_id, file_path):
         if pil_image.mode == 'RGBA':
             pil_image = pil_image.convert('RGB')
 
-        pil_image.save('output.jpg')
-        #pil_image.show()  
         return pil_image         
     else:
         print("Failed to capture window.")
+        return None
+
+def capture_window_to_file(window_id, file_path):
+    print(f"Capturing window {window_id} to {file_path}")
+    pil_image = capture_window_to_pil(window_id, file_path)
+    if pil_image != None:
+        print(f"Saved window capture to {file_path}")
+        pil_image.save('output.jpg')
+    return pil_image
 
 if __name__ == "__main__":
     x = find_window_id("RetroArch")

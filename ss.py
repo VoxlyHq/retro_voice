@@ -10,13 +10,13 @@ import argparse
 import cv2 
 from PIL import Image
 import concurrent.futures
+import numpy as np
 
-from PIL import Image
-import json
-
+from image_window import VideoStreamWithAnnotations
 from webserv import CustomHTTPRequestHandler, run_server2, set_dialog_file, signal_handler
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
+#from image_window import ImageWindow
 
 # Detect the operating system
 os_name = platform.system()
@@ -27,6 +27,7 @@ dialogues = {}
 
 frameProcessor =  FrameProcessor()
 last_played = -1
+show_image_screen = False 
 
 def format_filename(number):
     # Format the number with leading zeros to ensure it's four digits
@@ -152,7 +153,7 @@ def timed_action_screencapture():
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
-        closest_match, previous_image = frameProcessor.run_image(img)
+        closest_match, previous_image, highlighted_image = frameProcessor.run_image(img)
         print(f"Closest match: {closest_match}")
 
         if closest_match != None and closest_match != last_played:
@@ -161,17 +162,33 @@ def timed_action_screencapture():
             end_time = time.time()
             print(f"Audio Time taken: {end_time - start_time} seconds")
             last_played = closest_match
+            show_image_on_screen(highlighted_image)
 
     else:
         print(f"No window found with name containing '{window_name}'.")
         shared_data_put_data(f"No window found with name containing '{window_name}'.")
 
 
+
+def show_image_on_screen(img):
+    print("show_image_on_screen ")
+    return #STUB
+
+
+def process_screenshots():
+    while True:
+        timed_action_screencapture()
+        print("timed_action_screencapture")
+        time.sleep(1)  # Wait for 1 second
+
 def main():
     global dialogues
     global dialog_file_path
     global lang
     global frameProcessor
+    global show_image_screen
+
+    #setup_screen()
 
     print("Press ESC to exit...")
     parser = argparse.ArgumentParser(description="Process a video or do a screencapture.")
@@ -179,9 +196,11 @@ def main():
     parser.add_argument('-t', '--threads', type=int, default=10, help="Max threads for concurrent processing. Default is 10.")
     parser.add_argument('-w', '--webserver',  action='store_true', help="Enable Webserver")
     parser.add_argument('-jp', '--japanese',  action='store_true', help="Enable Japanese")
+    parser.add_argument('-is', '--show_image_screen',  action='store_true', help="Show image screen")
+
+    
 
     args = parser.parse_args()
-
     if args.japanese:
         set_dialog_file("dialogues_jp_web.json")
         lang = "jp"
@@ -197,21 +216,22 @@ def main():
         shared_data_put_data("Hello from the main thread!")
         shared_data_put_line(0)
 
+
+    callback = process_screenshots
+
     if args.video:
-        process_video(args.video)
+        callback = process_video(args.video) #TODO this wont work yet, need a lambda or something
         #process_video_threaded(args.video)
+
+    if args.show_image_screen:
+        video_stream = VideoStreamWithAnnotations(background_task=callback)
+        try:
+            video_stream.run_ss()
+        finally:
+            video_stream.stop()
     else:
-        while True:
-            timed_action_screencapture()
-            time.sleep(1)  # Wait for 1 second
-            if keyboard.is_pressed('esc'): #TODO this doesn't seem to work without root on osx?
-                print("Escape pressed, exiting...")
-                break
+        callback()
+
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("Program interrupted")
-    except PermissionError:
-        print("Permission denied: You might need to run as administrator/root or check your security settings.")
+    main()
