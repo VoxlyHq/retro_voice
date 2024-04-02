@@ -183,8 +183,11 @@ class FrameProcessor:
                 bottom_right = tuple(map(int, bottom_right))
                 
                 # Draw the bounding box
-                draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                
+                try:
+                    draw.rectangle([top_left, bottom_right], outline="red", width=2)
+                except:
+                    print(f"error drawing rectangle -{top_left} - {bottom_right}")
+                    #image.show(image)
                 # Annotate text. Adjust the position if necessary.
                 draw.text(top_left, text, fill="yellow")
                 
@@ -274,7 +277,7 @@ class FrameProcessor:
                 shared_data_put_line(res+1)
                 self.last_played = res
         else:
-            
+            print("No entry found")        
         return res, highlighted_image, annotations
 
 
