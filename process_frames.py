@@ -189,7 +189,7 @@ class FrameProcessor:
                 
         # Assuming you want to return the concatenated text that doesn't include 'RetroArch'
         filtered_text = ' '.join([text for (_, text, _) in filtered_result])
-        return filtered_text, drawable_image  # Now also returning the image with annotations
+        return filtered_text, drawable_image, filtered_result  # Now also returning the image with annotations
 
     def ocr_easyocr(self, image):
         # Convert the PIL Image to bytes
@@ -247,7 +247,7 @@ class FrameProcessor:
     def run_ocr(self, image):
         start_time = time.time() # Record the start time
 
-        str, highlighted_image = self.ocr_easyocr_and_highlight(image)
+        str, highlighted_image, annotations = self.ocr_easyocr_and_highlight(image)
 #        str = self.ocr_openai(image)
 #        str = self.ocr_google(image)
         
@@ -272,7 +272,7 @@ class FrameProcessor:
                 print(f"shared_data_put_line---{res}")
                 shared_data_put_line(res+1)
                 self.last_played = res
-        return res, highlighted_image
+        return res, highlighted_image, annotations
 
 
     def process_frame(self, frame_pil, frame_count, fps):
@@ -295,10 +295,10 @@ class FrameProcessor:
         # Decide whether to call OCR based on the difference
         if percent_diff > 10:
             print("Images are more than 10% different. Proceed with OCR.")
-            last_played, highlighted_image = self.run_ocr(img)
+            last_played, highlighted_image, annotations = self.run_ocr(img)
             print(f"finished ocr - {last_played} ")
             self.previous_image = img
-            return last_played, self.previous_image, highlighted_image
+            return last_played, self.previous_image, highlighted_image, annotations
         else:
             print("Difference is less than 10%. No need to call OCR again.")
-            return None, None, None
+            return None, None, None, None 

@@ -147,7 +147,7 @@ def process_screenshot(img):
     global frameProcessor
     global dialogues
 
-    closest_match, previous_image, highlighted_image = frameProcessor.run_image(img)
+    closest_match, previous_image, highlighted_image, annotations = frameProcessor.run_image(img)
     print(f"Closest match: {closest_match}")
 
     if closest_match != None and closest_match != last_played:
@@ -156,7 +156,7 @@ def process_screenshot(img):
         end_time = time.time()
         print(f"Audio Time taken: {end_time - start_time} seconds")
         last_played = closest_match
-        show_image_on_screen(highlighted_image)
+        set_annotation_text(annotations)
         
 def timed_action_screencapture():
     print("Action triggered by timer")
@@ -172,12 +172,8 @@ def timed_action_screencapture():
         print(f"No window found with name containing '{window_name}'.")
         shared_data_put_data(f"No window found with name containing '{window_name}'.")
 
-
-
-def show_image_on_screen(img):
-    print("show_image_on_screen ")
-    return #STUB
-
+def set_annotation_text(annotations):
+    video_stream.set_annotations(annotations)
 
 def process_screenshots():
     while True:

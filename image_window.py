@@ -15,6 +15,7 @@ class VideoStreamWithAnnotations:
 
         self.latest_frame = None
         self.frame_lock = threading.Lock()
+        self.current_annotations = None
 
         self.background_task = background_task
         if self.background_task is not None:
@@ -45,9 +46,32 @@ class VideoStreamWithAnnotations:
                 frame = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)                
 
 
-                # Add an annotation on top of the video
-                cv2.putText(frame, 'Hello, OpenCV!', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 
-                            1, (255, 255, 255), 2, cv2.LINE_AA)
+                with self.frame_lock:
+                    if self.current_annotations != None:
+                        # Add an annotation on top of the video
+                        cv2.putText(frame, 'Hello, OpenCV!', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 
+                                    1, (255, 255, 255), 2, cv2.LINE_AA)
+
+                        for (bbox, text, prob) in self.current_annotations:
+#                            filtered_result.append((bbox, text, prob))
+                            
+                            # Extracting min and max coordinates for the rectangle
+                            top_left = bbox[0]
+                            bottom_right = bbox[2]
+                            
+                            # Ensure the coordinates are in the correct format (floats or integers)
+                            top_left = tuple(map(int, top_left))
+                            bottom_right = tuple(map(int, bottom_right))
+                            
+                            # Draw the bounding box
+                            #draw.rectangle([top_left, bottom_right], outline="red", width=2)
+                            cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
+
+                            # Annotate text. Adjust the position if necessary.
+                            #draw.text(top_left, text, fill="yellow")
+                            text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
+                            cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
+                                        0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text    
                 
                 # Display the resulting frame
                 cv2.imshow('Video Stream with Annotations', frame)
@@ -92,6 +116,11 @@ class VideoStreamWithAnnotations:
     def get_latest_frame(self):
         with self.frame_lock:
             return self.latest_frame
+        
+    def set_annotations(self, annotations):
+        with self.frame_lock:
+            self.current_annotations = annotations
+
 
     def stop(self):
         if self.cap.isOpened():
