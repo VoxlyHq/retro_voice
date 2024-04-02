@@ -70,6 +70,7 @@ class VideoStreamWithAnnotations:
     def print_annotations(self, frame):
         with self.frame_lock:
             if self.current_annotations != None:
+                print(f"print_annotations- {self.current_annotations}")
                 for (bbox, text, prob) in self.current_annotations:
                     # Extracting min and max coordinates for the rectangle
                     top_left = bbox[0]
