@@ -150,6 +150,8 @@ def process_screenshot(img):
     closest_match, previous_image, highlighted_image, annotations = frameProcessor.run_image(img)
     print(f"Closest match: {closest_match}")
 
+
+
     if closest_match != None and closest_match != last_played:
         start_time = time.time() # Record the start time
         play_audio_threaded(format_filename(closest_match))
@@ -157,7 +159,11 @@ def process_screenshot(img):
         print(f"Audio Time taken: {end_time - start_time} seconds")
         last_played = closest_match
         set_annotation_text(annotations)
-        
+    elif annotations != None:
+        set_annotation_text(annotations)
+    elif closest_match == None:
+        set_annotation_text(None)
+
 def timed_action_screencapture():
     print("Action triggered by timer")
 

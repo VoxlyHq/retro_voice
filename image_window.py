@@ -65,10 +65,6 @@ class VideoStreamWithAnnotations:
 
                 with self.frame_lock:
                     if self.current_annotations != None:
-                        # Add an annotation on top of the video
-                        cv2.putText(frame, 'Hello, OpenCV!', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 
-                                    1, (255, 255, 255), 2, cv2.LINE_AA)
-
                         for (bbox, text, prob) in self.current_annotations:
 #                            filtered_result.append((bbox, text, prob))
                             
@@ -115,10 +111,6 @@ class VideoStreamWithAnnotations:
                 with self.frame_lock:
                     self.latest_frame = frame #TODO this needs to be PIL FORMAT!!!
                 last_time = time.time()
-
-            # Add an annotation on top of the video
-            cv2.putText(frame, 'Hello, OpenCV!', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 
-                        1, (255, 255, 255), 2, cv2.LINE_AA)
             
             # Display the resulting frame
             cv2.imshow('Video Stream with Annotations', frame)

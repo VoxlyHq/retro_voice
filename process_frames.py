@@ -36,6 +36,7 @@ class FrameProcessor:
         self.last_played = -1 #TODO this should be per user
 
         self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
+        self.last_annotations = None
 
 
     def load_dialogues(self):
@@ -272,6 +273,8 @@ class FrameProcessor:
                 print(f"shared_data_put_line---{res}")
                 shared_data_put_line(res+1)
                 self.last_played = res
+        else:
+            
         return res, highlighted_image, annotations
 
 
@@ -298,7 +301,8 @@ class FrameProcessor:
             last_played, highlighted_image, annotations = self.run_ocr(img)
             print(f"finished ocr - {last_played} ")
             self.previous_image = img
+            self.last_annotations = annotations
             return last_played, self.previous_image, highlighted_image, annotations
         else:
             print("Difference is less than 10%. No need to call OCR again.")
-            return None, None, None, None 
+            return None, None, None, self.last_annotations 
