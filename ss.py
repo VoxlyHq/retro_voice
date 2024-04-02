@@ -188,7 +188,7 @@ def process_screenshots():
         time.sleep(1)  # Wait for 1 second
 
 def process_cv2_screenshots():
-    time.sleep(1)  # Wait for 1 second
+    time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
     global video_stream
     print(video_stream)
     while True:

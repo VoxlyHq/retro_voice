@@ -76,3 +76,17 @@ python webserv.py
 
 
 
+
+
+
+## Video input modes
+
+1) Directly from a webcam
+```bash
+python ss.py -w -is -v webcam
+```
+
+2) Directly from a video
+```bash
+python ss.py -w -is -v ~/Desktop/ff2-screenrecord-first4min.mov
+```

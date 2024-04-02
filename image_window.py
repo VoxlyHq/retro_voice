@@ -70,7 +70,7 @@ class VideoStreamWithAnnotations:
     def print_annotations(self, frame):
         with self.frame_lock:
             if self.current_annotations != None:
-                print(f"print_annotations- {self.current_annotations}")
+#                print(f"print_annotations- {self.current_annotations}")
                 for (bbox, text, prob) in self.current_annotations:
                     # Extracting min and max coordinates for the rectangle
                     top_left = bbox[0]
@@ -85,10 +85,6 @@ class VideoStreamWithAnnotations:
                         cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
                     except Exception as e:
                         print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
-
-                    # Add an annotation on top of the video
-                    cv2.putText(frame, 'Hello, OpenCV!', (10, 50), cv2.FONT_HERSHEY_SIMPLEX,
-                                1, (255, 255, 255), 2, cv2.LINE_AA)
 
                     # Annotate text. Adjust the position if necessary.
                     text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
@@ -121,10 +117,10 @@ class VideoStreamWithAnnotations:
                     self.latest_frame = img
                 last_time = time.time()
             
+            self.print_annotations(frame)
+            
             # Display the resulting frame
             cv2.imshow('Video Stream with Annotations', frame)
-
-            self.print_annotations(frame)
 
             # Break the loop on pressing 'q'
             if cv2.waitKey(1) == ord('q'):
