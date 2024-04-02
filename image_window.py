@@ -1,10 +1,23 @@
 import os
+import platform
 import cv2
 import threading
 import time
 import numpy as np
 
-from osx_screenshot import capture_window_to_file, capture_window_to_pil, find_window_id
+os_name = platform.system()
+if os_name == 'Windows':
+    # Import Windows-specific module
+    from windows_screenshot import find_window_id, capture_window_to_pil 
+elif os_name == 'Darwin':
+    # Import macOS-specific module
+    from osx_screenshot import find_window_id, capture_window_to_pil
+elif os_name == 'Linux':
+    # Import Linux-specific module
+    from wsl_screenshot import find_window_id, capture_window_to_pil
+else:
+    raise Exception(f"Unsupported OS: {os_name}")
+
 
 class VideoStreamWithAnnotations:
     def __init__(self, background_task=None):

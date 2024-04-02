@@ -66,13 +66,13 @@ previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
 
 if os_name == 'Windows':
     # Import Windows-specific module
-    from windows_screenshot import find_window_id, capture_window_to_file
+    from windows_screenshot import find_window_id, capture_window_to_pil
 elif os_name == 'Darwin':
     # Import macOS-specific module
-    from osx_screenshot import find_window_id, capture_window_to_file
+    from osx_screenshot import find_window_id, capture_window_to_pil
 elif os_name == 'Linux':
     # Import Linux-specific module
-    from wsl_screenshot import find_window_id, capture_window_to_file
+    from wsl_screenshot import find_window_id, capture_window_to_pil
 else:
     raise Exception(f"Unsupported OS: {os_name}")
 
