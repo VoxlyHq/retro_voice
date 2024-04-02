@@ -188,6 +188,7 @@ def process_screenshots():
         time.sleep(1)  # Wait for 1 second
 
 def process_cv2_screenshots():
+    time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
     global video_stream
     print(video_stream)
     while True:
@@ -203,7 +204,6 @@ def main():
     global lang
     global frameProcessor
     global show_image_screen
-    global video_stream
 
     #setup_screen()
 
@@ -234,14 +234,19 @@ def main():
         shared_data_put_line(0)
 
 
-    if args.video:
+    if args.video !=  "" and args.video != None and args.show_image_screen == False:
         callback = process_video(args.video) #TODO this wont work yet, need a lambda or something
         #process_video_threaded(args.video)
 
     if args.show_image_screen:
+        global video_stream
         video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots)
         try:
-            video_stream.run_ss()
+            if args.video == "" or args.video == None:
+                video_stream.run_ss()
+            else:
+                print(f"args.video--{args.video}##")
+                video_stream.run_video(args.video)
         finally:
             video_stream.stop()
     else:

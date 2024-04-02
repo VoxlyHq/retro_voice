@@ -4,6 +4,7 @@ import cv2
 import threading
 import time
 import numpy as np
+from PIL import Image
 
 os_name = platform.system()
 if os_name == 'Windows':
@@ -33,13 +34,6 @@ class VideoStreamWithAnnotations:
             self.thread.start()
 
 
-    def open_camera(self):
-        self.cap = cv2.VideoCapture(0)  # 0 is usually the default camera
-        if not self.cap.isOpened():
-            print("Error: Could not open video stream.")
-            exit()
-
-
     def run_ss(self):
         print("run_ss")
         last_time = time.time()
@@ -62,29 +56,7 @@ class VideoStreamWithAnnotations:
                 image_array = np.array(img)
                 frame = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)                
 
-
-                with self.frame_lock:
-                    if self.current_annotations != None:
-                        for (bbox, text, prob) in self.current_annotations:
-#                            filtered_result.append((bbox, text, prob))
-                            
-                            # Extracting min and max coordinates for the rectangle
-                            top_left = bbox[0]
-                            bottom_right = bbox[2]
-                            
-                            # Ensure the coordinates are in the correct format (floats or integers)
-                            top_left = tuple(map(int, top_left))
-                            bottom_right = tuple(map(int, bottom_right))
-                            
-                            # Draw the bounding box
-                            #draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                            cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
-
-                            # Annotate text. Adjust the position if necessary.
-                            #draw.text(top_left, text, fill="yellow")
-                            text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                            cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
-                                        0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text    
+                self.print_annotations(frame)
                 
                 # Display the resulting frame
                 cv2.imshow('Video Stream with Annotations', frame)
@@ -95,11 +67,42 @@ class VideoStreamWithAnnotations:
 
         cv2.destroyAllWindows()
 
+    def print_annotations(self, frame):
+        with self.frame_lock:
+            if self.current_annotations != None:
+#                print(f"print_annotations- {self.current_annotations}")
+                for (bbox, text, prob) in self.current_annotations:
+                    # Extracting min and max coordinates for the rectangle
+                    top_left = bbox[0]
+                    bottom_right = bbox[2]
+                    
+                    # Ensure the coordinates are in the correct format (floats or integers)
+                    top_left = tuple(map(int, top_left))
+                    bottom_right = tuple(map(int, bottom_right))
+                    
+                    # Draw the bounding box
+                    try:
+                        cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
+                    except Exception as e:
+                        print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
 
-    def run(self):
-        self.open_camera()
-        print("run")
-        return
+                    # Annotate text. Adjust the position if necessary.
+                    text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
+                    cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
+                                0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
+                                    
+    def run_video(self, path):
+        last_time = time.time()
+        if path == "webcam":
+            self.cap = cv2.VideoCapture(0)  # 0 is usually the default camera
+            if not self.cap.isOpened():
+                print("Error: Could not open video stream.")
+                exit() 
+        else:
+            self.cap = cv2.VideoCapture(path)
+            
+
+        print("run video")
         while True:
             ret, frame = self.cap.read()
             if not ret:
@@ -108,9 +111,13 @@ class VideoStreamWithAnnotations:
 
             # Update the latest_frame every second
             if time.time() - last_time >= 1:
+                rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(rgb_image)
                 with self.frame_lock:
-                    self.latest_frame = frame #TODO this needs to be PIL FORMAT!!!
+                    self.latest_frame = img
                 last_time = time.time()
+            
+            self.print_annotations(frame)
             
             # Display the resulting frame
             cv2.imshow('Video Stream with Annotations', frame)
@@ -122,11 +129,14 @@ class VideoStreamWithAnnotations:
         self.cap.release()
         cv2.destroyAllWindows()
 
+
     def get_latest_frame(self):
         with self.frame_lock:
             return self.latest_frame
         
     def set_annotations(self, annotations):
+        if annotations == None:
+            return
         with self.frame_lock:
             self.current_annotations = annotations
 
