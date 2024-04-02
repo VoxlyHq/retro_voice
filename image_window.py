@@ -21,20 +21,24 @@ else:
 
 class VideoStreamWithAnnotations:
     def __init__(self, background_task=None):
-        self.cap = cv2.VideoCapture(0)  # 0 is usually the default camera
-        if not self.cap.isOpened():
-            print("Error: Could not open video stream.")
-            exit()
-
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
 
+        self.cap = None
         self.background_task = background_task
         if self.background_task is not None:
             self.thread = threading.Thread(target=self.background_task)
             self.thread.daemon = True  # Daemonize thread
             self.thread.start()
+
+
+    def open_camera(self):
+        self.cap = cv2.VideoCapture(0)  # 0 is usually the default camera
+        if not self.cap.isOpened():
+            print("Error: Could not open video stream.")
+            exit()
+
 
     def run_ss(self):
         print("run_ss")
@@ -93,11 +97,11 @@ class VideoStreamWithAnnotations:
             if cv2.waitKey(1) == ord('q'):
                 break
 
-        self.cap.release()
         cv2.destroyAllWindows()
 
 
     def run(self):
+        self.open_camera()
         print("run")
         return
         while True:
