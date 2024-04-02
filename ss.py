@@ -28,6 +28,7 @@ dialogues = {}
 frameProcessor =  FrameProcessor()
 last_played = -1
 show_image_screen = False 
+video_stream = None
 
 def format_filename(number):
     # Format the number with leading zeros to ensure it's four digits
@@ -141,28 +142,31 @@ def process_video_threaded(video_path, max_workers=10):
 
     cap.release()  # Release the video capture object
 
+def process_screenshot(img):
+    global last_played
+    global frameProcessor
+    global dialogues
 
+    closest_match, previous_image, highlighted_image = frameProcessor.run_image(img)
+    print(f"Closest match: {closest_match}")
+
+    if closest_match != None and closest_match != last_played:
+        start_time = time.time() # Record the start time
+        play_audio_threaded(format_filename(closest_match))
+        end_time = time.time()
+        print(f"Audio Time taken: {end_time - start_time} seconds")
+        last_played = closest_match
+        show_image_on_screen(highlighted_image)
+        
 def timed_action_screencapture():
     print("Action triggered by timer")
-    global dialogues
-    global frameProcessor
-    global last_played
 
     window_name = "RetroArch"  # Adjust this to the target window's name
     file_path = os.path.expanduser("window_capture.jpg")  # Save location
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
-        closest_match, previous_image, highlighted_image = frameProcessor.run_image(img)
-        print(f"Closest match: {closest_match}")
-
-        if closest_match != None and closest_match != last_played:
-            start_time = time.time() # Record the start time
-            play_audio_threaded(format_filename(closest_match))
-            end_time = time.time()
-            print(f"Audio Time taken: {end_time - start_time} seconds")
-            last_played = closest_match
-            show_image_on_screen(highlighted_image)
+        process_screenshot(img)
 
     else:
         print(f"No window found with name containing '{window_name}'.")
@@ -181,12 +185,23 @@ def process_screenshots():
         print("timed_action_screencapture")
         time.sleep(1)  # Wait for 1 second
 
+def process_cv2_screenshots():
+    global video_stream
+    print(video_stream)
+    while True:
+        frame = video_stream.get_latest_frame()
+        if frame is not None:
+            print("Background task accessing the latest frame...")
+            process_screenshot(frame)
+            time.sleep(1)  # Wait for 1 second
+
 def main():
     global dialogues
     global dialog_file_path
     global lang
     global frameProcessor
     global show_image_screen
+    global video_stream
 
     #setup_screen()
 
@@ -217,20 +232,18 @@ def main():
         shared_data_put_line(0)
 
 
-    callback = process_screenshots
-
     if args.video:
         callback = process_video(args.video) #TODO this wont work yet, need a lambda or something
         #process_video_threaded(args.video)
 
     if args.show_image_screen:
-        video_stream = VideoStreamWithAnnotations(background_task=callback)
+        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots)
         try:
             video_stream.run_ss()
         finally:
             video_stream.stop()
     else:
-        callback()
+        process_screenshots()
 
 
 if __name__ == "__main__":

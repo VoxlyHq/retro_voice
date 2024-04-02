@@ -12,7 +12,10 @@ class VideoStreamWithAnnotations:
         if not self.cap.isOpened():
             print("Error: Could not open video stream.")
             exit()
-        
+
+        self.latest_frame = None
+        self.frame_lock = threading.Lock()
+
         self.background_task = background_task
         if self.background_task is not None:
             self.thread = threading.Thread(target=self.background_task)
@@ -21,6 +24,7 @@ class VideoStreamWithAnnotations:
 
     def run_ss(self):
         print("run_ss")
+        last_time = time.time()
         while True:
             window_name = "RetroArch"  # Adjust this to the target window's name
             file_path = os.path.expanduser("window_capture.jpg")  # Save location
@@ -30,6 +34,12 @@ class VideoStreamWithAnnotations:
                 if not img:
                     print("Error: Can't receive frame (stream end?). Exiting ...")
                     break
+
+                # Update the latest_frame every second
+                if time.time() - last_time >= 1:
+                    with self.frame_lock:
+                        self.latest_frame = img
+                    last_time = time.time()
 
                 image_array = np.array(img)
                 frame = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)                
@@ -59,6 +69,12 @@ class VideoStreamWithAnnotations:
                 print("Error: Can't receive frame (stream end?). Exiting ...")
                 break
 
+            # Update the latest_frame every second
+            if time.time() - last_time >= 1:
+                with self.frame_lock:
+                    self.latest_frame = frame #TODO this needs to be PIL FORMAT!!!
+                last_time = time.time()
+
             # Add an annotation on top of the video
             cv2.putText(frame, 'Hello, OpenCV!', (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 
                         1, (255, 255, 255), 2, cv2.LINE_AA)
@@ -73,6 +89,10 @@ class VideoStreamWithAnnotations:
         self.cap.release()
         cv2.destroyAllWindows()
 
+    def get_latest_frame(self):
+        with self.frame_lock:
+            return self.latest_frame
+
     def stop(self):
         if self.cap.isOpened():
             self.cap.release()
@@ -81,10 +101,13 @@ class VideoStreamWithAnnotations:
             self.thread.join()
 
 # Example background task function
-def example_background_task():
+def example_background_task(video_stream):
     while True:
-        print("Running example background task...")
-        time.sleep(1)
+        frame = video_stream.get_latest_frame()
+        if frame is not None:
+            print("Background task accessing the latest frame...")
+            # Here you can process the frame or do something with it
+        time.sleep(1)  # Simulating work
 
 # Main function to start everything
 def main():
