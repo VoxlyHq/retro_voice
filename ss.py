@@ -66,7 +66,7 @@ previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
 
 if os_name == 'Windows':
     # Import Windows-specific module
-    from windows_screenshot import find_window_id, capture_window_to_pil
+    from windows_screenshot import find_window_id, capture_window_to_file
 elif os_name == 'Darwin':
     # Import macOS-specific module
     from osx_screenshot import find_window_id, capture_window_to_pil
