@@ -21,10 +21,14 @@ else:
 
 
 class VideoStreamWithAnnotations:
-    def __init__(self, background_task=None):
+    def __init__(self, background_task=None, show_fps=False):
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
+        self.show_fps = show_fps
+        self.frame_count = 0
+        self.fps = 0
+        self.fps_counter_start_time = time.time()
 
         self.cap = None
         self.background_task = background_task
@@ -34,30 +38,54 @@ class VideoStreamWithAnnotations:
             self.thread.start()
 
 
+    def get_frame_from_ss(self):
+        window_name = "RetroArch"  # Adjust this to the target window's name
+        file_path = os.path.expanduser("window_capture.jpg")  # Save location
+        window_id = find_window_id(window_name)
+        if window_id:
+            img = capture_window_to_pil(window_id, file_path)
+            if not img:
+                print("Error: Can't receive frame (stream end?). Exiting ...")
+                return None
+
+            image_array = np.array(img)
+            frame = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)                
+
+            return img, frame
+        return None 
+
+    def display_fps(self, frame):
+        self.frame_count += 1
+        # Calculate FPS every second
+        if time.time() - self.fps_counter_start_time >= 1:
+            self.fps = self.frame_count / (time.time() - self.fps_counter_start_time)
+            self.fps_counter_start_time = time.time()
+            self.frame_count = 0
+
+            print(f"FPS: {self.fps:.2f}")  # Optionally print FPS to console
+
+
+        # Add FPS counter to the frame
+        cv2.putText(frame, f"FPS: {self.fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+
     def run_ss(self):
         print("run_ss")
         last_time = time.time()
         while True:
-            window_name = "RetroArch"  # Adjust this to the target window's name
-            file_path = os.path.expanduser("window_capture.jpg")  # Save location
-            window_id = find_window_id(window_name)
-            if window_id:
-                img = capture_window_to_pil(window_id, file_path)
-                if not img:
-                    print("Error: Can't receive frame (stream end?). Exiting ...")
-                    break
-
+            img, frame = self.get_frame_from_ss()
+            if img != None:
                 # Update the latest_frame every second
                 if time.time() - last_time >= 1:
                     with self.frame_lock:
                         self.latest_frame = img
                     last_time = time.time()
 
-                image_array = np.array(img)
-                frame = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)                
-
                 self.print_annotations(frame)
-                
+
+                if self.show_fps:
+                    self.display_fps(frame)
+
                 # Display the resulting frame
                 cv2.imshow('Video Stream with Annotations', frame)
 
@@ -108,7 +136,7 @@ class VideoStreamWithAnnotations:
             if not ret:
                 print("Error: Can't receive frame (stream end?). Exiting ...")
                 break
-
+            
             # Update the latest_frame every second
             if time.time() - last_time >= 1:
                 rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -116,7 +144,10 @@ class VideoStreamWithAnnotations:
                 with self.frame_lock:
                     self.latest_frame = img
                 last_time = time.time()
-            
+
+            if self.show_fps:
+                self.display_fps(frame)
+
             self.print_annotations(frame)
             
             # Display the resulting frame
