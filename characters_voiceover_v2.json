@@ -1,34 +1,3 @@
-[
-  {
-    "name": "Crew",
-    "voiceover_name": "CrewVoice"
-  },
-  {
-    "name": "Cecil",
-    "voiceover_name": "CecilVoice"
-  },
-  {
-    "name": "Elder",
-    "voiceover_name": "ElderVoice"
-  },
-  {
-    "name": "Black Wizard",
-    "voiceover_name": "Black WizardVoice"
-  },
-  {
-    "name": "White Wizard",
-    "voiceover_name": "White WizardVoice"
-  },
-  {
-    "name": "Baigan",
-    "voiceover_name": "BaiganVoice"
-  },
-  {
-    "name": "King",
-    "voiceover_name": "KingVoice"
-  },
-  {
-    "name": "Kain",
-    "voiceover_name": "KainVoice"
-  }
-]
+version https://git-lfs.github.com/spec/v1
+oid sha256:ec1ac71b174d71cfa58fa4d046ca7d46a2abe11d9852c445685227515e836944
+size 546

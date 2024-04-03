@@ -1,34 +1,3 @@
-import queue
-
-class ThreadSafeData:
-    def __init__(self):
-        self.queue = queue.Queue()
-        self.line = 0
-
-    def put_line(self, line):
-        self.line = line
-
-    def get_line(self):
-        return self.line
-
-    def put_data(self, data):
-        self.queue.put(data)
-
-    def get_data(self):
-        if not self.queue.empty():
-            return self.queue.get()
-        return None
-
-
-
-# Create a shared data instance
-shared_data = ThreadSafeData()
-
-def shared_data_put_data(data):
-    shared_data.put_data(data)  # Put data into the shared queue
-
-def shared_data_put_line(line):
-    shared_data.put_line(line)  # Put data into the shared queue
-
-def shared_data_get_data():
-    return shared_data.get_data()  # Get data from the shared queue
+version https://git-lfs.github.com/spec/v1
+oid sha256:55dab0ed71d1ed61144a6b109252b0544fa6040aa041f4642adf7db1ba016d4c
+size 757
