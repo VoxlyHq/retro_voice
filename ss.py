@@ -214,6 +214,7 @@ def main():
     parser.add_argument('-w', '--webserver',  action='store_true', help="Enable Webserver")
     parser.add_argument('-jp', '--japanese',  action='store_true', help="Enable Japanese")
     parser.add_argument('-is', '--show_image_screen',  action='store_true', help="Show image screen")
+    parser.add_argument('-fps', '--show_fps',  action='store_true', help="Show fps")
 
     
 
@@ -240,7 +241,7 @@ def main():
 
     if args.show_image_screen:
         global video_stream
-        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots)
+        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots,show_fps=args.show_fps)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()
