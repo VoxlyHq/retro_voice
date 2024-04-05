@@ -204,7 +204,7 @@ def process_screenshots(translate=None, show_image_screen=False):
         print("timed_action_screencapture")
         time.sleep(1)  # Wait for 1 second
 
-def process_cv2_screenshots():
+def process_cv2_screenshots(translate):
     time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
     global video_stream
     print(video_stream)
@@ -212,7 +212,7 @@ def process_cv2_screenshots():
         frame = video_stream.get_latest_frame()
         if frame is not None:
             print("Background task accessing the latest frame...")
-            process_screenshot(frame)
+            process_screenshot(frame, translate=translate, show_image_screen=True)
             time.sleep(1)  # Wait for 1 second
 
 def main():
@@ -259,7 +259,7 @@ def main():
 
     if args.show_image_screen:
         global video_stream
-        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots,show_fps=args.show_fps)
+        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate},show_fps=args.show_fps)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()

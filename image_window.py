@@ -4,7 +4,7 @@ import cv2
 import threading
 import time
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 
 os_name = platform.system()
 if os_name == 'Windows':
@@ -21,7 +21,7 @@ else:
 
 
 class VideoStreamWithAnnotations:
-    def __init__(self, background_task=None, show_fps=False):
+    def __init__(self, background_task=None, background_task_args={}, show_fps=False):
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
@@ -33,8 +33,9 @@ class VideoStreamWithAnnotations:
 
         self.cap = None
         self.background_task = background_task
+        self.background_task_args = background_task_args
         if self.background_task is not None:
-            self.thread = threading.Thread(target=self.background_task)
+            self.thread = threading.Thread(target=self.background_task, kwargs=self.background_task_args)
             self.thread.daemon = True  # Daemonize thread
             self.thread.start()
 
@@ -71,6 +72,7 @@ class VideoStreamWithAnnotations:
 
 
     def run_ss(self):
+        
         print("run_ss")
         last_time = time.time()
         while True:
@@ -84,11 +86,14 @@ class VideoStreamWithAnnotations:
 
                 self.print_annotations(frame)
 
+
                 if self.show_fps:
                     self.display_fps(frame)
 
                 # Display the resulting frame
-                cv2.imshow('Video Stream with Annotations', frame)
+                # cv2.imshow('Video Stream with Annotations', frame)
+
+
 
             # Break the loop on pressing 'q'
             if cv2.waitKey(1) == ord('q'):
@@ -97,8 +102,9 @@ class VideoStreamWithAnnotations:
         cv2.destroyAllWindows()
 
     def print_annotations(self, frame):
+        translate = self.background_task_args["translate"]
         with self.frame_lock:
-            if self.current_annotations != None:
+            if self.current_annotations != None and self.current_annotations != []:
 #                print(f"print_annotations- {self.current_annotations}")
                 for (bbox, text, prob) in self.current_annotations:
                     # Extracting min and max coordinates for the rectangle
@@ -119,7 +125,35 @@ class VideoStreamWithAnnotations:
                     text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
                     cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
                                 0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
-                                    
+                
+                if translate:
+                    top_left = self.current_annotations[0][0][0]
+                    bottom_right = self.current_annotations[-1][0][2]
+                        
+                    # Ensure the coordinates are in the correct format (floats or integers)
+                    top_left = tuple(map(int, top_left))
+                    bottom_right = tuple(map(int, bottom_right))
+                    
+                    # Draw the bounding box
+                    try:
+                        cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
+                    except Exception as e:
+                        print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
+
+                    # Annotate text. Adjust the position if necessary.
+                    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    pil_image = Image.fromarray(image)
+
+                    font = ImageFont.truetype("C:\Windows\YuGothB.ttc", 35)
+                    draw = ImageDraw.Draw(pil_image)
+                    text_position = (top_left[0], top_left[1] - 50)
+                    draw.text(text_position, self.current_translations, font=font, fill="yellow")
+
+                    image = np.asarray(pil_image)
+                    frame = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        cv2.imshow("Image with Annotations", frame)
+
+
     def run_video(self, path):
         last_time = time.time()
         if path == "webcam":
@@ -152,7 +186,7 @@ class VideoStreamWithAnnotations:
             self.print_annotations(frame)
             
             # Display the resulting frame
-            cv2.imshow('Video Stream with Annotations', frame)
+            # cv2.imshow('Video Stream with Annotations', frame)
 
             # Break the loop on pressing 'q'
             if cv2.waitKey(1) == ord('q'):
