@@ -142,14 +142,16 @@ def process_video_threaded(video_path, max_workers=10):
 
     cap.release()  # Release the video capture object
 
-def process_screenshot(img):
+def process_screenshot(img,translate=None, show_image_screen=False):
     global last_played
     global frameProcessor
     global dialogues
 
-    closest_match, previous_image, highlighted_image, annotations = frameProcessor.run_image(img)
-    print(f"Closest match: {closest_match}")
-
+    
+    if translate:
+        closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate)
+    else:
+        closest_match, previous_image, highlighted_image, annotations = frameProcessor.run_image(img)
 
 
     if closest_match != None and closest_match != last_played:
@@ -158,13 +160,22 @@ def process_screenshot(img):
         end_time = time.time()
         print(f"Audio Time taken: {end_time - start_time} seconds")
         last_played = closest_match
-        set_annotation_text(annotations)
+        if show_image_screen:
+            set_annotation_text(annotations)
+            if translate:
+                set_translation_text(translation)
     elif annotations != None:
-        set_annotation_text(annotations)
+        if show_image_screen:
+            set_annotation_text(annotations)
+            if translate:
+                set_translation_text(translation)
     elif closest_match == None:
-        set_annotation_text(None)
+        if show_image_screen:
+            set_annotation_text(None)
+            if translate:
+                set_translation_text(translation)
 
-def timed_action_screencapture():
+def timed_action_screencapture(translate=None, show_image_screen=False):
     print("Action triggered by timer")
 
     window_name = "RetroArch"  # Adjust this to the target window's name
@@ -172,7 +183,7 @@ def timed_action_screencapture():
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
-        process_screenshot(img)
+        process_screenshot(img, translate, show_image_screen)
 
     else:
         print(f"No window found with name containing '{window_name}'.")
@@ -181,9 +192,12 @@ def timed_action_screencapture():
 def set_annotation_text(annotations):
     video_stream.set_annotations(annotations)
 
-def process_screenshots():
+def set_translation_text(translation):
+    video_stream.set_translation(translation)
+
+def process_screenshots(translate=None, show_image_screen=False):
     while True:
-        timed_action_screencapture()
+        timed_action_screencapture(translate=translate, show_image_screen=show_image_screen)
         print("timed_action_screencapture")
         time.sleep(1)  # Wait for 1 second
 
@@ -215,6 +229,7 @@ def main():
     parser.add_argument('-jp', '--japanese',  action='store_true', help="Enable Japanese")
     parser.add_argument('-is', '--show_image_screen',  action='store_true', help="Show image screen")
     parser.add_argument('-fps', '--show_fps',  action='store_true', help="Show fps")
+    parser.add_argument('-trans', '--translate', type=str, default="en,jp", help="Translate from source language to target language eg. en,jp")
 
     
 
@@ -251,7 +266,7 @@ def main():
         finally:
             video_stream.stop()
     else:
-        process_screenshots()
+        process_screenshots(translate=args.translate, show_image_screen=args.show_image_screen)
 
 
 if __name__ == "__main__":

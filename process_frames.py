@@ -14,9 +14,14 @@ from image_diff import calculate_image_difference
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
 from PIL import Image, ImageDraw, ImageFont
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 OPENAI_API_KEY = os.environ.get("OPENAI_ACCESS_TOKEN")
+
+lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 
 class FrameProcessor:
     def __init__(self, language='en'):
@@ -129,6 +134,7 @@ class FrameProcessor:
         response = requests.post(url, headers=headers, json=payload)
         print(response.json())
         return response.json()
+    
 
     @staticmethod
     def thefuzz_test(ocr_text):
@@ -279,6 +285,70 @@ class FrameProcessor:
         else:
             print("No entry found")        
         return res, highlighted_image, annotations
+    
+    def call_openai_translation_api(self, content, target_lang):
+        
+        headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENAI_API_KEY}"
+        }
+
+        model_openai = "gpt-3.5-turbo"
+        # model_local = "llava_v16"
+        model = model_openai
+
+
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                "role": "user",
+                "content": [
+                    {
+                    "type": "text",
+                    "text": f"Translate this sentence into {target_lang}.Context is game dialogue.\n{content}"
+                    },
+                ]
+                }
+            ],
+            "max_tokens": 300
+            }
+
+        openai_url = "https://api.openai.com/v1/chat/completions"
+        # local_url = "http://localhost:8080/v1/chat/completions"
+        url = openai_url
+
+        response = requests.post(url, headers=headers, json=payload)
+        print(response.json())
+        return response.json()
+
+
+    def translate_openai(self, content, target_lang):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        result = self.call_openai_translation_api(content, target_lang)
+
+        content =  result['choices'][0]['message']['content'] 
+        
+        cleaned_string = str(content)
+        print(f"{cleaned_string=}")
+        return cleaned_string
+    
+    def run_translation(self, content, translate):
+        start_time = time.time() # Record the start time
+
+        target_lang = translate.split(',')[1]
+        str = self.translate_openai(content, target_lang)
+        
+        print("---- Translated Text ----")
+        print(str)
+        print("-----------------------")
+
+        end_time = time.time()
+        print(f"Time taken: {end_time - start_time} seconds")
+                  
+        return str
+
 
 
     def process_frame(self, frame_pil, frame_count, fps):
@@ -291,7 +361,7 @@ class FrameProcessor:
         print(f"Frame at {frame_count//fps} seconds")
         return x,y
 
-    def run_image(self, img):
+    def run_image(self, img, translate=None):
         print("previous_image--{previous_image}")
         print(self.previous_image)
         print("-0--")
@@ -303,9 +373,24 @@ class FrameProcessor:
             print("Images are more than 10% different. Proceed with OCR.")
             last_played, highlighted_image, annotations = self.run_ocr(img)
             print(f"finished ocr - {last_played} ")
+
+            if translate:
+                if last_played:
+                    print("Running Translation.")
+                    translation = self.run_translation(self.dialogues[last_played], translate)
+                    print("finished translation")
+                else:
+                    translation = ""
+
             self.previous_image = img
             self.last_annotations = annotations
+
+            if translate:
+                return last_played, self.previous_image, highlighted_image, annotations, translation
+            
             return last_played, self.previous_image, highlighted_image, annotations
         else:
             print("Difference is less than 10%. No need to call OCR again.")
-            return None, None, None, self.last_annotations 
+            if translate:
+                return None, None, None, self.last_annotations, None
+            return None, None, None, self.last_annotations
