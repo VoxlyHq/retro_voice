@@ -25,6 +25,7 @@ class VideoStreamWithAnnotations:
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
+        self.current_translations = None
         self.show_fps = show_fps
         self.frame_count = 0
         self.fps = 0
@@ -170,6 +171,12 @@ class VideoStreamWithAnnotations:
             return
         with self.frame_lock:
             self.current_annotations = annotations
+
+    def set_translation(self, translation):
+        if translation == None:
+            return
+        with self.frame_lock:
+            self.current_translations = translation
 
 
     def stop(self):
