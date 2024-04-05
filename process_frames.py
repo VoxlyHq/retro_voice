@@ -297,6 +297,7 @@ class FrameProcessor:
         # model_local = "llava_v16"
         model = model_openai
 
+        content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}" 
 
         payload = {
             "model": model,
@@ -306,7 +307,7 @@ class FrameProcessor:
                 "content": [
                     {
                     "type": "text",
-                    "text": f"Translate this sentence into {target_lang}.Context is game dialogue.\n{content}"
+                    "text": f"Translate this sentence into {target_lang}.\n{content}"
                     },
                 ]
                 }
