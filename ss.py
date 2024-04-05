@@ -78,7 +78,7 @@ else:
 
 
 
-def process_video(video_path):
+def process_video(video_path, translate=None):
     global frameProcessor  
     # Open the video file
     cap = cv2.VideoCapture(video_path)
@@ -100,7 +100,10 @@ def process_video(video_path):
             # Save to disk
             pil_image.save("window_capture.jpg")
             print(f"Frame at {frame_count//fps} seconds saved as debug.jpg")
-            frameProcessor.run_image(pil_image)
+            if translate:
+                frameProcessor.run_image(pil_image, translate)
+            else:
+                frameProcessor.run_image(pil_image)
         
         frame_count += 1
 
@@ -251,7 +254,7 @@ def main():
 
 
     if args.video !=  "" and args.video != None and args.show_image_screen == False:
-        callback = process_video(args.video) #TODO this wont work yet, need a lambda or something
+        callback = process_video(args.video, args.translate) #TODO this wont work yet, need a lambda or something
         #process_video_threaded(args.video)
 
     if args.show_image_screen:
