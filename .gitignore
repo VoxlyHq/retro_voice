@@ -7,3 +7,4 @@ output_en_elevenlabs
 output_en_htplay
 .DS_Store
 exceptions.txt
+.env
