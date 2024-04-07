@@ -31,6 +31,12 @@ class VideoStreamWithAnnotations:
         self.fps = 0
         self.fps_counter_start_time = time.time()
 
+
+        # Check the operating system, and language these two are for japanese
+        if platform.system() == "Windows":
+            self.font_path = "C:/Windows/Fonts/YuGothB.ttc"  # Path to MS Gothic on Windows
+        elif platform.system() == "Darwin":  # Darwin is the system name for macOS
+            self.font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"  # Path to Hiragino Maru Gothic Pro
         self.cap = None
         self.background_task = background_task
         self.background_task_args = background_task_args
@@ -144,7 +150,7 @@ class VideoStreamWithAnnotations:
                     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     pil_image = Image.fromarray(image)
 
-                    font = ImageFont.truetype("C:\Windows\YuGothB.ttc", 35)
+                    font = ImageFont.truetype(self.font_path, 35)
                     draw = ImageDraw.Draw(pil_image)
                     text_position = (top_left[0], top_left[1] - 50)
                     draw.text(text_position, self.current_translations, font=font, fill="yellow")
