@@ -385,11 +385,8 @@ class FrameProcessor:
 
             self.previous_image = img
             self.last_annotations = annotations
-
-            if translate:
-                return last_played, self.previous_image, highlighted_image, annotations, translation
             
-            return last_played, self.previous_image, highlighted_image, annotations
+            return last_played, self.previous_image, highlighted_image, annotations, None
         else:
             print("Difference is less than 10%. No need to call OCR again.")
             if translate:
