@@ -382,7 +382,7 @@ class FrameProcessor:
                 if last_played:
                     translation = self.run_translation(self.dialogues[last_played], translate)
                     
-            print("finished translation")
+                    print("finished translation")
 
             self.previous_image = img
             self.last_annotations = annotations
