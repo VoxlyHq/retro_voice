@@ -374,21 +374,21 @@ class FrameProcessor:
             print("Images are more than 10% different. Proceed with OCR.")
             last_played, highlighted_image, annotations = self.run_ocr(img)
             print(f"finished ocr - {last_played} ")
-
+            
+            
+            translation = ""
             if translate:
+                
                 if last_played:
-                    print("Running Translation.")
                     translation = self.run_translation(self.dialogues[last_played], translate)
-                    print("finished translation")
-                else:
-                    translation = ""
+                    
+            print("finished translation")
 
             self.previous_image = img
             self.last_annotations = annotations
             
-            return last_played, self.previous_image, highlighted_image, annotations, None
+            return last_played, self.previous_image, highlighted_image, annotations, translation
         else:
             print("Difference is less than 10%. No need to call OCR again.")
-            if translate:
-                return None, None, None, self.last_annotations, None
-            return None, None, None, self.last_annotations
+            
+            return None, None, None, self.last_annotations, None

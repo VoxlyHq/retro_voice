@@ -154,7 +154,7 @@ def process_screenshot(img,translate=None, show_image_screen=False):
     if translate:
         closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate)
     else:
-        closest_match, previous_image, highlighted_image, annotations = frameProcessor.run_image(img)
+        closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img)
 
 
     if closest_match != None and closest_match != last_played:
@@ -232,7 +232,7 @@ def main():
     parser.add_argument('-jp', '--japanese',  action='store_true', help="Enable Japanese")
     parser.add_argument('-is', '--show_image_screen',  action='store_true', help="Show image screen")
     parser.add_argument('-fps', '--show_fps',  action='store_true', help="Show fps")
-    parser.add_argument('-trans', '--translate', type=str, default="en,jp", help="Translate from source language to target language eg. en,jp")
+    parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
 
     
 
