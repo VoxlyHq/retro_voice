@@ -100,11 +100,7 @@ def process_video(video_path, translate=None):
             # Save to disk
             pil_image.save("window_capture.jpg")
             print(f"Frame at {frame_count//fps} seconds saved as debug.jpg")
-            if translate:
-                frameProcessor.run_image(pil_image, translate)
-            else:
-                frameProcessor.run_image(pil_image)
-        
+            frameProcessor.run_image(pil_image, translate)
         frame_count += 1
 
     cap.release()  # Release the video capture object
@@ -149,13 +145,8 @@ def process_screenshot(img,translate=None, show_image_screen=False):
     global last_played
     global frameProcessor
     global dialogues
-
     
-    if translate:
-        closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate)
-    else:
-        closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img)
-
+    closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate)
 
     if closest_match != None and closest_match != last_played:
         start_time = time.time() # Record the start time
@@ -165,18 +156,15 @@ def process_screenshot(img,translate=None, show_image_screen=False):
         last_played = closest_match
         if show_image_screen:
             set_annotation_text(annotations)
-            if translate:
-                set_translation_text(translation)
+            set_translation_text(translation)
     elif annotations != None:
         if show_image_screen:
             set_annotation_text(annotations)
-            if translate:
-                set_translation_text(translation)
+            set_translation_text(translation)
     elif closest_match == None:
         if show_image_screen:
             set_annotation_text(None)
-            if translate:
-                set_translation_text(translation)
+            set_translation_text(None)
 
 def timed_action_screencapture(translate=None, show_image_screen=False):
     print("Action triggered by timer")
