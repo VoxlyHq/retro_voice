@@ -14,12 +14,7 @@ from image_diff import calculate_image_difference
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
 from PIL import Image, ImageDraw, ImageFont
-from dotenv import load_dotenv
-
-load_dotenv()
-
-
-OPENAI_API_KEY = os.environ.get("OPENAI_ACCESS_TOKEN")
+from openai_api import OpenAI_API
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 
@@ -42,6 +37,8 @@ class FrameProcessor:
 
         self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
         self.last_annotations = None
+
+        self.openai_api = OpenAI_API()
 
 
     def load_dialogues(self):
@@ -90,51 +87,6 @@ class FrameProcessor:
     def encode_image(self, image_path):
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode('utf-8')
-
-    def call_openai_vision_api(self, image_bytes):
-        # Getting the base64 string
-        base64_image = base64.b64encode(image_bytes).decode('utf-8')
-
-        headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENAI_API_KEY}"
-        }
-
-        model_openai = "gpt-4-vision-preview"
-        model_local = "llava_v16"
-        model = model_local
-
-
-        payload = {
-        "model": model,
-        "messages": [
-            {
-            "role": "user",
-            "content": [
-                {
-                "type": "text",
-                "text": "What is the text in the photo?"
-                },
-                {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
-                }
-                }
-            ]
-            }
-        ],
-        "max_tokens": 300
-        }
-
-        #openai_url = "https://api.openai.com/v1/chat/completions"
-        local_url = "http://localhost:8080/v1/chat/completions"
-        url = local_url
-
-        response = requests.post(url, headers=headers, json=payload)
-        print(response.json())
-        return response.json()
-    
 
     @staticmethod
     def thefuzz_test(ocr_text):
@@ -230,7 +182,7 @@ class FrameProcessor:
         top_half.save(byte_buffer, format='JPEG')  # You can change format if needed
         image_bytes = byte_buffer.getvalue()
 
-        result = self.call_openai_vision_api(image_bytes)
+        result = self.openai_api.call_vision_api(image_bytes)
 
         result_filename = f"result_{timestamp}.json"
         with open(result_filename, 'w') as f:
@@ -285,49 +237,11 @@ class FrameProcessor:
         else:
             print("No entry found")        
         return res, highlighted_image, annotations
-    
-    def call_openai_translation_api(self, content, target_lang):
-        
-        headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENAI_API_KEY}"
-        }
-
-        model_openai = "gpt-3.5-turbo"
-        # model_local = "llava_v16"
-        model = model_openai
-
-        content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}" 
-
-        payload = {
-            "model": model,
-            "messages": [
-                {
-                "role": "user",
-                "content": [
-                    {
-                    "type": "text",
-                    "text": f"Translate this sentence into {target_lang}.\n{content}"
-                    },
-                ]
-                }
-            ],
-            "max_tokens": 300
-            }
-
-        openai_url = "https://api.openai.com/v1/chat/completions"
-        # local_url = "http://localhost:8080/v1/chat/completions"
-        url = openai_url
-
-        response = requests.post(url, headers=headers, json=payload)
-        print(response.json())
-        return response.json()
-
 
     def translate_openai(self, content, target_lang):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         
-        result = self.call_openai_translation_api(content, target_lang)
+        result = self.openai_api.call_translation_api(content, target_lang)
 
         content =  result['choices'][0]['message']['content'] 
         
