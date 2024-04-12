@@ -111,30 +111,20 @@ class VideoStreamWithAnnotations:
         translate = self.background_task_args["translate"]
         with self.frame_lock:
             if self.current_annotations != None and self.current_annotations != []:
-#                print(f"print_annotations- {self.current_annotations}")
-                for (bbox, text, prob) in self.current_annotations:
-                    # Extracting min and max coordinates for the rectangle
-                    top_left = bbox[0]
-                    bottom_right = bbox[2]
-                    
-                    # Ensure the coordinates are in the correct format (floats or integers)
-                    top_left = tuple(map(int, top_left))
-                    bottom_right = tuple(map(int, bottom_right))
-                    
-                    # Draw the bounding box
-                    try:
-                        cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
-                    except Exception as e:
-                        print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
-
-                    # Annotate text. Adjust the position if necessary.
-                    text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                    cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
-                                0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
-                
                 if translate:
+                    dialogue_box_bg_color = (192, 27, 9)
+
                     top_left = self.current_annotations[0][0][0]
-                    bottom_right = self.current_annotations[-1][0][2]
+                    # finding largest x and y coordinates for bottom_right
+                    largest_x = 0
+                    largest_y = 0
+                    for i in self.current_annotations:
+                        ann = i[0][2]
+                        if ann[0] >= largest_x:
+                            largest_x = ann[0]
+                        if ann[1] >= largest_y:
+                            largest_y = ann[1]
+                    bottom_right = [largest_x, largest_y]
                         
                     # Ensure the coordinates are in the correct format (floats or integers)
                     top_left = tuple(map(int, top_left))
@@ -142,7 +132,7 @@ class VideoStreamWithAnnotations:
                     
                     # Draw the bounding box
                     try:
-                        cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
+                        cv2.rectangle(frame, top_left, bottom_right, dialogue_box_bg_color, cv2.FILLED)  # BGR color format, red box
                     except Exception as e:
                         print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
 
@@ -152,11 +142,33 @@ class VideoStreamWithAnnotations:
 
                     font = ImageFont.truetype(self.font_path, 35)
                     draw = ImageDraw.Draw(pil_image)
-                    text_position = (top_left[0], top_left[1] - 50)
+                    text_position = (top_left[0], top_left[1])
                     draw.text(text_position, self.current_translations, font=font, fill="yellow")
 
                     image = np.asarray(pil_image)
                     frame = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                
+                else:
+    #               print(f"print_annotations- {self.current_annotations}")
+                    for (bbox, text, prob) in self.current_annotations:
+                        # Extracting min and max coordinates for the rectangle
+                        top_left = bbox[0]
+                        bottom_right = bbox[2]
+                        
+                        # Ensure the coordinates are in the correct format (floats or integers)
+                        top_left = tuple(map(int, top_left))
+                        bottom_right = tuple(map(int, bottom_right))
+                        
+                        # Draw the bounding box
+                        try:
+                            cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
+                        except Exception as e:
+                            print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
+
+                        # Annotate text. Adjust the position if necessary.
+                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
+                        cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
+                                    0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
         cv2.imshow("Image with Annotations", frame)
 
 
