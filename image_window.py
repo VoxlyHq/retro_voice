@@ -146,7 +146,19 @@ class VideoStreamWithAnnotations:
             if self.cal_abs_diff(dialogue_bg_color, color) > abs_diff_const:
                 return color
 
+    def adjust_translation_text(self, translation, draw, font, dialogue_bbox_width):
+        """Adding newline when translation text is longer than dialogue_bbox_width"""
 
+        char_width = 0
+        translation_adjusted = ""
+        for char in translation:
+            char_width += draw.textlength(char, font=font)
+            if char_width > dialogue_bbox_width:
+                char_width = 0
+                translation_adjusted += "\n"
+            else:
+                translation_adjusted += char
+        return translation_adjusted
 
     def print_annotations(self, frame):
         translate = self.background_task_args["translate"]
@@ -188,8 +200,12 @@ class VideoStreamWithAnnotations:
                     dialogue_bbox = [tuple(top_left), tuple(bottom_right)]
                     draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
 
+                    dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
+                    translation_adjusted = self.adjust_translation_text(self.current_translations, draw, 
+                                                                        font, dialogue_bbox_width)
+
                     text_position = (top_left[0], top_left[1])
-                    draw.text(text_position, self.current_translations, font=font, fill=self.dialogue_text_color)
+                    draw.text(text_position, translation_adjusted, font=font, fill=self.dialogue_text_color)
 
                     image = np.asarray(pil_image)
                     frame = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
