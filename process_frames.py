@@ -59,6 +59,24 @@ class FrameProcessor:
         #    print(format_filename(number))
         
         return dialogues
+    
+    def split_current_text(self, current_text):
+        """
+        split current text into different speakers and dialogues
+        """
+        texts = []
+        text = []
+
+        for word in current_text.split()[1:]:
+            if ":" in word:
+                texts.append(' '.join(text))
+                text = []
+            else:
+                text.append(word)
+        if text:
+            texts.append(' '.join(text))
+        return texts
+
 
 
     def find_closest_entry(self, current_text):
@@ -66,23 +84,27 @@ class FrameProcessor:
         if "Contentless Cores Explore"   in current_text:
             print(f"skipping menu")
             return None
-
         
-        # Initialize variables to track the highest similarity and corresponding entry number
-        max_similarity_ratio = 0.33  # Start with your threshold
-        closest_entry_number = None
+        texts = self.split_current_text(current_text)
         
-        for number, entry in self.dialogues.items():
-            dialogue = entry['dialogue']
-            similarity_ratio = fuzz.ratio(current_text, dialogue) / 100.0  # Convert to a scale of 0 to 1
-            #print(f"dialogue: {dialogue} -- similarity_ratio: {similarity_ratio} -- number {number}")
+        closest_entry_numbers = []
+        for text in texts:
+            # Initialize variables to track the highest similarity and corresponding entry number
+            max_similarity_ratio = 0.33  # Start with your threshold
+            closest_entry_number = None
             
-            # Update if this entry has a higher similarity ratio than current max and is above threshold
-            if similarity_ratio > max_similarity_ratio:
-                max_similarity_ratio = similarity_ratio
-                closest_entry_number = number
+            for number, entry in self.dialogues.items():
+                dialogue = entry['dialogue']
+                similarity_ratio = fuzz.ratio(text, dialogue) / 100.0  # Convert to a scale of 0 to 1
+                #print(f"dialogue: {dialogue} -- similarity_ratio: {similarity_ratio} -- number {number}")
+                
+                # Update if this entry has a higher similarity ratio than current max and is above threshold
+                if similarity_ratio > max_similarity_ratio:
+                    max_similarity_ratio = similarity_ratio
+                    closest_entry_number = number
+            closest_entry_numbers.append(closest_entry_number)
 
-        return closest_entry_number  # Return the entry number with the highest similarity ratio over 0.33
+        return closest_entry_numbers  # Return the entry number with the highest similarity ratio over 0.33
 
     def encode_image(self, image_path):
         with open(image_path, "rb") as image_file:
@@ -225,15 +247,15 @@ class FrameProcessor:
             
         #thefuzz_test(text)
         res = self.find_closest_entry(str)
-        if res != None:
+        if  res != [] and res[0] != None:
             print("found entry ")
             print(res)
             if res == self.last_played:
                 print("Already played this entry")
             else:
                 print(f"shared_data_put_line---{res}")
-                shared_data_put_line(res+1)
-                self.last_played = res
+                shared_data_put_line(res[0]+1)
+                self.last_played = res[0]
         else:
             print("No entry found")        
         return res, highlighted_image, annotations
@@ -294,7 +316,14 @@ class FrameProcessor:
             if translate:
                 
                 if last_played:
-                    translation = self.run_translation(self.dialogues[last_played], translate)
+                    content_to_translate = []
+                    for entry in last_played:
+                        content = self.dialogues[entry]
+                        content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
+                        content_to_translate.append(content)
+                    content_to_translate = " ".join(content_to_translate)
+
+                    translation = self.run_translation(content_to_translate, translate)
                     
                     print("finished translation")
 
