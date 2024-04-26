@@ -1,5 +1,6 @@
 from PIL import Image
 import numpy as np
+import imagehash
 
 def calculate_image_difference(img1, img2):
     if img1 == None or img2 == None:
@@ -19,6 +20,12 @@ def calculate_image_difference(img1, img2):
     percent_diff = (num_diff_pixels / total_pixels) * 100
     return percent_diff
 
+def calculate_image_hash_different(img1, img2):
+    if img1 == None or img2 == None:
+        return 0
+    img1_hash = imagehash.average_hash(img1)
+    img2_hash = imagehash.average_hash(img2)
+    return img1_hash - img2_hash
     
 
 def calculate_image_file_difference(img_path1, img_path2):

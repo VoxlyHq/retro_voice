@@ -10,7 +10,7 @@ import easyocr
 import base64
 import json
 from PIL import Image
-from image_diff import calculate_image_difference
+from image_diff import calculate_image_difference, calculate_image_hash_different
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
 from PIL import Image, ImageDraw, ImageFont
@@ -102,7 +102,8 @@ class FrameProcessor:
                 if similarity_ratio > max_similarity_ratio:
                     max_similarity_ratio = similarity_ratio
                     closest_entry_number = number
-            closest_entry_numbers.append(closest_entry_number)
+            if closest_entry_number:
+                closest_entry_numbers.append(closest_entry_number)
 
         return closest_entry_numbers  # Return the entry number with the highest similarity ratio over 0.33
 
@@ -302,12 +303,16 @@ class FrameProcessor:
         print("previous_image--{previous_image}")
         print(self.previous_image)
         print("-0--")
-        percent_diff = calculate_image_difference(img, self.previous_image)
-        print(f'Images differ by {percent_diff:.2f}%')
+        # percent_diff = calculate_image_difference(img, self.previous_image)
+        hash_diff = calculate_image_hash_different(img, self.previous_image)
+        # print(f'Images differ by {percent_diff:.2f}%')
+        print(f"Images differ by {hash_diff}")
 
         # Decide whether to call OCR based on the difference
-        if percent_diff > 10:
-            print("Images are more than 10% different. Proceed with OCR.")
+        # if percent_diff > 10:
+        if hash_diff >= 7:
+            # print("Images are more than 10% different. Proceed with OCR.")
+            print("Images are more than 7 hamming distance. Proceed with OCR")
             last_played, highlighted_image, annotations = self.run_ocr(img)
             print(f"finished ocr - {last_played} ")
             
