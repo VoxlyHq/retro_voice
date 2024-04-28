@@ -149,10 +149,10 @@ def process_screenshot(img,translate=None, show_image_screen=False):
     closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate)
 
     if closest_match != None and closest_match != last_played:
-        start_time = time.time() # Record the start time
-        play_audio_threaded(format_filename(closest_match))
-        end_time = time.time()
-        print(f"Audio Time taken: {end_time - start_time} seconds")
+        # start_time = time.time() # Record the start time
+        # play_audio_threaded(format_filename(closest_match))
+        # end_time = time.time()
+        # print(f"Audio Time taken: {end_time - start_time} seconds")
         last_played = closest_match
         if show_image_screen:
             set_annotation_text(annotations)
