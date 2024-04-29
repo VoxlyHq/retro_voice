@@ -8,3 +8,4 @@ output_en_htplay
 .DS_Store
 exceptions.txt
 .env
+*.pkl
