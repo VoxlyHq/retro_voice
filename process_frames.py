@@ -10,11 +10,14 @@ import easyocr
 import base64
 import json
 from PIL import Image
-from image_diff import calculate_image_difference, calculate_image_hash_different
+from image_diff import calculate_image_difference, calculate_image_hash_different, crop_img
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
 from PIL import Image, ImageDraw, ImageFont
 from openai_api import OpenAI_API
+from pathlib import Path
+import pickle
+import imagehash
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 
@@ -39,6 +42,37 @@ class FrameProcessor:
         self.last_annotations = None
 
         self.openai_api = OpenAI_API()
+
+        self.cache_pkl_path = Path('cache.pkl')
+        self.cache = self.load_cache()
+    
+    def load_cache(self):
+        if self.cache_pkl_path.exists():
+            with open(self.cache_pkl_path, 'rb') as f:
+                cache = pickle.load(f)
+        else:
+            cache = []
+        return cache
+    
+    def update_cache(self):
+        with open(self.cache_pkl_path, 'wb') as f:
+            pickle.dump(self.cache, f)
+    
+    def run_cache(self, img):
+
+        min_diff = 10000
+        closest_entry = None
+        current = imagehash.average_hash(img, 16)
+        for index, value in enumerate(self.cache):
+            diff = current - value['hash']
+            if diff <= min_diff:
+                min_diff = diff
+                closest_entry = index
+        if min_diff < 7:
+            return closest_entry
+        else:
+            return None
+
 
 
     def load_dialogues(self):
@@ -313,7 +347,20 @@ class FrameProcessor:
         if hash_diff >= 7:
             # print("Images are more than 10% different. Proceed with OCR.")
             print("Images are more than 7 hamming distance. Proceed with OCR")
-            last_played, highlighted_image, annotations = self.run_ocr(img)
+
+            # cache
+            closest_entry = self.run_cache(crop_img(img))
+
+            if closest_entry:
+                data = self.cache[closest_entry]
+                last_played = data['string']
+                annotations = data['annotations']
+                highlighted_image = None
+            else:
+                last_played, highlighted_image, annotations = self.run_ocr(img)
+                self.cache.append({'string' : last_played, 'annotations' : annotations, 'hash' : imagehash.average_hash(crop_img(img), 16)})
+                self.update_cache()
+
             print(f"finished ocr - {last_played} ")
             
             
