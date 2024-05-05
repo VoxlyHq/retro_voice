@@ -43,27 +43,45 @@ class FrameProcessor:
 
         self.openai_api = OpenAI_API()
 
-        self.cache_pkl_path = Path('cache.pkl')
-        self.cache = self.load_cache()
+        self.ocr_cache_pkl_path = Path('ocr_cache.pkl')
+        self.translation_cache_pkl_path = Path('translation_cache.pkl')
+        self.ocr_cache = self.load_cache('ocr')
+        self.translation_cache = self.load_cache('translation')
     
-    def load_cache(self):
-        if self.cache_pkl_path.exists():
-            with open(self.cache_pkl_path, 'rb') as f:
+    def load_cache(self, cache_type):
+        if cache_type == "ocr":
+            file = self.ocr_cache_pkl_path
+        if cache_type == "translation":
+            file = self.translation_cache_pkl_path
+        if file.exists():
+            with open(file, 'rb') as f:
                 cache = pickle.load(f)
         else:
             cache = []
         return cache
     
-    def update_cache(self):
-        with open(self.cache_pkl_path, 'wb') as f:
-            pickle.dump(self.cache, f)
+    def update_cache(self, cache_type):
+        if cache_type == "ocr":
+            file = self.ocr_cache_pkl_path
+            cache = self.ocr_cache
+        if cache_type == "translation":
+            file = self.translation_cache_pkl_path
+            cache = self.translation_cache
+
+        with open(file, 'wb') as f:
+            pickle.dump(cache, f)
     
-    def run_cache(self, img):
+    def run_cache(self, img, cache_type):
+
+        if cache_type == "ocr":
+            cache = self.ocr_cache
+        if cache_type == "translation":
+            cache = self.translation_cache
 
         min_diff = 10000
         closest_entry = None
         current = imagehash.average_hash(img, 16)
-        for index, value in enumerate(self.cache):
+        for index, value in enumerate(cache):
             diff = current - value['hash']
             if diff <= min_diff:
                 min_diff = diff
@@ -348,26 +366,39 @@ class FrameProcessor:
             # print("Images are more than 10% different. Proceed with OCR.")
             print("Images are more than 7 hamming distance. Proceed with OCR")
 
-            # cache
-            closest_entry = self.run_cache(crop_img(img))
+            img_crop = crop_img(img)
 
+            # cache
+            then = time.time()
+            
+            closest_entry = self.run_cache(img_crop, 'ocr')
             if closest_entry:
-                data = self.cache[closest_entry]
+                print('---run_cache_ocr---')
+                data = self.ocr_cache[closest_entry]
                 last_played = data['string']
                 annotations = data['annotations']
                 highlighted_image = None
+                print(f'Time Taken {time.time() - then}')
             else:
                 last_played, highlighted_image, annotations = self.run_ocr(img)
-                self.cache.append({'string' : last_played, 'annotations' : annotations, 'hash' : imagehash.average_hash(crop_img(img), 16)})
-                self.update_cache()
+                self.ocr_cache.append({'string' : last_played, 'annotations' : annotations, 'hash' : imagehash.average_hash(img_crop, 16)})
+                self.update_cache('ocr')
 
             print(f"finished ocr - {last_played} ")
             
             
             translation = ""
             if translate:
-                
-                if last_played:
+                # cache
+                then = time.time()
+                closest_entry = self.run_cache(img_crop, 'translation')
+                if closest_entry:
+                    print('---run_cache_translation---')
+                    data = self.translation_cache[closest_entry]
+                    translation = data['translation']
+                    print(f'Time Taken {time.time() - then}')
+                    
+                if closest_entry is None and last_played:
                     content_to_translate = []
                     for entry in last_played:
                         content = self.dialogues[entry]
@@ -376,6 +407,9 @@ class FrameProcessor:
                     content_to_translate = " ".join(content_to_translate)
 
                     translation = self.run_translation(content_to_translate, translate)
+
+                    self.translation_cache.append({'translation' : translation,'hash' : imagehash.average_hash(img_crop, 16)})
+                    self.update_cache('translation')
                     
                     print("finished translation")
 
