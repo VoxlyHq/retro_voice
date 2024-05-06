@@ -236,11 +236,14 @@ class VideoStreamWithAnnotations:
 
     def run_video(self, path):
         last_time = time.time()
-        if path == "webcam":
-            self.cap = cv2.VideoCapture(0)  # 0 is usually the default camera
-            if not self.cap.isOpened():
-                print("Error: Could not open video stream.")
-                exit() 
+        if path.startswith("webcam"):
+            print("opening webcam- ", path)
+            webcam_index = int(path[6:])  # Extract the index from "webcamX"
+            cap = cv2.VideoCapture(webcam_index)
+            if not cap.isOpened():
+                print(f"Error: Could not open video stream for {path}.")
+                exit()
+            self.cap = cap
         else:
             self.cap = cv2.VideoCapture(path)
             
@@ -294,7 +297,7 @@ class VideoStreamWithAnnotations:
 
 
     def stop(self):
-        if self.cap.isOpened():
+        if self.cap != None and self.cap.isOpened():
             self.cap.release()
         cv2.destroyAllWindows()
         if self.thread is not None and self.thread.is_alive():

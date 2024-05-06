@@ -49,7 +49,7 @@ def find_window_id(window_name):
         if window_name.lower() in window.get('kCGWindowName', '').lower():
             #print(f"Found window '{window.get('kCGWindowName', '')}' with ID {window['kCGWindowNumber']}")
             return window['kCGWindowNumber']
-    print(f"Window '{window_name}' not found.")
+    print(f"Osx Window '{window_name}' not found.")
     return None
 
 
