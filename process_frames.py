@@ -38,7 +38,7 @@ class FrameProcessor:
         self.previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
         self.last_played = -1 #TODO this should be per user
 
-        self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
+        self.reader = easyocr.Reader(['en', 'ja']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
         self.last_annotations = None
 
         self.openai_api = OpenAI_API()
@@ -99,7 +99,7 @@ class FrameProcessor:
         file_path = self.dialog_file_path
 
         # Read JSON data from the file
-        with open(file_path, 'r') as file:
+        with open(file_path, 'r', encoding='utf8') as file:
             data = json.load(file)
 
         # Convert list to a numbered dictionary
@@ -137,12 +137,18 @@ class FrameProcessor:
             print(f"skipping menu")
             return None
         
-        texts = self.split_current_text(current_text)
+        if self.lang == 'jp':
+            texts = [current_text]
+        else:
+            texts = self.split_current_text(current_text)
         
         closest_entry_numbers = []
         for text in texts:
             # Initialize variables to track the highest similarity and corresponding entry number
-            max_similarity_ratio = 0.33  # Start with your threshold
+            if self.lang == 'jp':
+                max_similarity_ratio = 0.1
+            else:
+                max_similarity_ratio = 0.33  # Start with your threshold
             closest_entry_number = None
             
             for number, entry in self.dialogues.items():
@@ -154,7 +160,7 @@ class FrameProcessor:
                 if similarity_ratio > max_similarity_ratio:
                     max_similarity_ratio = similarity_ratio
                     closest_entry_number = number
-            if closest_entry_number:
+            if closest_entry_number is not None:
                 closest_entry_numbers.append(closest_entry_number)
 
         return closest_entry_numbers  # Return the entry number with the highest similarity ratio over 0.33

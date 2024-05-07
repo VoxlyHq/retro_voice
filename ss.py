@@ -226,9 +226,9 @@ def main():
 
     args = parser.parse_args()
     if args.japanese:
-        set_dialog_file("dialogues_jp_web.json")
+        # set_dialog_file("dialogues_jp_web.json")
         lang = "jp"
-        frameProcessor =  frameProcessor(lang) 
+        frameProcessor =  FrameProcessor(lang) 
 
     if args.webserver:
         server_thread = threading.Thread(target=run_server2, args=(8000, ""), daemon=True)
