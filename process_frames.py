@@ -357,7 +357,7 @@ class FrameProcessor:
         print(f"Frame at {frame_count//fps} seconds")
         return x,y
 
-    def run_image(self, img, translate=None):
+    def run_image(self, img, translate=None, enable_cache=False):
         print("previous_image--{previous_image}")
         print(self.previous_image)
         print("-0--")
@@ -377,7 +377,10 @@ class FrameProcessor:
             # cache
             then = time.time()
             
-            closest_entry = self.run_cache(img_crop, 'ocr')
+            if enable_cache:
+                closest_entry = self.run_cache(img_crop, 'ocr')
+            else:
+                closest_entry = None
             if closest_entry:
                 print('---run_cache_ocr---')
                 data = self.ocr_cache[closest_entry]
@@ -397,7 +400,10 @@ class FrameProcessor:
             if translate:
                 # cache
                 then = time.time()
-                closest_entry = self.run_cache(img_crop, 'translation')
+                if enable_cache:
+                    closest_entry = self.run_cache(img_crop, 'translation')
+                else:
+                    closest_entry = None
                 if closest_entry:
                     print('---run_cache_translation---')
                     data = self.translation_cache[closest_entry]

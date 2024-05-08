@@ -141,12 +141,12 @@ def process_video_threaded(video_path, max_workers=10):
 
     cap.release()  # Release the video capture object
 
-def process_screenshot(img,translate=None, show_image_screen=False):
+def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False):
     global last_played
     global frameProcessor
     global dialogues
     
-    closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate)
+    closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
 
     if closest_match != None and closest_match != last_played:
         # start_time = time.time() # Record the start time
@@ -192,7 +192,7 @@ def process_screenshots(translate=None, show_image_screen=False):
         print("timed_action_screencapture")
         time.sleep(1)  # Wait for 1 second
 
-def process_cv2_screenshots(translate):
+def process_cv2_screenshots(translate, enable_cache=False):
     time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
     global video_stream
     print(video_stream)
@@ -200,7 +200,7 @@ def process_cv2_screenshots(translate):
         frame = video_stream.get_latest_frame()
         if frame is not None:
             print("Background task accessing the latest frame...")
-            process_screenshot(frame, translate=translate, show_image_screen=True)
+            process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache)
             time.sleep(1)  # Wait for 1 second
 
 def main():
@@ -221,6 +221,7 @@ def main():
     parser.add_argument('-is', '--show_image_screen',  action='store_true', help="Show image screen")
     parser.add_argument('-fps', '--show_fps',  action='store_true', help="Show fps")
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
+    parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
 
     
 
@@ -247,7 +248,7 @@ def main():
 
     if args.show_image_screen:
         global video_stream
-        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate},show_fps=args.show_fps)
+        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},show_fps=args.show_fps)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()
