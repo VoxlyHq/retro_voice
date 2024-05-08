@@ -39,26 +39,27 @@ def format_filename(number):
 
     return file_name
 
-def play_audio(filename):
+def play_audio(filenames):
     global lang
-    print(f"output_en_elevenlabs/{filename}")
-    # Initialize the mixer module
-    pygame.mixer.init()
-    
-    # Load the MP3 file
-    pygame.mixer.music.load(f"output_v2_{frameProcessor.lang}_elevenlabs/{filename}")
-    
-    # Play the music
-    pygame.mixer.music.play()
-    
-    # Wait for the music to finish playing
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)  # Wait a bit for the music to finish
+    for filename in filenames:
+        print(f"output_en_elevenlabs/{filename}")
+        # Initialize the mixer module
+        pygame.mixer.init()
+        
+        # Load the MP3 file
+        pygame.mixer.music.load(f"output_v2_{frameProcessor.lang}_elevenlabs/{filename}")
+        
+        # Play the music
+        pygame.mixer.music.play()
+        
+        # Wait for the music to finish playing
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)  # Wait a bit for the music to finish
 
 # Function to wrap your play_mp3 for threading
-def play_audio_threaded(filename):
+def play_audio_threaded(filenames):
     # Create a thread targeting the play_mp3 function
-    thread = threading.Thread(target=play_audio, args=(filename,))
+    thread = threading.Thread(target=play_audio, args=(filenames,))
     thread.start()  # Start the thread
 
 
@@ -149,10 +150,11 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
     closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
 
     if closest_match != None and closest_match != last_played:
-        # start_time = time.time() # Record the start time
-        # play_audio_threaded(format_filename(closest_match))
-        # end_time = time.time()
-        # print(f"Audio Time taken: {end_time - start_time} seconds")
+        start_time = time.time() # Record the start time
+        formated_filenames = [format_filename(i) for i in closest_match]
+        play_audio_threaded(formated_filenames)
+        end_time = time.time()
+        print(f"Audio Time taken: {end_time - start_time} seconds")
         last_played = closest_match
         if show_image_screen:
             set_annotation_text(annotations)

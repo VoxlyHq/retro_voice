@@ -27,8 +27,10 @@ class FrameProcessor:
         self.lang = language
         if language == 'en':
             self.dialog_file_path = "dialogues_en_v2.json"
+            self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
         elif language == 'jp':
             self.dialog_file_path = "dialogues_jp_v2.json"
+            self.reader = easyocr.Reader(['ja']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
         else:   
             raise("Invalid language")   
 
@@ -38,7 +40,7 @@ class FrameProcessor:
         self.previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
         self.last_played = -1 #TODO this should be per user
 
-        self.reader = easyocr.Reader(['en', 'ja']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
+        
         self.last_annotations = None
 
         self.openai_api = OpenAI_API()
