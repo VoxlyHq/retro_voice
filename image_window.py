@@ -194,15 +194,17 @@ class VideoStreamWithAnnotations:
                     self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
                     self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
 
-                    font = ImageFont.truetype(self.font_path, 35)
+                    font = ImageFont.truetype(self.font_path, 10)
                     draw = ImageDraw.Draw(pil_image)
 
                     dialogue_bbox = [tuple(top_left), tuple(bottom_right)]
                     draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
+                    draw.rectangle(dialogue_bbox, outline='yellow')
 
                     dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
-                    translation_adjusted = self.adjust_translation_text(self.current_translations, draw, 
-                                                                        font, dialogue_bbox_width)
+                    # translation_adjusted = self.adjust_translation_text(self.current_translations, draw, 
+                    #                                                     font, dialogue_bbox_width)
+                    translation_adjusted = self.current_translations
 
                     text_position = (top_left[0], top_left[1])
                     draw.text(text_position, translation_adjusted, font=font, fill=self.dialogue_text_color)
@@ -210,27 +212,27 @@ class VideoStreamWithAnnotations:
                     image = np.asarray(pil_image)
                     frame = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
                 
-                else:
+                # else:
     #               print(f"print_annotations- {self.current_annotations}")
-                    for (bbox, text, prob) in self.current_annotations:
-                        # Extracting min and max coordinates for the rectangle
-                        top_left = bbox[0]
-                        bottom_right = bbox[2]
-                        
-                        # Ensure the coordinates are in the correct format (floats or integers)
-                        top_left = tuple(map(int, top_left))
-                        bottom_right = tuple(map(int, bottom_right))
-                        
-                        # Draw the bounding box
-                        try:
-                            cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
-                        except Exception as e:
-                            print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
+                for (bbox, text, prob) in self.current_annotations:
+                    # Extracting min and max coordinates for the rectangle
+                    top_left = bbox[0]
+                    bottom_right = bbox[2]
+                    
+                    # Ensure the coordinates are in the correct format (floats or integers)
+                    top_left = tuple(map(int, top_left))
+                    bottom_right = tuple(map(int, bottom_right))
+                    
+                    # Draw the bounding box
+                    try:
+                        cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
+                    except Exception as e:
+                        print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
 
                         # Annotate text. Adjust the position if necessary.
-                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                        cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
-                                    0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
+                        # text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
+                        # cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
+                        #             0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
         cv2.imshow("Image with Annotations", frame)
 
 
@@ -297,7 +299,8 @@ class VideoStreamWithAnnotations:
 
 
     def stop(self):
-        if self.cap != None and self.cap.isOpened():
+        # if self.cap != None and self.cap.isOpened():
+        if self.cap.isOpened():
             self.cap.release()
         cv2.destroyAllWindows()
         if self.thread is not None and self.thread.is_alive():

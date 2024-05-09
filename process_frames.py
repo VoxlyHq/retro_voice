@@ -301,25 +301,25 @@ class FrameProcessor:
         print(str)
         print("----")
     
+        return str, highlighted_image, annotations
 
-
-        end_time = time.time()
-        print(f"Time taken: {end_time - start_time} seconds")
+        # end_time = time.time()
+        # print(f"Time taken: {end_time - start_time} seconds")
             
-        #thefuzz_test(text)
-        res = self.find_closest_entry(str)
-        if  res != [] and res[0] != None:
-            print("found entry ")
-            print(res)
-            if res == self.last_played:
-                print("Already played this entry")
-            else:
-                print(f"shared_data_put_line---{res}")
-                shared_data_put_line(res[0]+1)
-                self.last_played = res[0]
-        else:
-            print("No entry found")        
-        return res, highlighted_image, annotations
+        # #thefuzz_test(text)
+        # res = self.find_closest_entry(str)
+        # if  res != [] and res[0] != None:
+        #     print("found entry ")
+        #     print(res)
+        #     if res == self.last_played:
+        #         print("Already played this entry")
+        #     else:
+        #         print(f"shared_data_put_line---{res}")
+        #         shared_data_put_line(res[0]+1)
+        #         self.last_played = res[0]
+        # else:
+        #     print("No entry found")        
+        # return res, highlighted_image, annotations
 
     def translate_openai(self, content, target_lang):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -413,14 +413,16 @@ class FrameProcessor:
                     print(f'Time Taken {time.time() - then}')
                     
                 if closest_entry is None and last_played:
-                    content_to_translate = []
-                    for entry in last_played:
-                        content = self.dialogues[entry]
-                        content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
-                        content_to_translate.append(content)
-                    content_to_translate = " ".join(content_to_translate)
-
+                    # content_to_translate = []
+                    # for entry in last_played:
+                    #     content = self.dialogues[entry]
+                    #     content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
+                    #     content_to_translate.append(content)
+                    # content_to_translate = " ".join(content_to_translate)
+                    # content_to_translate = last_played
+                    content_to_translate = last_played
                     translation = self.run_translation(content_to_translate, translate)
+                    # translation = last_played
 
                     self.translation_cache.append({'translation' : translation,'hash' : imagehash.average_hash(img_crop, 16)})
                     self.update_cache('translation')
