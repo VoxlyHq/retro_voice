@@ -27,10 +27,10 @@ class FrameProcessor:
         self.lang = language
         if language == 'en':
             self.dialog_file_path = "dialogues_en_v2.json"
-            self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
+            self.reader = easyocr.Reader(['en'])  # comment this if you aren't using easy ocr
         elif language == 'jp':
             self.dialog_file_path = "dialogues_jp_v2.json"
-            self.reader = easyocr.Reader(['ja']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
+            self.reader = easyocr.Reader(['en', 'ja'])  # comment this if you aren't using easy ocr
         else:   
             raise("Invalid language")   
 
@@ -212,7 +212,7 @@ class FrameProcessor:
 
         filtered_result = []
         for (bbox, text, prob) in result:
-            if 'RetroArch' not in text:
+            if 'RetroArch' not in text and 'Retronrch' not in text:
                 filtered_result.append((bbox, text, prob))
                 
                 # Extracting min and max coordinates for the rectangle

@@ -6,7 +6,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/ss.py",
-            "args": ["-w", "-is", "--translate=jp,en", "-fps"],
+            "args": ["-w", "-is", "-jp", "--translate=jp,en", "-fps"],
             "console": "integratedTerminal"
         },
         {
