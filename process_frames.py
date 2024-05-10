@@ -11,16 +11,15 @@ import base64
 import json
 from PIL import Image
 from image_diff import calculate_image_difference, calculate_image_hash_different, crop_img
+from openai_api import OpenAI_API
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
 from PIL import Image, ImageDraw, ImageFont
-from openai_api import OpenAI_API
 from pathlib import Path
 import pickle
 import imagehash
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
-
 class FrameProcessor:
     def __init__(self, language='en'):
         self.counter = 0  # Convert the global variable to an instance attribute
