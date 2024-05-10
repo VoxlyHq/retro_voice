@@ -4,7 +4,8 @@ import cv2
 import threading
 import time
 import numpy as np
-from PIL import Image
+from collections import Counter
+from PIL import Image, ImageFont, ImageDraw
 
 os_name = platform.system()
 if os_name == 'Windows':
@@ -31,10 +32,17 @@ class VideoStreamWithAnnotations:
         self.fps = 0
         self.fps_counter_start_time = time.time()
 
+
+        # Check the operating system, and language these two are for japanese
+        if platform.system() == "Windows":
+            self.font_path = "C:/Windows/Fonts/YuGothB.ttc"  # Path to MS Gothic on Windows
+        elif platform.system() == "Darwin":  # Darwin is the system name for macOS
+            self.font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"  # Path to Hiragino Maru Gothic Pro
         self.cap = None
         self.background_task = background_task
+        self.background_task_args = background_task_args
         if self.background_task is not None:
-            self.thread = threading.Thread(target=self.background_task)
+            self.thread = threading.Thread(target=self.background_task, kwargs=self.background_task_args)
             self.thread.daemon = True  # Daemonize thread
             self.thread.start()
 
@@ -71,6 +79,7 @@ class VideoStreamWithAnnotations:
 
 
     def run_ss(self):
+        
         print("run_ss")
         last_time = time.time()
         while True:
@@ -84,49 +93,157 @@ class VideoStreamWithAnnotations:
 
                 self.print_annotations(frame)
 
+
                 if self.show_fps:
                     self.display_fps(frame)
 
                 # Display the resulting frame
-                cv2.imshow('Video Stream with Annotations', frame)
+                # cv2.imshow('Video Stream with Annotations', frame)
+
+
 
             # Break the loop on pressing 'q'
             if cv2.waitKey(1) == ord('q'):
                 break
 
         cv2.destroyAllWindows()
+    
+    def cal_abs_diff(self, color1, color2):
+        abs_diff = sum([abs(i - j) for i,j in zip(color1, color2)])
+        return abs_diff
+    
+    def set_dialogue_bg_color(self, pil_image):
+        bbox, _, _ = self.current_annotations[0]
+
+        top_left, bottom_right = bbox[0], bbox[2]
+        bbox = top_left[0], top_left[1], bottom_right[0], bottom_right[1]
+
+        bg_color_ref_point = (top_left[0] - 10, top_left[1] + 40)
+        dialogue_bg_color = pil_image.getpixel(bg_color_ref_point)
+
+        return dialogue_bg_color
+    
+    def set_dialogue_text_color(self, pil_image, dialogue_bg_color):
+        
+        # random threshold number to determine difference between background color and text color
+        abs_diff_const = 500
+        colors = []
+
+        bbox, _, _ = self.current_annotations[0]
+
+        top_left, bottom_right = bbox[0], bbox[2]
+        bbox = top_left[0], top_left[1], bottom_right[0], bottom_right[1]
+
+        img_crop = pil_image.crop(bbox)
+        for i in range(img_crop.size[0]):
+            for j in range(img_crop.size[1]):
+                colors.append(img_crop.getpixel((i,j)))
+        
+        counter = Counter(colors)
+
+        for k in counter.most_common()[:20]:
+            color = k[0]
+            if self.cal_abs_diff(dialogue_bg_color, color) > abs_diff_const:
+                return color
+
+    def adjust_translation_text(self, translation, draw, font, dialogue_bbox_width):
+        """Adding newline when translation text is longer than dialogue_bbox_width"""
+
+        char_width = 0
+        translation_adjusted = ""
+        for char in translation:
+            char_width += draw.textlength(char, font=font)
+            if char_width > dialogue_bbox_width:
+                char_width = 0
+                translation_adjusted += "\n"
+            else:
+                translation_adjusted += char
+        return translation_adjusted
 
     def print_annotations(self, frame):
+        translate = self.background_task_args["translate"]
         with self.frame_lock:
-            if self.current_annotations != None:
-#                print(f"print_annotations- {self.current_annotations}")
-                for (bbox, text, prob) in self.current_annotations:
-                    # Extracting min and max coordinates for the rectangle
-                    top_left = bbox[0]
-                    bottom_right = bbox[2]
-                    
+            if self.current_annotations != None and self.current_annotations != []:
+                if translate:
+                    top_left = self.current_annotations[0][0][0]
+                    # finding largest x and y coordinates for bottom_right
+                    largest_x = 0
+                    largest_y = 0
+                    for i in self.current_annotations:
+                        ann = i[0][2]
+                        if ann[0] >= largest_x:
+                            largest_x = ann[0]
+                        if ann[1] >= largest_y:
+                            largest_y = ann[1]
+                    bottom_right = [largest_x, largest_y]
+                        
                     # Ensure the coordinates are in the correct format (floats or integers)
                     top_left = tuple(map(int, top_left))
                     bottom_right = tuple(map(int, bottom_right))
                     
-                    # Draw the bounding box
-                    try:
-                        cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
-                    except Exception as e:
-                        print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
+                    # # Draw the bounding box
+                    # try:
+                    #     cv2.rectangle(frame, top_left, bottom_right, self.dialogue_box_bg_color, cv2.FILLED)  # BGR color format, red box
+                    # except Exception as e:
+                    #     print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
 
                     # Annotate text. Adjust the position if necessary.
-                    text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                    cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
-                                0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
-                                    
+                    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    pil_image = Image.fromarray(image)
+
+                    self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
+                    self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
+
+                    font = ImageFont.truetype(self.font_path, 35)
+                    draw = ImageDraw.Draw(pil_image)
+
+                    dialogue_bbox = [tuple(top_left), tuple(bottom_right)]
+                    draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
+
+                    dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
+                    translation_adjusted = self.adjust_translation_text(self.current_translations, draw, 
+                                                                        font, dialogue_bbox_width)
+
+                    text_position = (top_left[0], top_left[1])
+                    draw.text(text_position, translation_adjusted, font=font, fill=self.dialogue_text_color)
+
+                    image = np.asarray(pil_image)
+                    frame = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                
+                else:
+    #               print(f"print_annotations- {self.current_annotations}")
+                    for (bbox, text, prob) in self.current_annotations:
+                        # Extracting min and max coordinates for the rectangle
+                        top_left = bbox[0]
+                        bottom_right = bbox[2]
+                        
+                        # Ensure the coordinates are in the correct format (floats or integers)
+                        top_left = tuple(map(int, top_left))
+                        bottom_right = tuple(map(int, bottom_right))
+                        
+                        # Draw the bounding box
+                        try:
+                            cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
+                        except Exception as e:
+                            print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
+
+                        # Annotate text. Adjust the position if necessary.
+                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
+                        cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
+                                    0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
+        cv2.imshow("Image with Annotations", frame)
+
+
     def run_video(self, path):
         last_time = time.time()
-        if path == "webcam":
-            self.cap = cv2.VideoCapture(0)  # 0 is usually the default camera
-            if not self.cap.isOpened():
-                print("Error: Could not open video stream.")
-                exit() 
+        if path.startswith("webcam"):
+            print("opening webcam- ", path)
+            webcam_index = int(path[6:])  # Extract the index from "webcamX"
+            cap = cv2.VideoCapture(webcam_index)
+            if not cap.isOpened():
+                print(f"Error: Could not open video stream for {path}.")
+                exit()
+            self.cap = cap
         else:
             self.cap = cv2.VideoCapture(path)
             
@@ -152,7 +269,7 @@ class VideoStreamWithAnnotations:
             self.print_annotations(frame)
             
             # Display the resulting frame
-            cv2.imshow('Video Stream with Annotations', frame)
+            # cv2.imshow('Video Stream with Annotations', frame)
 
             # Break the loop on pressing 'q'
             if cv2.waitKey(1) == ord('q'):
@@ -160,9 +277,6 @@ class VideoStreamWithAnnotations:
 
         self.cap.release()
         cv2.destroyAllWindows()
-
-    def set_translation(self, translation):
-        print("todo")
 
     def get_latest_frame(self):
         with self.frame_lock:
@@ -174,9 +288,15 @@ class VideoStreamWithAnnotations:
         with self.frame_lock:
             self.current_annotations = annotations
 
+    def set_translation(self, translation):
+        if translation == None:
+            return
+        with self.frame_lock:
+            self.current_translations = translation
+
 
     def stop(self):
-        if self.cap.isOpened():
+        if self.cap != None and self.cap.isOpened():
             self.cap.release()
         cv2.destroyAllWindows()
         if self.thread is not None and self.thread.is_alive():

@@ -146,13 +146,12 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
     global frameProcessor
     global dialogues
     
-    translation = None
-    closest_match, previous_image, highlighted_image, annotations = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
+    closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
 
     if closest_match != None and closest_match != last_played:
         start_time = time.time() # Record the start time
-        #formated_filenames = [format_filename(i) for i in closest_match]
-        play_audio_threaded([format_filename(closest_match)])
+        formated_filenames = [format_filename(i) for i in closest_match]
+        play_audio_threaded(formated_filenames)
         end_time = time.time()
         print(f"Audio Time taken: {end_time - start_time} seconds")
         last_played = closest_match
@@ -194,7 +193,7 @@ def process_screenshots(translate=None, show_image_screen=False):
         print("timed_action_screencapture")
         time.sleep(1)  # Wait for 1 second
 
-def process_cv2_screenshots(translate=None, enable_cache=False):
+def process_cv2_screenshots(translate, enable_cache=False):
     time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
     global video_stream
     print(video_stream)
