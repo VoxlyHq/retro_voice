@@ -57,6 +57,7 @@ def generate_encoded():
     # Parameters for the video
     width, height = 640, 480
     fps = 24
+    frame_delay = 1 / fps  # Delay to achieve ~24 FPS
     
     # Setup memory buffer
     buffer = BytesIO()
@@ -69,37 +70,41 @@ def generate_encoded():
     stream.height = height
     stream.pix_fmt = 'yuv420p'
     
-    for angle in range(0, 360):
-        # Create a black image
-        image = np.zeros((height, width, 3), dtype=np.uint8)
+    while True: # Infinite loop for continuous streaming
+        for angle in range(0, 360, 15):
+            # Create a black image
+            image = np.zeros((height, width, 3), dtype=np.uint8)
+            
+            # Define the square's properties
+            center = (width // 2, height // 2)
+            size = min(width, height) // 4
+            rect_pts = np.array([
+                [-size, -size],
+                [size, -size],
+                [size, size],
+                [-size, size]
+            ], dtype=np.float32)
+            
+            # Rotate the square
+            M = cv2.getRotationMatrix2D(center, angle, 1.0)
+            rotated_pts = cv2.transform(np.array([rect_pts]), M)[0].astype(np.int32)
+            
+            # Draw the rotated square
+            cv2.fillPoly(image, [rotated_pts], (0, 255, 0))
+            
+            # Create frame from the image
+            frame = av.VideoFrame.from_ndarray(image, format='bgr24')
+            for packet in stream.encode(frame):
+                output.mux(packet)
+                buffer.seek(0)
+                chunk = buffer.read()
+                buffer.seek(0)
+                buffer.truncate()
+                yield chunk
         
-        # Define the square's properties
-        center = (width // 2, height // 2)
-        size = min(width, height) // 4
-        rect_pts = np.array([
-            [-size, -size],
-            [size, -size],
-            [size, size],
-            [-size, size]
-        ], dtype=np.float32)
-        
-        # Rotate the square
-        M = cv2.getRotationMatrix2D(center, angle, 1.0)
-        rotated_pts = cv2.transform(np.array([rect_pts]), M)[0].astype(np.int32)
-        
-        # Draw the rotated square
-        cv2.fillPoly(image, [rotated_pts], (0, 255, 0))
-        
-        # Create frame from the image
-        frame = av.VideoFrame.from_ndarray(image, format='bgr24')
-        for packet in stream.encode(frame):
-            output.mux(packet)
-            buffer.seek(0)
-            chunk = buffer.read()
-            buffer.seek(0)
-            buffer.truncate()
-            yield chunk
-    
+        time.sleep(frame_delay)  # Wait to control the frame rate
+
+    # NOTE: this never actually runs due to the infinite loop above
     # Finalize video stream
     for packet in stream.encode(None):
         output.mux(packet)
