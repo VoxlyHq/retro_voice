@@ -38,26 +38,27 @@ def format_filename(number):
 
     return file_name
 
-def play_audio(filename):
+def play_audio(filenames):
     global lang
-    print(f"output_en_elevenlabs/{filename}")
-    # Initialize the mixer module
-    pygame.mixer.init()
-    
-    # Load the MP3 file
-    pygame.mixer.music.load(f"output_v2_{frameProcessor.lang}_elevenlabs/{filename}")
-    
-    # Play the music
-    pygame.mixer.music.play()
-    
-    # Wait for the music to finish playing
-    while pygame.mixer.music.get_busy():
-        pygame.time.Clock().tick(10)  # Wait a bit for the music to finish
+    for filename in filenames:
+        print(f"output_en_elevenlabs/{filename}")
+        # Initialize the mixer module
+        pygame.mixer.init()
+        
+        # Load the MP3 file
+        pygame.mixer.music.load(f"output_v2_{frameProcessor.lang}_elevenlabs/{filename}")
+        
+        # Play the music
+        pygame.mixer.music.play()
+        
+        # Wait for the music to finish playing
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)  # Wait a bit for the music to finish
 
 # Function to wrap your play_mp3 for threading
-def play_audio_threaded(filename):
+def play_audio_threaded(filenames):
     # Create a thread targeting the play_mp3 function
-    thread = threading.Thread(target=play_audio, args=(filename,))
+    thread = threading.Thread(target=play_audio, args=(filenames,))
     thread.start()  # Start the thread
 
 
@@ -77,7 +78,7 @@ else:
 
 
 
-def process_video(video_path):
+def process_video(video_path, translate=None):
     global frameProcessor  
     # Open the video file
     cap = cv2.VideoCapture(video_path)
@@ -99,8 +100,7 @@ def process_video(video_path):
             # Save to disk
             pil_image.save("window_capture.jpg")
             print(f"Frame at {frame_count//fps} seconds saved as debug.jpg")
-            frameProcessor.run_image(pil_image)
-        
+            frameProcessor.run_image(pil_image, translate)
         frame_count += 1
 
     cap.release()  # Release the video capture object
@@ -141,29 +141,34 @@ def process_video_threaded(video_path, max_workers=10):
 
     cap.release()  # Release the video capture object
 
-def process_screenshot(img):
+def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False):
     global last_played
     global frameProcessor
     global dialogues
-
-    closest_match, previous_image, highlighted_image, annotations = frameProcessor.run_image(img)
-    print(f"Closest match: {closest_match}")
-
-
+    
+    translation = None
+    closest_match, previous_image, highlighted_image, annotations = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
 
     if closest_match != None and closest_match != last_played:
         start_time = time.time() # Record the start time
-        play_audio_threaded(format_filename(closest_match))
+        #formated_filenames = [format_filename(i) for i in closest_match]
+        play_audio_threaded([format_filename(closest_match)])
         end_time = time.time()
         print(f"Audio Time taken: {end_time - start_time} seconds")
         last_played = closest_match
-        set_annotation_text(annotations)
+        if show_image_screen:
+            set_annotation_text(annotations)
+            set_translation_text(translation)
     elif annotations != None:
-        set_annotation_text(annotations)
+        if show_image_screen:
+            set_annotation_text(annotations)
+            set_translation_text(translation)
     elif closest_match == None:
-        set_annotation_text(None)
+        if show_image_screen:
+            set_annotation_text(None)
+            set_translation_text(None)
 
-def timed_action_screencapture():
+def timed_action_screencapture(translate=None, show_image_screen=False):
     print("Action triggered by timer")
 
     window_name = "RetroArch"  # Adjust this to the target window's name
@@ -171,7 +176,7 @@ def timed_action_screencapture():
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
-        process_screenshot(img)
+        process_screenshot(img, translate, show_image_screen)
 
     else:
         print(f"No window found with name containing '{window_name}'.")
@@ -180,13 +185,16 @@ def timed_action_screencapture():
 def set_annotation_text(annotations):
     video_stream.set_annotations(annotations)
 
-def process_screenshots():
+def set_translation_text(translation):
+    video_stream.set_translation(translation)
+
+def process_screenshots(translate=None, show_image_screen=False):
     while True:
-        timed_action_screencapture()
+        timed_action_screencapture(translate=translate, show_image_screen=show_image_screen)
         print("timed_action_screencapture")
         time.sleep(1)  # Wait for 1 second
 
-def process_cv2_screenshots():
+def process_cv2_screenshots(translate=None, enable_cache=False):
     time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
     global video_stream
     print(video_stream)
@@ -194,7 +202,7 @@ def process_cv2_screenshots():
         frame = video_stream.get_latest_frame()
         if frame is not None:
             print("Background task accessing the latest frame...")
-            process_screenshot(frame)
+            process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache)
             time.sleep(1)  # Wait for 1 second
 
 def main():
@@ -214,6 +222,8 @@ def main():
     parser.add_argument('-jp', '--japanese',  action='store_true', help="Enable Japanese")
     parser.add_argument('-is', '--show_image_screen',  action='store_true', help="Show image screen")
     parser.add_argument('-fps', '--show_fps',  action='store_true', help="Show fps")
+    parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
+    parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
 
     
 
@@ -221,7 +231,7 @@ def main():
     if args.japanese:
         set_dialog_file("dialogues_jp_web.json")
         lang = "jp"
-        frameProcessor =  frameProcessor(lang) 
+        frameProcessor =  FrameProcessor(lang) 
 
     if args.webserver:
         server_thread = threading.Thread(target=run_server2, args=(8000, ""), daemon=True)
@@ -235,12 +245,12 @@ def main():
 
 
     if args.video !=  "" and args.video != None and args.show_image_screen == False:
-        callback = process_video(args.video) #TODO this wont work yet, need a lambda or something
+        callback = process_video(args.video, args.translate) #TODO this wont work yet, need a lambda or something
         #process_video_threaded(args.video)
 
     if args.show_image_screen:
         global video_stream
-        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots,show_fps=args.show_fps)
+        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},show_fps=args.show_fps)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()
@@ -250,7 +260,7 @@ def main():
         finally:
             video_stream.stop()
     else:
-        process_screenshots()
+        process_screenshots(translate=args.translate, show_image_screen=args.show_image_screen)
 
 
 if __name__ == "__main__":

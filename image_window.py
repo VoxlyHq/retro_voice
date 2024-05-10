@@ -21,10 +21,11 @@ else:
 
 
 class VideoStreamWithAnnotations:
-    def __init__(self, background_task=None, show_fps=False):
+    def __init__(self, background_task=None, background_task_args={}, show_fps=False):
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
+        self.current_translations = None
         self.show_fps = show_fps
         self.frame_count = 0
         self.fps = 0
@@ -160,6 +161,8 @@ class VideoStreamWithAnnotations:
         self.cap.release()
         cv2.destroyAllWindows()
 
+    def set_translation(self, translation):
+        print("todo")
 
     def get_latest_frame(self):
         with self.frame_lock:
