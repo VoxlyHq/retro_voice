@@ -2,7 +2,6 @@ import os
 import platform
 import signal
 import time
-import keyboard
 import pygame
 import time
 import threading
