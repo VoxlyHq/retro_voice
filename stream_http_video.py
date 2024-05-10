@@ -1,11 +1,15 @@
-from flask import Flask, Response, send_from_directory
+import av
+import io
 import cv2
 import numpy as np
+from flask import Flask, Response, send_from_directory
+from io import BytesIO
 import time
+
 
 app = Flask(__name__)
 
-def generate_video():
+def generate_mjpeg():
     # Constants for the video and square
     width, height = 640, 480
     square_size = 150
@@ -41,14 +45,82 @@ def generate_video():
             time.sleep(frame_delay)  # Wait to control the frame rate
 
 
-@app.route('/video_feed')
+@app.route('/video_mjpeg')
 def video_feed():
-    return Response(generate_video(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate_mjpeg(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+
+def generate_encoded():
+    # Parameters for the video
+    width, height = 640, 480
+    fps = 24
+    
+    # Setup memory buffer
+    buffer = BytesIO()
+
+    # Create a video encoder
+    codec_name = 'libx264'  # H.264 codec
+    output = av.open(buffer, mode='w', format='mpegts')
+    stream = output.add_stream(codec_name, rate=fps)
+    stream.width = width
+    stream.height = height
+    stream.pix_fmt = 'yuv420p'
+    
+    for angle in range(0, 360):
+        # Create a black image
+        image = np.zeros((height, width, 3), dtype=np.uint8)
+        
+        # Define the square's properties
+        center = (width // 2, height // 2)
+        size = min(width, height) // 4
+        rect_pts = np.array([
+            [-size, -size],
+            [size, -size],
+            [size, size],
+            [-size, size]
+        ], dtype=np.float32)
+        
+        # Rotate the square
+        M = cv2.getRotationMatrix2D(center, angle, 1.0)
+        rotated_pts = cv2.transform(np.array([rect_pts]), M)[0].astype(np.int32)
+        
+        # Draw the rotated square
+        cv2.fillPoly(image, [rotated_pts], (0, 255, 0))
+        
+        # Create frame from the image
+        frame = av.VideoFrame.from_ndarray(image, format='bgr24')
+        for packet in stream.encode(frame):
+            output.mux(packet)
+            buffer.seek(0)
+            chunk = buffer.read()
+            buffer.seek(0)
+            buffer.truncate()
+            yield chunk
+    
+    # Finalize video stream
+    for packet in stream.encode(None):
+        output.mux(packet)
+        buffer.seek(0)
+        chunk = buffer.read()
+        buffer.seek(0)
+        buffer.truncate()
+        if chunk:
+            yield chunk
+    
+    # Close everything
+    output.close()
+    buffer.close()
+
+
+@app.route('/video')
+def video():
+    return Response(generate_encoded(), mimetype='video/mp2t')
+
 
 @app.route('/')
 def index():
     return send_from_directory('html', 'video.html')
 
 if __name__ == '__main__':
-    app.run(debug=True, threaded=True)
+    app.run(debug=True, threaded=True, port=5001)
