@@ -228,7 +228,7 @@ def main():
 
     args = parser.parse_args()
     if args.japanese:
-        # set_dialog_file("dialogues_jp_web.json")
+        set_dialog_file("dialogues_jp_web.json")
         lang = "jp"
         frameProcessor =  FrameProcessor(lang) 
 
