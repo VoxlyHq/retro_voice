@@ -278,6 +278,8 @@ class VideoStreamWithAnnotations:
         self.cap.release()
         cv2.destroyAllWindows()
 
+    def set_translation(self, translation):
+        print("todo")
 
     def get_latest_frame(self):
         with self.frame_lock:
