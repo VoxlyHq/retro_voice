@@ -24,6 +24,11 @@ note this hasn't been tested on non-mac systems.
 pip3 install -r requirements.txt
 ```
 
+on mac
+2a)
+```bash
+pip3 install -r requirements_osx.txt
+```
 
 3) Install (RetroArch)[http://retroarch.com]
 
