@@ -246,7 +246,7 @@ class FrameProcessor:
         print(f"Frame at {frame_count//fps} seconds")
         return x,y
 
-    def run_image(self, img):
+    def run_image(self, img, translate=None, enable_cache=False):
         print("previous_image--{previous_image}")
         print(self.previous_image)
         print("-0--")
