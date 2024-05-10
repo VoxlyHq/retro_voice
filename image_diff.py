@@ -20,10 +20,7 @@ def calculate_image_difference(img1, img2):
     percent_diff = (num_diff_pixels / total_pixels) * 100
     return percent_diff
 
-def crop_img(img):
-    w,h = img.size
-    top_left = tuple((0, 0))
-    bottom_right = tuple((w, h//2))
+def crop_image(img, top_left, bottom_right):
 
     left = top_left[0]
     upper = top_left[1]
