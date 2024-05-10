@@ -7,7 +7,9 @@ from io import BytesIO
 import time
 
 
-app = Flask(__name__)
+app = Flask(__name__,
+            static_url_path='',
+            static_folder='html')
 
 def generate_mjpeg():
     # Constants for the video and square
