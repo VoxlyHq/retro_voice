@@ -152,7 +152,7 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
     if closest_match != None and closest_match != last_played:
         start_time = time.time() # Record the start time
         #formated_filenames = [format_filename(i) for i in closest_match]
-        play_audio_threaded(format_filename(closest_match))
+        play_audio_threaded([format_filename(closest_match)])
         end_time = time.time()
         print(f"Audio Time taken: {end_time - start_time} seconds")
         last_played = closest_match
