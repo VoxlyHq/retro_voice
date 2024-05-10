@@ -29,7 +29,7 @@ class FrameProcessor:
             self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
         elif language == 'jp':
             self.dialog_file_path = "dialogues_jp_v2.json"
-            self.reader = easyocr.Reader(['ja']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
+            self.reader = (['en', 'jp'])  # comment this if you aren't using easy ocr
         else:   
             raise("Invalid language")   
 
