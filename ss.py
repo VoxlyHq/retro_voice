@@ -12,7 +12,7 @@ import concurrent.futures
 import numpy as np
 
 from image_window import VideoStreamWithAnnotations
-from webserv import CustomHTTPRequestHandler, run_server2, set_dialog_file, signal_handler
+from webserv import run_server, set_dialog_file
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
 #from image_window import ImageWindow
@@ -228,14 +228,13 @@ def main():
 
     args = parser.parse_args()
     if args.japanese:
-        set_dialog_file("dialogues_jp_web.json")
+        set_dialog_file("static/dialogues_jp_web.json")
         lang = "jp"
         frameProcessor =  FrameProcessor(lang) 
 
     if args.webserver:
-        server_thread = threading.Thread(target=run_server2, args=(8000, ""), daemon=True)
+        server_thread = threading.Thread(target=run_server)
         server_thread.start()
-        signal.signal(signal.SIGINT, signal_handler)
 
 
         # Main thread: Put data into the shared queue

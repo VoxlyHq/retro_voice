@@ -13,7 +13,7 @@ for i, dialogue in enumerate(dialogues, start=1):
     dialogue['id'] = i
 
 # Save the modified data back to a file (or you can print it)
-with open(f'dialogues_{lang}_web.json', 'w') as file:
+with open(f'static/dialogues_{lang}_web.json', 'w') as file:
     json.dump(dialogues, file, indent=2, ensure_ascii=False)
 
 print("The file has been updated with IDs.")
