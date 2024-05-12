@@ -1,6 +1,7 @@
-import numpy as np  # Make sure to import NumPy
+import numpy as np
 from PIL import Image
 from doctr.models import detection_predictor
+import matplotlib.pyplot as plt
 
 def detect_text(image_path):
     # Load the image with PIL
@@ -16,21 +17,25 @@ def detect_text(image_path):
     predictor = detection_predictor("db_resnet50")
 
     # Perform text detection
-    result = predictor([image_np])  # Pass the numpy array here
+    results = predictor([image_np])  # This returns a list of dictionaries
+
+    # Since we are processing one image, we can directly access the first result
+    result = results[0]
 
     # Display results
-    for page in result.pages:
-        for block in page.blocks:
-            print(f"Text Block: {block.geometry}")
-            for line in block.lines:
-                for word in line.words:
-                    print(f"Word: {word.value}, Confidence: {word.confidence}, Bounding Box: {word.geometry}")
+    for block in result['blocks']:
+        print(f"Text Block: {block['geometry']}")
+        for line in block['lines']:
+            for word in line['words']:
+                print(f"Word: {word['value']}, Confidence: {word['confidence']}, Bounding Box: {word['geometry']}")
 
     # Optional: visualize the result
-    fig = result.show(doc=[image])
+    # Let's assume we have a visualization function in doctr
+    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
+    doctr.visualize.show_results(image_np, result, ax=ax)
     plt.show()
-    
+
 if __name__ == "__main__":
     # Path to your image file
-    image_path = 'ff2_en_1.png'
+    image_path = 'path_to_your_image.jpg'
     detect_text(image_path)
