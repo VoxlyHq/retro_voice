@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import numpy as np  # Make sure to import NumPy
 from PIL import Image
 from doctr.models import detection_predictor
 
@@ -9,11 +9,14 @@ def detect_text(image_path):
     # Convert the image to RGB
     image = image.convert("RGB")
 
+    # Convert the image to a NumPy array
+    image_np = np.array(image)
+
     # Load doctr predictor for text detection
     predictor = detection_predictor("db_resnet50")
 
     # Perform text detection
-    result = predictor([image])
+    result = predictor([image_np])  # Pass the numpy array here
 
     # Display results
     for page in result.pages:
@@ -26,7 +29,7 @@ def detect_text(image_path):
     # Optional: visualize the result
     fig = result.show(doc=[image])
     plt.show()
-
+    
 if __name__ == "__main__":
     # Path to your image file
     image_path = 'ff2_en_1.png'
