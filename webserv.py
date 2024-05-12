@@ -77,10 +77,13 @@ def highlight():
 def run_server():
     app.run(host='localhost', port=8000, debug=True, use_reloader=False)
 
-def run_server_prod():
+def run_server_dev():
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)  # Use TLSv1.2 to avoid vulnerabilities
     context.load_cert_chain('server.crt', 'server.key')
     app.run(ssl_context=context, host='0.0.0.0', port=443, debug=False)
+
+def run_server_prod():
+    app.run(host='0.0.0.0', port=8000, debug=False, use_reloader=False)
 
 # Static file handling is automatically done by Flask for the 'static' folder
 if __name__ == '__main__':
