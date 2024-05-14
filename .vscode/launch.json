@@ -10,6 +10,23 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "precog",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "text_recog.py",
+            "args": [  "--east", "frozen_east_text_detection.pb", "--image",  "~/Desktop/ff2_en_1.png"],
+            "console": "integratedTerminal",
+            "python": "coreml/bin/python"
+        },
+        {
+            "name": "coreml: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "python": "coreml/bin/python"
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

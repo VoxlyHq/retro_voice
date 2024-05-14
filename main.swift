@@ -56,9 +56,9 @@ func decodePredictions(scores: MLMultiArray, geometry: MLMultiArray) -> (rects: 
             let score = scoresData[x]
 
             // Ignore low confidence scores
-            if score < 0.1 { // Adjusted threshold
-                continue
-            }
+            //if score < 0.1 { // Adjusted threshold
+            //    continue
+            //}
 
             // Calculate the offset
             let offsetX = Double(x) * 4.0
@@ -107,6 +107,27 @@ func geometryPointer(geometry: MLMultiArray, row: Int, channel: Int) -> [Double]
     return Array(UnsafeBufferPointer(start: pointer + start, count: end - start))
 }
 
+func drawRectangles(on image: CGImage, rects: [CGRect]) -> NSImage? {
+    let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+    let outputImage = NSImage(size: nsImage.size)
+    
+    outputImage.lockFocus()
+    nsImage.draw(at: .zero, from: NSRect(origin: .zero, size: nsImage.size), operation: .sourceOver, fraction: 1.0)
+    
+    let path = NSBezierPath()
+    for rect in rects {
+        path.appendRect(rect)
+    }
+    
+    NSColor.red.set()
+    path.lineWidth = 2
+    path.stroke()
+    
+    outputImage.unlockFocus()
+    
+    return outputImage
+}
+
 func main() {
     // Load the Core ML model
     guard let modelURL = URL(string: "file://" + "/Users/hyper/projects/me/retro_voiceover" + "/frozen_east_text_detection.mlpackage") else {
@@ -133,7 +154,9 @@ func main() {
     
     // Run the text detection 100 times and calculate the average duration
     var totalDuration: TimeInterval = 0
-    let runCount = 120
+    let runCount = 2
+    
+    var finalRects: [CGRect] = []
     
     for i in 0..<runCount {
         if let result = detectText(in: cgImage, model: model) {
@@ -151,10 +174,22 @@ func main() {
             print("Detected text for run \(i + 1):")
             for rect in rects {
                 print("Text detected at \(rect)")
+                finalRects.append(rect)
             }
         } else {
             print("Text detection failed on run \(i + 1)")
         }
+    }
+    
+    // Draw rectangles on the image
+    if let annotatedImage = drawRectangles(on: cgImage, rects: finalRects) {
+        // Save the annotated image to disk
+        let outputPath = "/Users/hyper/Desktop/annotated_image.png"
+        let imageData = annotatedImage.tiffRepresentation
+        let bitmapImageRep = NSBitmapImageRep(data: imageData!)
+        let pngData = bitmapImageRep?.representation(using: .png, properties: [:])
+        try? pngData?.write(to: URL(fileURLWithPath: outputPath))
+        print("Annotated image saved to \(outputPath)")
     }
     
     let averageDuration = totalDuration / Double(runCount)
