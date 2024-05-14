@@ -29,7 +29,7 @@ class FrameProcessor:
             self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
         elif language == 'jp':
             self.dialog_file_path = "dialogues_jp_v2.json"
-            self.reader = (['en', 'jp'])  # comment this if you aren't using easy ocr
+            self.reader = easyocr.Reader(['en', 'ja'])  # comment this if you aren't using easy ocr
         else:   
             raise("Invalid language")   
 
@@ -200,7 +200,7 @@ class FrameProcessor:
         image_bytes = byte_buffer.getvalue()
 
         # Now, we want the locations as well, so detail=1
-        result = self.reader.readtext(image_bytes, detail=1)
+        result = self.ocr_easyocr(image_bytes)
 
         # Creating a drawable image
         drawable_image = Image.open(io.BytesIO(image_bytes))
@@ -209,45 +209,41 @@ class FrameProcessor:
         # Optionally, load a font.
         # font = ImageFont.truetype("arial.ttf", 15)  # You might need to adjust the path and size
 
-        filtered_result = []
-        for (bbox, text, prob) in result:
-            if 'RetroArch' not in text:
-                filtered_result.append((bbox, text, prob))
+        filtered_result = self.filter_ocr_result(result)
+        for (bbox, text, prob) in filtered_result:
                 
-                # Extracting min and max coordinates for the rectangle
-                top_left = bbox[0]
-                bottom_right = bbox[2]
-                
-                # Ensure the coordinates are in the correct format (floats or integers)
-                top_left = tuple(map(int, top_left))
-                bottom_right = tuple(map(int, bottom_right))
-                
-                # Draw the bounding box
-                try:
-                    draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                except:
-                    print(f"error drawing rectangle -{top_left} - {bottom_right}")
-                    #image.show(image)
-                # Annotate text. Adjust the position if necessary.
-                draw.text(top_left, text, fill="yellow")
+            # Extracting min and max coordinates for the rectangle
+            top_left = bbox[0]
+            bottom_right = bbox[2]
+            
+            # Ensure the coordinates are in the correct format (floats or integers)
+            top_left = tuple(map(int, top_left))
+            bottom_right = tuple(map(int, bottom_right))
+            
+            # Draw the bounding box
+            try:
+                draw.rectangle([top_left, bottom_right], outline="red", width=2)
+            except:
+                print(f"error drawing rectangle -{top_left} - {bottom_right}")
+                #image.show(image)
+            # Annotate text. Adjust the position if necessary.
+            draw.text(top_left, text, fill="yellow")
                 
         # Assuming you want to return the concatenated text that doesn't include 'RetroArch'
         filtered_text = ' '.join([text for (_, text, _) in filtered_result])
         return filtered_text, drawable_image, filtered_result  # Now also returning the image with annotations
 
-    def ocr_easyocr(self, image):
+    def ocr_easyocr(self, image_bytes):
         # Convert the PIL Image to bytes
-        byte_buffer = io.BytesIO()
+        result = self.reader.readtext(image_bytes, detail=1)
+        return result
 
-        image.save(byte_buffer, format='JPEG')  # You can change format if needed
-        image_bytes = byte_buffer.getvalue()
-
-
-        result =  self.reader.readtext(image_bytes,detail = 0) #change detail if you want the locations
-        filtered_array = [entry for entry in result if 'RetroArch' not in entry]
-        str = ' '.join(filtered_array)
-        return str
-
+    def filter_ocr_result(self, result):
+        filtered_result = []
+        for (bbox, text, prob) in result:
+            if 'retroarch' not in text.lower() and 'retronrch' not in text.lower():
+                filtered_result.append((bbox, text, prob))
+        return filtered_result
 
 
     def ocr_openai(self, image):

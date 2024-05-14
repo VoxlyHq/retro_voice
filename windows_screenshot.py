@@ -8,7 +8,7 @@ from mss import mss
 def find_window_id(window_name):
     def callback(hwnd, window_name):
         if window_name.lower() in win32gui.GetWindowText(hwnd).lower():
-            print(f"Found window '{win32gui.GetWindowText(hwnd)}' with handle {hwnd}")
+            # print(f"Found window '{win32gui.GetWindowText(hwnd)}' with handle {hwnd}")
             window_handles.append(hwnd)
     window_handles = []
     win32gui.EnumWindows(callback, window_name)
