@@ -59,20 +59,20 @@ func extractTextAndCoordinates(from observations: [VNCoreMLFeatureValueObservati
     let geometryCount = geometryArray.count
     let scoreCount = scoreArray.count
 
-    // Debugging: print score map values for the first 10x10 region
-    print("Score map values (first 10x10 region):")
-    for y in 0..<10 {
-        for x in 0..<10 {
+    // Debugging: print score map values for the first 20x20 region
+    print("Score map values (first 20x20 region):")
+    for y in 0..<20 {
+        for x in 0..<20 {
             let index = (0 * 128 * 128) + (y * 128) + x
             print(scoreArray[index].doubleValue, terminator: " ")
         }
         print()
     }
 
-    // Debugging: print geometry map values for the first 10x10 region
-    print("Geometry map values (first 10x10 region):")
-    for y in 0..<10 {
-        for x in 0..<10 {
+    // Debugging: print geometry map values for the first 20x20 region
+    print("Geometry map values (first 20x20 region):")
+    for y in 0..<20 {
+        for x in 0..<20 {
             let baseIndex = ((0 * 128 * 128) + (y * 128) + x) * 4
             let offsetX = geometryArray[baseIndex].doubleValue
             let offsetY = geometryArray[baseIndex + 1].doubleValue
@@ -98,10 +98,10 @@ func extractTextAndCoordinates(from observations: [VNCoreMLFeatureValueObservati
                 let height = geometryArray[baseIndex + 3].doubleValue
 
                 let coordinates = [
-                    CGPoint(x: Double(x) * 128.0 + offsetX, y: Double(y) * 128.0 + offsetY),
-                    CGPoint(x: Double(x) * 128.0 + offsetX + width, y: Double(y) * 128.0 + offsetY),
-                    CGPoint(x: Double(x) * 128.0 + offsetX + width, y: Double(y) * 128.0 + offsetY + height),
-                    CGPoint(x: Double(x) * 128.0 + offsetX, y: Double(y) * 128.0 + offsetY + height)
+                    CGPoint(x: Double(x) * 4.0 + offsetX, y: Double(y) * 4.0 + offsetY),
+                    CGPoint(x: Double(x) * 4.0 + offsetX + width, y: Double(y) * 4.0 + offsetY),
+                    CGPoint(x: Double(x) * 4.0 + offsetX + width, y: Double(y) * 4.0 + offsetY + height),
+                    CGPoint(x: Double(x) * 4.0 + offsetX, y: Double(y) * 4.0 + offsetY + height)
                 ]
 
                 detectedTexts.append(("Text Detected", coordinates))
@@ -138,7 +138,7 @@ guard let image = NSImage(contentsOfFile: imagePath),
 
 // Run the text detection 100 times and calculate the average duration
 var totalDuration: TimeInterval = 0
-let runCount = 100
+let runCount = 120
 
 for i in 0..<runCount {
     if let result = detectText(in: cgImage, model: model) {
@@ -157,3 +157,5 @@ for i in 0..<runCount {
 
 let averageDuration = totalDuration / Double(runCount)
 print("Average duration for text detection: \(averageDuration) seconds")
+print("Total duration for text detection: \(totalDuration) seconds")
+
