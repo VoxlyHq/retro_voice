@@ -36,195 +36,205 @@ func detectText(in image: CGImage, model: VNCoreMLModel) -> (duration: TimeInter
     return (result.duration, observations)
 }
 
-func decodePredictions(scores: MLMultiArray, geometry: MLMultiArray, rW: Double, rH: Double) -> (rects: [(CGRect)], confidences: [Double]) {
-    var rects: [(CGRect)] = []
-    var confidences: [Double] = []
+// Function to extract text and coordinates from feature values
+func extractTextAndCoordinates(from observations: [VNCoreMLFeatureValueObservation]) -> [(text: String, coordinates: [CGPoint])] {
+    var detectedTexts: [(text: String, coordinates: [CGPoint])] = []
+
+    // Assuming the second observation is the geometry map
+    guard observations.count >= 2, let geometryArray = observations[1].featureValue.multiArrayValue else {
+        return detectedTexts
+    }
+
+    // Assuming the first observation is the score map
+    guard let scoreArray = observations[0].featureValue.multiArrayValue else {
+        return detectedTexts
+    }
+
+    printMultiArrayDetails(scoreArray)
     
-    let numRows = scores.shape[2].intValue
-    let numCols = scores.shape[3].intValue
+    let geometryShape = geometryArray.shape
+    let scoreShape = scoreArray.shape
 
-    for y in 0..<numRows {
-        // Extract scores and geometry data for this row
-        let scoresData = scoresPointer(scores: scores, row: y)
-        let xData0 = geometryPointer(geometry: geometry, row: y, channel: 0)
-        let xData1 = geometryPointer(geometry: geometry, row: y, channel: 1)
-        let xData2 = geometryPointer(geometry: geometry, row: y, channel: 2)
-        let xData3 = geometryPointer(geometry: geometry, row: y, channel: 3)
-        let anglesData = geometryPointer(geometry: geometry, row: y, channel: 4)
+    print("Geometry Shape: \(geometryShape)")
+    print("Score Array Shape: \(scoreShape)")
 
-        for x in 0..<numCols {
-            let score = scoresData[x]
+    let geometryCount = geometryArray.count
+    let scoreCount = scoreArray.count
 
-            // Ignore low confidence scores
-            if score < 0.1 { // Adjusted threshold
-                continue
+    // Lowered threshold for text detection
+    for y in 0..<80 {
+        for x in 0..<80 {
+            let index = (0 * 80 * 80) + (y * 80) + x
+            let key = [0,y,x] as [NSNumber]
+            let score = scoreArray[key].doubleValue
+                let baseIndex = index * 4
+                let offsetX = geometryArray[baseIndex].doubleValue
+                let offsetY = geometryArray[baseIndex + 1].doubleValue
+                let width = geometryArray[baseIndex + 2].doubleValue
+                let height = geometryArray[baseIndex + 3].doubleValue
+
+
+            if score > 0.1 { // Lowered threshold for considering a valid text box
+
+                let coordinates = [
+                    CGPoint(x:offsetX, y: offsetY),
+                    CGPoint(x:offsetX + width, y: Double(y) * 4.0 + offsetY),
+                    CGPoint(x: Double(x) * 4.0 + offsetX + width, y: Double(y) * 4.0 + offsetY + height),
+                    CGPoint(x: Double(x) * 4.0 + offsetX, y: Double(y) * 4.0 + offsetY + height)
+                ]
+
+                detectedTexts.append(("Text Detected", coordinates))
+                print("Detected text with score \(score) at \(coordinates)")
             }
-
-            // Calculate the offset
-            let offsetX = Double(x) * 4.0
-            let offsetY = Double(y) * 4.0
-
-            // Extract angle and calculate cos and sin
-            let angle = anglesData[x]
-            let cos = cos(angle)
-            let sin = sin(angle)
-
-            // Calculate width and height
-            let h = xData0[x] + xData2[x]
-            let w = xData1[x] + xData3[x]
-
-            // Calculate bounding box coordinates
-            let endX = offsetX + (cos * xData1[x]) + (sin * xData2[x])
-            let endY = offsetY - (sin * xData1[x]) + (cos * xData2[x])
-            let startX = endX - w
-            let startY = endY - h
-
-            // Adjust the bounding box coordinates based on the original image size
-            let adjustedRect = CGRect(
-                x: startX * rW,
-                y: startY * rH,
-                width: w * rW,
-                height: h * rH
-            )
-
-            rects.append(adjustedRect)
-            confidences.append(score)
         }
     }
-    
-    return (rects, confidences)
+
+    return detectedTexts
 }
 
-func scoresPointer(scores: MLMultiArray, row: Int) -> [Double] {
-    let shape = scores.shape
-    let pointer = UnsafeMutablePointer<Double>(OpaquePointer(scores.dataPointer))
-    let stride = shape[2].intValue * shape[3].intValue
-    let start = stride * row
-    let end = start + shape[3].intValue
-    return Array(UnsafeBufferPointer(start: pointer + start, count: end - start))
-}
+// Function to draw detected text annotations on an image
+func drawAnnotations(on image: NSImage, with detections: [(text: String, coordinates: [CGPoint])]) -> NSImage? {
+    let size = image.size
+    let newImage = NSImage(size: size)
+    newImage.lockFocus()
 
-func geometryPointer(geometry: MLMultiArray, row: Int, channel: Int) -> [Double] {
-    let shape = geometry.shape
-    let pointer = UnsafeMutablePointer<Double>(OpaquePointer(geometry.dataPointer))
-    let stride = shape[1].intValue * shape[2].intValue * shape[3].intValue
-    let channelStride = shape[2].intValue * shape[3].intValue
-    let start = stride * 0 + channelStride * channel + shape[3].intValue * row
-    let end = start + shape[3].intValue
-    return Array(UnsafeBufferPointer(start: pointer + start, count: end - start))
-}
+    let context = NSGraphicsContext.current?.cgContext
+    context?.draw(image.cgImage(forProposedRect: nil, context: nil, hints: nil)!, in: CGRect(origin: .zero, size: size))
 
-func drawRectangles(on image: CGImage, rects: [CGRect]) -> NSImage? {
-    let nsImage = NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
-    let outputImage = NSImage(size: nsImage.size)
-    
-    outputImage.lockFocus()
-    nsImage.draw(at: .zero, from: NSRect(origin: .zero, size: nsImage.size), operation: .sourceOver, fraction: 1.0)
-    
-    let path = NSBezierPath()
-    for rect in rects {
-        path.appendRect(rect)
+    context?.setLineWidth(2.0)
+    context?.setStrokeColor(NSColor.red.cgColor)
+
+    for detection in detections {
+        let path = CGMutablePath()
+        let coords = detection.coordinates
+        path.move(to: coords[0])
+        path.addLine(to: coords[1])
+        path.addLine(to: coords[2])
+        path.addLine(to: coords[3])
+        path.closeSubpath()
+
+        context?.addPath(path)
+        context?.strokePath()
     }
-    
-    NSColor.red.set()
-    path.lineWidth = 2
-    path.stroke()
-    
-    outputImage.unlockFocus()
-    
-    return outputImage
+
+    newImage.unlockFocus()
+    return newImage
 }
+
+
+func printMultiArrayDetails(_ multiArray: MLMultiArray) {
+    let shape = multiArray.shape
+    let count = shape.count
+
+    print("MultiArray Dimensions: \(count)")
+
+    // Print the size of each dimension
+    for i in 0..<count {
+        print("Dimension \(i + 1): \(shape[i])")
+    }
+
+    // Print all values in the multi-array
+    var indices = [Int](repeating: 0, count: count)
+    printValues(of: multiArray, shape: shape, indices: &indices, dimension: 0)
+}
+
+private func printValues(of multiArray: MLMultiArray, shape: [NSNumber], indices: inout [Int], dimension: Int) {
+    if dimension == shape.count {
+        let indexArray = indices.map { NSNumber(value: $0) }
+        let value = multiArray[indexArray]
+        print("Value at \(indices): \(value)")
+        return
+    }
+
+    for i in 0..<shape[dimension].intValue {
+        indices[dimension] = i
+        printValues(of: multiArray, shape: shape, indices: &indices, dimension: dimension + 1)
+    }
+}
+
 
 func main() {
     // Load the Core ML model
-    guard let modelURL = URL(string: "file://" + "/Users/hyper/projects/me/retro_voiceover" + "/frozen_east_text_detection.mlpackage") else {
+    guard let modelURL = URL(string: "file:///Users/hyper/projects/me/retro_voiceover/frozen_east_text_detection.mlpackage") else {
         fatalError("Failed to load model URL")
     }
-    
+
     guard let compiledModelURL = try? MLModel.compileModel(at: modelURL) else {
         fatalError("Failed to compile model")
     }
-    
+
     let model: VNCoreMLModel
     do {
         model = try VNCoreMLModel(for: MLModel(contentsOf: compiledModelURL))
     } catch {
         fatalError("Failed to create VNCoreMLModel: \(error)")
     }
+
     
-    // Load the image
+    //Load the image
     let imagePath = "/Users/hyper/Desktop/ff2_en_1.png"
-    guard let image = NSImage(contentsOfFile: imagePath),
-          let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-        fatalError("Failed to load image")
-    }
+     guard let image = NSImage(contentsOfFile: imagePath),
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            fatalError("Failed to load image")
+       }
     
-    // Get original image dimensions
-    let origW = cgImage.width
-    let origH = cgImage.height
+       // Get original image dimensions
+        let origW = cgImage.width
+        let origH = cgImage.height
     
-    // Set the new width and height (nearest multiple of 32)
-    let newW = 320
-    let newH = 320
-    let rW = Double(origW) / Double(newW)
-    let rH = Double(origH) / Double(newH)
+        // Set the new width and height (nearest multiple of 32)
+        let newW = 320
+        let newH = 320
+        let rW = Double(origW) / Double(newW)
+        let rH = Double(origH) / Double(newH)
     
-    // Resize the image
+        // Resize the image
     let resizedImage = NSImage(size: NSSize(width: newW, height: newH))
-    resizedImage.lockFocus()
-    image.draw(in: NSRect(x: 0, y: 0, width: newW, height: newH))
-    resizedImage.unlockFocus()
-    guard let resizedCGImage = resizedImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-        fatalError("Failed to resize image")
-    }
+        resizedImage.lockFocus()
+        image.draw(in: NSRect(x: 0, y: 0, width: newW, height: newH))
+        resizedImage.unlockFocus()
+        guard let resizedCGImage = resizedImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            fatalError("Failed to resize image")
+        }
     
-    // Run the text detection 100 times and calculate the average duration
+        // Run the text detection 100 times and calculate the average duration
     var totalDuration: TimeInterval = 0
-    let runCount = 120
+    let runCount = 2
     
     var finalRects: [CGRect] = []
     
+        
     for i in 0..<runCount {
         if let result = detectText(in: resizedCGImage, model: model) {
             totalDuration += result.duration
             print("Run \(i + 1): Duration: \(result.duration) seconds")
-            
-            guard result.results.count >= 2,
-                  let scores = result.results[0].featureValue.multiArrayValue,
-                  let geometry = result.results[1].featureValue.multiArrayValue else {
-                print("Invalid results for run \(i + 1)")
-                continue
-            }
-            
-            let (rects, confidences) = decodePredictions(scores: scores, geometry: geometry, rW: rW, rH: rH)
-            if !rects.isEmpty {
-                finalRects.append(contentsOf: rects)
-            }
-            
+
+            let detectedTexts = extractTextAndCoordinates(from: result.results)
             print("Detected text for run \(i + 1):")
-            for rect in rects {
-                print("Text detected at \(rect)")
+            for (text, coordinates) in detectedTexts {
+                print("\(text) at \(coordinates)")
+            }
+
+            // Annotate and save the image
+            if let annotatedImage = drawAnnotations(on: image, with: detectedTexts) {
+                let outputPath = "annotated_image_\(i + 1).png"
+                let outputUrl = URL(fileURLWithPath: outputPath)
+                if let tiffData = annotatedImage.tiffRepresentation,
+                   let bitmapImage = NSBitmapImageRep(data: tiffData),
+                   let pngData = bitmapImage.representation(using: .png, properties: [:]) {
+                    do {
+                        try pngData.write(to: outputUrl)
+                        print("Saved annotated image to \(outputPath)")
+                    } catch {
+                        print("Failed to save annotated image: \(error)")
+                    }
+                }
             }
         } else {
             print("Text detection failed on run \(i + 1)")
         }
     }
-    
-    // Draw rectangles on the image
-    if !finalRects.isEmpty {
-        if let annotatedImage = drawRectangles(on: cgImage, rects: finalRects) {
-            // Save the annotated image to disk
-            let outputPath = "/Users/hyper/Desktop/annotated_image.png"
-            let imageData = annotatedImage.tiffRepresentation
-            let bitmapImageRep = NSBitmapImageRep(data: imageData!)
-            let pngData = bitmapImageRep?.representation(using: .png, properties: [:])
-            try? pngData?.write(to: URL(fileURLWithPath: outputPath))
-            print("Annotated image saved to \(outputPath)")
-        }
-    } else {
-        print("No text detected in any run.")
-    }
-    
+
     let averageDuration = totalDuration / Double(runCount)
     print("Average duration for text detection: \(averageDuration) seconds")
     print("Total duration for text detection: \(totalDuration) seconds")
