@@ -98,6 +98,18 @@
 
 <div id="media" style="display: none">
     <h2>Media</h2>
+    <div style="display: flex; justify-content: space-between;">
+        <div>
+            <h3>Outbound Stats</h3>
+            <p>Codec: <span id="outbound-codec"></span></p>
+            <p>FPS: <span id="outbound-fps"></span></p>    
+        </div>
+        <div>
+            <h3>Inbound Stats</h3>
+            <p>Codec: <span id="inbound-codec"></span></p>
+            <p>FPS: <span id="inbound-fps"></span></p>
+        </div>
+    </div>
 
     <audio id="audio" autoplay="true"></audio>
     <video id="video" autoplay="true" playsinline="true"></video>

@@ -10,6 +10,8 @@ var pc = null;
 // data channel
 var dc = null, dcInterval = null;
 
+var statsTimer = null;
+
 function createPeerConnection() {
     var config = {
         sdpSemantics: 'unified-plan'
@@ -74,6 +76,26 @@ function enumerateInputDevices() {
     });
 }
 
+function startGatheringStats() {
+    if (statsTimer) {
+        clearInterval(statsTimer);
+    }
+    statsTimer = setInterval(async () => {
+        const stats = await pc.getStats();
+        stats.forEach(stat => {
+            if (stat.type === 'outbound-rtp' && stat.kind === 'video') {
+                const codec = stats.get(stat.codecId);
+                document.getElementById('outbound-codec').innerText = codec.mimeType;
+                document.getElementById('outbound-fps').innerText = stat.framesPerSecond;
+            } else if (stat.type === 'inbound-rtp' && stat.kind === 'video') {
+                const codec = stats.get(stat.codecId)
+                document.getElementById('inbound-codec').innerText = codec.mimeType;
+                document.getElementById('inbound-fps').innerText = stat.framesPerSecond;
+            }
+        })
+    }, 1000)
+}
+
 function negotiate() {
     return pc.createOffer().then((offer) => {
         return pc.setLocalDescription(offer);
@@ -123,6 +145,8 @@ function negotiate() {
     }).then((answer) => {
         document.getElementById('answer-sdp').textContent = answer.sdp;
         return pc.setRemoteDescription(answer);
+    }).then(() => {
+        return startGatheringStats()
     }).catch((e) => {
         alert(e);
     });
@@ -229,6 +253,11 @@ function start() {
 
 function stop() {
     document.getElementById('stop').style.display = 'none';
+
+    if (statsTimer) {
+        clearInterval(statsTimer);
+        statsTimer = null;
+    }
 
     // close data channel
     if (dc) {
