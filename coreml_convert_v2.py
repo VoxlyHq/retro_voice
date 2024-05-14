@@ -21,7 +21,7 @@ mlmodel = ct.convert(
     'saved_model',
     source='tensorflow',
     inputs=[ct.ImageType(name="input_images", shape=fixed_input_shape, bias=[-1, -1, -1], scale=1/127.5)],
-    outputs=['feature_fusion/Conv_7/Sigmoid:0', 'feature_fusion/Conv_8/Sigmoid:0', 'feature_fusion/Conv_9/Sigmoid:0']
+    outputs=['feature_fusion/Conv_7/Sigmoid:0', 'feature_fusion/concat_3:0']
 )
 
 # Save the Core ML model with .mlpackage extension

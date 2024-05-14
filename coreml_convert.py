@@ -17,7 +17,6 @@ with tf.Graph().as_default() as graph:
             inputs={'input_images': graph.get_tensor_by_name('input_images:0')},
             outputs={
                 'feature_fusion/Conv_7/Sigmoid': graph.get_tensor_by_name('feature_fusion/Conv_7/Sigmoid:0'),
-                'feature_fusion/Conv_8/Sigmoid': graph.get_tensor_by_name('feature_fusion/Conv_8/Sigmoid:0'),
-                'feature_fusion/Conv_9/Sigmoid': graph.get_tensor_by_name('feature_fusion/Conv_9/Sigmoid:0')
+                'feature_fusion/concat_3:0': graph.get_tensor_by_name('feature_fusion/concat_3:0'),
             }
         )
