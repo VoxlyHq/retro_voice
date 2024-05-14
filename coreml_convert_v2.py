@@ -14,7 +14,7 @@ with tf.Graph().as_default() as graph:
 input_tensor = graph.get_tensor_by_name('input_images:0')
 
 # Define fixed input shape
-fixed_input_shape = (1, 512, 512, 3)
+fixed_input_shape = (1, 320, 320, 3)
 
 # Convert to Core ML model with image type input
 mlmodel = ct.convert(

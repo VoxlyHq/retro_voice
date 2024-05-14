@@ -36,7 +36,7 @@ func detectText(in image: CGImage, model: VNCoreMLModel) -> (duration: TimeInter
     return (result.duration, observations)
 }
 
-func decodePredictions(scores: MLMultiArray, geometry: MLMultiArray) -> (rects: [(CGRect)], confidences: [Double]) {
+func decodePredictions(scores: MLMultiArray, geometry: MLMultiArray, rW: Double, rH: Double) -> (rects: [(CGRect)], confidences: [Double]) {
     var rects: [(CGRect)] = []
     var confidences: [Double] = []
     
@@ -56,9 +56,9 @@ func decodePredictions(scores: MLMultiArray, geometry: MLMultiArray) -> (rects: 
             let score = scoresData[x]
 
             // Ignore low confidence scores
-            //if score < 0.1 { // Adjusted threshold
-            //    continue
-            //}
+            if score < 0.1 { // Adjusted threshold
+                continue
+            }
 
             // Calculate the offset
             let offsetX = Double(x) * 4.0
@@ -79,8 +79,15 @@ func decodePredictions(scores: MLMultiArray, geometry: MLMultiArray) -> (rects: 
             let startX = endX - w
             let startY = endY - h
 
-            let rect = CGRect(x: startX, y: startY, width: w, height: h)
-            rects.append(rect)
+            // Adjust the bounding box coordinates based on the original image size
+            let adjustedRect = CGRect(
+                x: startX * rW,
+                y: startY * rH,
+                width: w * rW,
+                height: h * rH
+            )
+
+            rects.append(adjustedRect)
             confidences.append(score)
         }
     }
@@ -152,14 +159,33 @@ func main() {
         fatalError("Failed to load image")
     }
     
+    // Get original image dimensions
+    let origW = cgImage.width
+    let origH = cgImage.height
+    
+    // Set the new width and height (nearest multiple of 32)
+    let newW = 320
+    let newH = 320
+    let rW = Double(origW) / Double(newW)
+    let rH = Double(origH) / Double(newH)
+    
+    // Resize the image
+    let resizedImage = NSImage(size: NSSize(width: newW, height: newH))
+    resizedImage.lockFocus()
+    image.draw(in: NSRect(x: 0, y: 0, width: newW, height: newH))
+    resizedImage.unlockFocus()
+    guard let resizedCGImage = resizedImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+        fatalError("Failed to resize image")
+    }
+    
     // Run the text detection 100 times and calculate the average duration
     var totalDuration: TimeInterval = 0
-    let runCount = 2
+    let runCount = 120
     
     var finalRects: [CGRect] = []
     
     for i in 0..<runCount {
-        if let result = detectText(in: cgImage, model: model) {
+        if let result = detectText(in: resizedCGImage, model: model) {
             totalDuration += result.duration
             print("Run \(i + 1): Duration: \(result.duration) seconds")
             
@@ -170,11 +196,14 @@ func main() {
                 continue
             }
             
-            let (rects, confidences) = decodePredictions(scores: scores, geometry: geometry)
+            let (rects, confidences) = decodePredictions(scores: scores, geometry: geometry, rW: rW, rH: rH)
+            if !rects.isEmpty {
+                finalRects.append(contentsOf: rects)
+            }
+            
             print("Detected text for run \(i + 1):")
             for rect in rects {
                 print("Text detected at \(rect)")
-                finalRects.append(rect)
             }
         } else {
             print("Text detection failed on run \(i + 1)")
@@ -182,14 +211,18 @@ func main() {
     }
     
     // Draw rectangles on the image
-    if let annotatedImage = drawRectangles(on: cgImage, rects: finalRects) {
-        // Save the annotated image to disk
-        let outputPath = "/Users/hyper/Desktop/annotated_image.png"
-        let imageData = annotatedImage.tiffRepresentation
-        let bitmapImageRep = NSBitmapImageRep(data: imageData!)
-        let pngData = bitmapImageRep?.representation(using: .png, properties: [:])
-        try? pngData?.write(to: URL(fileURLWithPath: outputPath))
-        print("Annotated image saved to \(outputPath)")
+    if !finalRects.isEmpty {
+        if let annotatedImage = drawRectangles(on: cgImage, rects: finalRects) {
+            // Save the annotated image to disk
+            let outputPath = "/Users/hyper/Desktop/annotated_image.png"
+            let imageData = annotatedImage.tiffRepresentation
+            let bitmapImageRep = NSBitmapImageRep(data: imageData!)
+            let pngData = bitmapImageRep?.representation(using: .png, properties: [:])
+            try? pngData?.write(to: URL(fileURLWithPath: outputPath))
+            print("Annotated image saved to \(outputPath)")
+        }
+    } else {
+        print("No text detected in any run.")
     }
     
     let averageDuration = totalDuration / Double(runCount)
