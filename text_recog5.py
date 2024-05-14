@@ -1,9 +1,8 @@
 import numpy as np
-#import pytesseract
+import pytesseract
 import argparse
 import tensorflow as tf
 import time
-from imutils.object_detection import non_max_suppression
 from PIL import Image
 import os
 
@@ -42,6 +41,41 @@ def decode_predictions(scores, geometry):
             confidences.append(scoresData[x])
 
     return (rects, confidences)
+
+def non_max_suppression(boxes, scores, overlapThresh=0.3):
+    if len(boxes) == 0:
+        return []
+
+    boxes = np.array(boxes)
+    if boxes.dtype.kind == "i":
+        boxes = boxes.astype("float")
+
+    pick = []
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+
+    area = (x2 - x1 + 1) * (y2 - y1 + 1)
+    idxs = np.argsort(scores)
+
+    while len(idxs) > 0:
+        last = len(idxs) - 1
+        i = idxs[last]
+        pick.append(i)
+
+        xx1 = np.maximum(x1[i], x1[idxs[:last]])
+        yy1 = np.maximum(y1[i], y1[idxs[:last]])
+        xx2 = np.minimum(x2[i], x2[idxs[:last]])
+        yy2 = np.minimum(y2[i], y2[idxs[:last]])
+
+        w = np.maximum(0, xx2 - xx1 + 1)
+        h = np.maximum(0, yy2 - yy1 + 1)
+        overlap = (w * h) / area[idxs[:last]]
+
+        idxs = np.delete(idxs, np.concatenate(([last], np.where(overlap > overlapThresh)[0])))
+
+    return boxes[pick].astype("int")
 
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
@@ -83,78 +117,79 @@ layerNames = [
 
 total_duration = 0
 
-# Perform forward pass
-for _ in range(100):
-    start_time = time.time()
-    with tf.compat.v1.Session(graph=graph) as sess:
-        image_tensor = graph.get_tensor_by_name("input_images:0")
-        scores_tensor = graph.get_tensor_by_name(layerNames[0] + ":0")
-        geometry_tensor = graph.get_tensor_by_name(layerNames[1] + ":0")
+with tf.compat.v1.Session(graph=graph) as sess:
+    image_tensor = graph.get_tensor_by_name("input_images:0")
+    scores_tensor = graph.get_tensor_by_name(layerNames[0] + ":0")
+    geometry_tensor = graph.get_tensor_by_name(layerNames[1] + ":0")
 
+    # Perform forward pass
+    for _ in range(10):
+        start_time = time.time()
         blob = np.expand_dims(image, axis=0)
         (scores, geometry) = sess.run([scores_tensor, geometry_tensor], feed_dict={image_tensor: blob})
 
-    # Decode the predictions, then apply non-maxima suppression to suppress weak, overlapping bounding boxes
-    (rects, confidences) = decode_predictions(scores, geometry)
-    flattened_confidences = np.concatenate(confidences).ravel()
-    boxes = non_max_suppression(np.array(rects), probs=flattened_confidences)
+        # Decode the predictions, then apply non-maxima suppression to suppress weak, overlapping bounding boxes
+        (rects, confidences) = decode_predictions(scores, geometry)
+        boxes = non_max_suppression(rects, confidences)
 
-    # Initialize the list of results
-    results = []
+        flattened_confidences = np.concatenate(confidences).ravel()
+        boxes = non_max_suppression(rects, flattened_confidences)
 
-    # Loop over the bounding boxes
-    for (startX, startY, endX, endY) in boxes:
-        startX = int(startX * rW)
-        startY = int(startY * rH)
-        endX = int(endX * rW)
-        endY = int(endY * rH)
+        # Initialize the list of results
+        results = []
 
-        dX = int((endX - startX) * args["padding"])
-        dY = int((endY - startY) * args["padding"])
+        # Loop over the bounding boxes
+        for (startX, startY, endX, endY) in boxes:
+            startX = int(startX * rW)
+            startY = int(startY * rH)
+            endX = int(endX * rW)
+            endY = int(endY * rH)
 
-        startX = max(0, startX - dX)
-        startY = max(0, startY - dY)
-        endX = min(origW, endX + (dX * 2))
-        endY = min(origH, endY + (dY * 2))
+            dX = int((endX - startX) * args["padding"])
+            dY = int((endY - startY) * args["padding"])
 
-        startX = startX - 10
-        startY = startY - 5
-        endX = endX + 10
-        endY = endY + 10
+            startX = max(0, startX - dX)
+            startY = max(0, startY - dY)
+            endX = min(origW, endX + (dX * 2))
+            endY = min(origH, endY + (dY * 2))
 
-        roi = orig[startY:endY, startX-3:endX+3]
+            startX = startX - 10
+            startY = startY - 5
+            endX = endX + 10
+            endY = endY + 10
 
-        config = ("-l eng --oem 1 --psm 7")
-        #text = pytesseract.image_to_string(roi, config=config)
-        text = "dummy text"
+            roi = orig[startY:endY, startX-3:endX+3]
 
-        results.append(((startX, startY, endX, endY), text))
+            config = ("-l eng --oem 1 --psm 7")
+            text = pytesseract.image_to_string(roi, config=config)
 
-    results = sorted(results, key=lambda r: r[0][1])
+            results.append(((startX, startY, endX, endY), text))
 
-    def swapPositions(list, pos1, pos2):
-        list[pos1], list[pos2] = list[pos2], list[pos1]
-        return list
+        results = sorted(results, key=lambda r: r[0][1])
 
-    First = True
-    swap = []
-    for pos, result in enumerate(results):
-        if First:
-            temp = result
-            First = False
-        else:
-            if (temp[0][1] + 10) >= result[0][1]:
-                if temp[0][0] > result[0][0]:
-                    swap.append((pos - 1, pos))
-            temp = result
+        def swapPositions(list, pos1, pos2):
+            list[pos1], list[pos2] = list[pos2], list[pos1]
+            return list
 
-    if swap:
-        for p1, p2 in swap:
-            swapPositions(results, p1, p2)
+        First = True
+        swap = []
+        for pos, result in enumerate(results):
+            if First:
+                temp = result
+                First = False
+            else:
+                if (temp[0][1] + 10) >= result[0][1]:
+                    if temp[0][0] > result[0][0]:
+                        swap.append((pos - 1, pos))
+                temp = result
 
-    end_time = time.time()
-    total_duration += (end_time - start_time)
+        if swap:
+            for p1, p2 in swap:
+                swapPositions(results, p1, p2)
 
-average_duration = total_duration / 100
+        end_time = time.time()
+        total_duration += (end_time - start_time)
+
+average_duration = total_duration / 10
 print(f"Average duration: {average_duration:.4f} seconds")
 print(f"Total duration: {total_duration:.4f} seconds")
