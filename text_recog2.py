@@ -104,7 +104,8 @@ for i in range(100):
         roi = orig[startY:endY, startX-3:endX+3]
 
         config = ("-l eng --oem 1 --psm 7")
-        text = pytesseract.image_to_string(roi, config=config)
+        #text = pytesseract.image_to_string(roi, config=config)
+        text = "dummy text" #dont care about pytesseract for now
 
         results.append(((startX, startY, endX, endY), text))
 
