@@ -1,56 +1,19 @@
-import av
-import io
-import cv2
-import numpy as np
-from flask import Flask, Response, send_from_directory
+import asyncio
 from io import BytesIO
+import logging
+import atexit
 import time
 
+import numpy as np
+import av
+import cv2
+from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
+from aiortc.contrib.media import MediaRelay, MediaBlackhole
+from quart import Quart, send_from_directory, request, jsonify
 
-app = Flask(__name__,
+app = Quart(__name__,
             static_url_path='',
             static_folder='html')
-
-def generate_mjpeg():
-    # Constants for the video and square
-    width, height = 640, 480
-    square_size = 150
-    frame_rate = 24
-    frame_delay = 1 / frame_rate  # Delay to achieve ~24 FPS
-
-    while True:  # Loop to make it continuous
-        for angle in range(0, 360, 15):  # Increment angle for faster rotation and less frames
-            # Create a black frame
-            frame = np.zeros((height, width, 3), dtype=np.uint8)
-
-            # Create a square
-            square = np.zeros((square_size, square_size, 3), dtype=np.uint8)
-            square[:] = (0, 0, 255)  # Red color
-
-            # Rotate the square
-            M = cv2.getRotationMatrix2D((square_size / 2, square_size / 2), angle, 1)
-            rotated_square = cv2.warpAffine(square, M, (square_size, square_size))
-
-            # Position the square in the center of the frame
-            start_x = width // 2 - square_size // 2
-            start_y = height // 2 - square_size // 2
-            frame[start_y:start_y + square_size, start_x:start_x + square_size] = rotated_square
-
-            # Encode frame as JPEG for streaming
-            ret, buffer = cv2.imencode('.jpg', frame)
-            if not ret:
-                continue  # Skip the frame if encoding failed
-
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-            time.sleep(frame_delay)  # Wait to control the frame rate
-
-
-@app.route('/video_mjpeg')
-def video_feed():
-    return Response(generate_mjpeg(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
 
 
 def generate_encoded():
@@ -101,7 +64,7 @@ def generate_encoded():
                 buffer.seek(0)
                 buffer.truncate()
                 yield chunk
-        
+
         time.sleep(frame_delay)  # Wait to control the frame rate
 
     # NOTE: this never actually runs due to the infinite loop above
@@ -121,13 +84,138 @@ def generate_encoded():
 
 
 @app.route('/video')
-def video():
-    return Response(generate_encoded(), mimetype='video/mp2t')
+async def video():
+    return generate_encoded(), 200, { 'mimetype': 'video/mp2t' }
+
+
+class VideoTransformTrack(MediaStreamTrack):
+    """
+    Custom WebRTC MediaStreamTrack that overlays a watermark onto each video frame.
+    """
+    kind = "video"
+
+    def __init__(self, track, watermark_data):
+        super().__init__()
+        self.track = track
+        self.watermark_data = watermark_data
+        self.alpha = watermark_data[:,:,3] / 255.0 # normalize the alpha channel
+        self.inverse_alpha = 1 - self.alpha
+
+    async def recv(self):
+        frame = await self.track.recv()
+        return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
+    
+    def overlay_watermark(self, frame, watermark_data, alpha, inverse_alpha):
+        frame_data = frame.to_ndarray(format='rgba')
+
+        # place watermark in bottom right corner of the frame
+        x_offset = frame_data.shape[1] - watermark_data.shape[1]
+        y_offset = frame_data.shape[0] - watermark_data.shape[0]
+
+        for c in range(3):
+            frame_data[y_offset:, x_offset:, c] = (alpha * watermark_data[:,:,c] + inverse_alpha * frame_data[y_offset:, x_offset:, c])
+
+        # rebuild frame while preserving timing info
+        new_frame = av.VideoFrame.from_ndarray(frame_data, format='rgba')
+        new_frame.pts = frame.pts
+        new_frame.time_base = frame.time_base
+        return new_frame
+
+
+logger = logging.getLogger("pc")
+pcs = set() # current WebRTC  peer connections
+relay = MediaRelay()
+
+
+@app.route('/offer', methods=['POST'])
+async def offer():
+    """
+    This endpoint is used to establish a WebRTC connection between a client
+    and the server. Once the connection has been established the client
+    will stream video to the server, the server will add a watermark to each
+    video frame and stream the modified video back to the client. 
+    """
+    params = await request.get_json()
+    #print('Offer params', params)
+    offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
+
+    pc = RTCPeerConnection()
+    pc_id = 'PeerConnection(%s)' % id(pc)
+    pcs.add(pc)
+
+    def log_info(msg, *args):
+        logger.info(pc_id + " " + msg, *args)
+
+    recorder = MediaBlackhole()
+
+    # shouldn't need this
+    @pc.on("datachannel")
+    def on_datachannel(channel):
+        @channel.on("message")
+        def on_message(message):
+            if isinstance(message, str) and message.startswith("ping"):
+                channel.send("pong" + message[4:])
+
+    @pc.on("connectionstatechange")
+    async def on_connectionstatechange():
+        log_info('Connection state is %s', pc.connectionState)
+        if pc.connectionState == 'failed':
+            await pc.close()
+            pcs.discard(pc)
+
+    @pc.on("track")
+    def on_track(track):
+        log_info('Track received: %s', track.kind)
+
+        if track.kind == 'video':
+            log_info('Creating video transform track')
+            watermark_data = load_watermark()
+            pc.addTrack(VideoTransformTrack(relay.subscribe(track), watermark_data))
+            recorder.addTrack(relay.subscribe(track))
+
+        @track.on("ended")
+        async def on_ended():
+            log_info('Track %s ended', track.kind)
+            await recorder.stop()
+    
+    # handle offer
+    await pc.setRemoteDescription(offer)
+    await recorder.start()
+    # send answer
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+
+    return jsonify({'sdp': pc.localDescription.sdp, 'type': pc.localDescription.type})
+
+
+def load_watermark():
+    watermark_data = cv2.imread('watermark.png', cv2.IMREAD_UNCHANGED)
+    # convert to RGBA if needed
+    if watermark_data.shape[2] == 3:
+        watermark_data = cv2.cvtColor(watermark_data, cv2.COLOR_BGR2RGBA)
+    elif watermark_data.shape[2] == 1:
+        watermark_data = cv2.cvtColor(watermark_data, cv2.COLOR_GRAY2BGRA)
+    return watermark_data
+
+
+def on_shutdown():
+    # close peer connections
+    for pc in list(pcs):
+        asyncio.run(pc.close())
+        pcs.discard(pc)
+    pcs.clear()
 
 
 @app.route('/')
-def index():
-    return send_from_directory('html', 'video.html')
+async def index():
+    return await send_from_directory('html', 'video.html')
+
+
+@app.route('/webrtc')
+async def webrtc():
+    return await send_from_directory('html', 'webrtc.html')
+
 
 if __name__ == '__main__':
+    atexit.register(on_shutdown)
     app.run(debug=True, threaded=True, port=5001)
