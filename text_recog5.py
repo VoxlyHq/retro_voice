@@ -1,5 +1,5 @@
 import numpy as np
-import pytesseract
+#import pytesseract
 import argparse
 import tensorflow as tf
 import time
@@ -123,7 +123,7 @@ with tf.compat.v1.Session(graph=graph) as sess:
     geometry_tensor = graph.get_tensor_by_name(layerNames[1] + ":0")
 
     # Perform forward pass
-    for _ in range(10):
+    for _ in range(100):
         start_time = time.time()
         blob = np.expand_dims(image, axis=0)
         (scores, geometry) = sess.run([scores_tensor, geometry_tensor], feed_dict={image_tensor: blob})
@@ -161,7 +161,8 @@ with tf.compat.v1.Session(graph=graph) as sess:
             roi = orig[startY:endY, startX-3:endX+3]
 
             config = ("-l eng --oem 1 --psm 7")
-            text = pytesseract.image_to_string(roi, config=config)
+            #text = pytesseract.image_to_string(roi, config=config)
+            text = "dummy_text"
 
             results.append(((startX, startY, endX, endY), text))
 
@@ -190,6 +191,6 @@ with tf.compat.v1.Session(graph=graph) as sess:
         end_time = time.time()
         total_duration += (end_time - start_time)
 
-average_duration = total_duration / 10
+average_duration = total_duration / 100
 print(f"Average duration: {average_duration:.4f} seconds")
 print(f"Total duration: {total_duration:.4f} seconds")
