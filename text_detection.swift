@@ -36,27 +36,77 @@ func detectText(in image: CGImage, model: VNCoreMLModel) -> (duration: TimeInter
     return (result.duration, observations)
 }
 
-// Function to extract text from feature values
-func extractText(from observations: [VNCoreMLFeatureValueObservation]) -> [String] {
-    var detectedTexts: [String] = []
+// Function to extract text and coordinates from feature values
+func extractTextAndCoordinates(from observations: [VNCoreMLFeatureValueObservation]) -> [(text: String, coordinates: [CGPoint])] {
+    var detectedTexts: [(text: String, coordinates: [CGPoint])] = []
 
-    for observation in observations {
-        guard let multiArray = observation.featureValue.multiArrayValue else {
-            continue
+    // Assuming the second observation is the geometry map
+    guard observations.count >= 2, let geometryArray = observations[1].featureValue.multiArrayValue else {
+        return detectedTexts
+    }
+
+    // Assuming the first observation is the score map
+    guard let scoreArray = observations[0].featureValue.multiArrayValue else {
+        return detectedTexts
+    }
+
+    let geometryShape = geometryArray.shape
+    let scoreShape = scoreArray.shape
+
+    print("Geometry Shape: \(geometryShape)")
+    print("Score Array Shape: \(scoreShape)")
+
+    let geometryCount = geometryArray.count
+    let scoreCount = scoreArray.count
+
+    // Debugging: print score map values for the first 10x10 region
+    print("Score map values (first 10x10 region):")
+    for y in 0..<10 {
+        for x in 0..<10 {
+            let index = (0 * 128 * 128) + (y * 128) + x
+            print(scoreArray[index].doubleValue, terminator: " ")
         }
+        print()
+    }
 
-        // Process the multiArray to extract text data
-        // This is a placeholder, actual implementation will depend on the model's output format
-        // Here, we just print the shape and some values as an example
-        let shape = multiArray.shape
-        print("Detected feature with shape: \(shape)")
+    // Debugging: print geometry map values for the first 10x10 region
+    print("Geometry map values (first 10x10 region):")
+    for y in 0..<10 {
+        for x in 0..<10 {
+            let baseIndex = ((0 * 128 * 128) + (y * 128) + x) * 4
+            let offsetX = geometryArray[baseIndex].doubleValue
+            let offsetY = geometryArray[baseIndex + 1].doubleValue
+            let width = geometryArray[baseIndex + 2].doubleValue
+            let height = geometryArray[baseIndex + 3].doubleValue
 
-        // Assuming multiArray contains the text detection scores or coordinates
-        let count = multiArray.count
-        let step = max(1, count / 10)  // Print up to 10 values to avoid excessive output
-        for i in stride(from: 0, to: count, by: step) {
-            let value = multiArray[i].doubleValue
-            detectedTexts.append("\(value)")
+            print("(\(offsetX), \(offsetY), \(width), \(height))", terminator: " ")
+        }
+        print()
+    }
+
+    // Lowered threshold for text detection
+    for y in 0..<128 {
+        for x in 0..<128 {
+            let index = (0 * 128 * 128) + (y * 128) + x
+            let score = scoreArray[index].doubleValue
+
+            if score > 0.1 { // Lowered threshold for considering a valid text box
+                let baseIndex = index * 4
+                let offsetX = geometryArray[baseIndex].doubleValue
+                let offsetY = geometryArray[baseIndex + 1].doubleValue
+                let width = geometryArray[baseIndex + 2].doubleValue
+                let height = geometryArray[baseIndex + 3].doubleValue
+
+                let coordinates = [
+                    CGPoint(x: Double(x) * 128.0 + offsetX, y: Double(y) * 128.0 + offsetY),
+                    CGPoint(x: Double(x) * 128.0 + offsetX + width, y: Double(y) * 128.0 + offsetY),
+                    CGPoint(x: Double(x) * 128.0 + offsetX + width, y: Double(y) * 128.0 + offsetY + height),
+                    CGPoint(x: Double(x) * 128.0 + offsetX, y: Double(y) * 128.0 + offsetY + height)
+                ]
+
+                detectedTexts.append(("Text Detected", coordinates))
+                print("Detected text with score \(score) at \(coordinates)")
+            }
         }
     }
 
@@ -95,9 +145,10 @@ for i in 0..<runCount {
         totalDuration += result.duration
         print("Run \(i + 1): Duration: \(result.duration) seconds")
         
-        let detectedTexts = extractText(from: result.results)
-        for text in detectedTexts {
-            print("Detected text: \(text)")
+        let detectedTexts = extractTextAndCoordinates(from: result.results)
+        print("Detected text for run \(i + 1):")
+        for (text, coordinates) in detectedTexts {
+            print("\(text) at \(coordinates)")
         }
     } else {
         print("Text detection failed on run \(i + 1)")
