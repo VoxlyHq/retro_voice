@@ -116,6 +116,8 @@ layerNames = [
     "feature_fusion/concat_3"]
 
 total_duration = 0
+detection_count = 0
+abs_start_time = time.time()
 
 with tf.compat.v1.Session(graph=graph) as sess:
     image_tensor = graph.get_tensor_by_name("input_images:0")
@@ -194,3 +196,5 @@ with tf.compat.v1.Session(graph=graph) as sess:
 average_duration = total_duration / 100
 print(f"Average duration: {average_duration:.4f} seconds")
 print(f"Total duration: {total_duration:.4f} seconds")
+fps = 100 / (time.time() - abs_start_time)
+print(f"FPS: {fps:.2f}")
