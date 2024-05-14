@@ -10,30 +10,35 @@ from imutils.object_detection import non_max_suppression
 from PIL import Image, ImageDraw
 
 def decode_predictions(scores, geometry):
+    # Debugging prints
+    print(f"scores shape: {scores.shape}")
+    print(f"geometry shape: {geometry.shape}")
+
     (numRows, numCols) = scores.shape[1:3]
     rects = []
     confidences = []
 
     for y in range(numRows):
         scoresData = scores[0, y]
-        xData0 = geometry[0, 0, y]
-        xData1 = geometry[0, 1, y]
-        xData2 = geometry[0, 2, y]
-        xData3 = geometry[0, 3, y]
-        anglesData = geometry[0, 4, y]
-
         for x in range(numCols):
             if scoresData[x] < args["min_confidence"]:
                 continue
 
+            xData0 = geometry[0, y, x, 0]
+            xData1 = geometry[0, y, x, 1]
+            xData2 = geometry[0, y, x, 2]
+            xData3 = geometry[0, y, x, 3]
+
+
             (offsetX, offsetY) = (x * 4.0, y * 4.0)
-            angle = anglesData[x]
+            anglesData = geometry[0, y, x, 4]
+            angle = anglesData
             cos = np.cos(angle)
             sin = np.sin(angle)
-            h = xData0[x] + xData2[x]
-            w = xData1[x] + xData3[x]
-            endX = int(offsetX + (cos * xData1[x]) + (sin * xData2[x]))
-            endY = int(offsetY - (sin * xData1[x]) + (cos * xData2[x]))
+            h = xData0 + xData2
+            w = xData1 + xData3
+            endX = int(offsetX + (cos * xData1) + (sin * xData2))
+            endY = int(offsetY - (sin * xData1) + (cos * xData2))
             startX = int(endX - w)
             startY = int(endY - h)
 
@@ -91,17 +96,17 @@ with tf.compat.v1.Session(graph=graph) as sess:
     geometry_tensor = graph.get_tensor_by_name(layerNames[1] + ":0")
 
     blob = np.expand_dims(image, axis=0)
-    print(f"Blob shape: {blob.shape}")
     (scores, geometry) = sess.run([scores_tensor, geometry_tensor], feed_dict={image_tensor: blob})
 
-# decode the predictions, then apply non-maxima suppression to suppress weak, overlapping bounding boxes
+# Decode the predictions, then apply non-maxima suppression to suppress weak, overlapping bounding boxes
 (rects, confidences) = decode_predictions(scores, geometry)
-boxes = non_max_suppression(np.array(rects), probs=confidences)
+flattened_confidences = np.concatenate(confidences).ravel()
+boxes = non_max_suppression(np.array(rects), probs=flattened_confidences)
 
-# initialize the list of results
+# Initialize the list of results
 results = []
 
-# loop over the bounding boxes
+# Loop over the bounding boxes
 for (startX, startY, endX, endY) in boxes:
     startX = int(startX * rW)
     startY = int(startY * rH)

@@ -10,10 +10,19 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "precog",
+            "name": "3precog",
             "type": "debugpy",
             "request": "launch",
-            "program": "text_recog.py",
+            "program": "text_recog3.py",
+            "args": [  "--east", "frozen_east_text_detection.pb", "--image",  "~/Desktop/ff2_en_1.png"],
+            "console": "integratedTerminal",
+            "python": "coreml/bin/python"
+        },
+        {
+            "name": "2precog",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "text_recog2.py",
             "args": [  "--east", "frozen_east_text_detection.pb", "--image",  "~/Desktop/ff2_en_1.png"],
             "console": "integratedTerminal",
             "python": "coreml/bin/python"
