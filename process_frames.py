@@ -10,7 +10,7 @@ import easyocr
 import base64
 import json
 from PIL import Image
-from image_diff import calculate_image_difference, calculate_image_hash_different, crop_img
+from image_diff import calculate_image_difference, calculate_image_hash_different, image_crop
 from openai_api import OpenAI_API
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
@@ -377,7 +377,7 @@ class FrameProcessor:
             w,h = img.size
             top_left = tuple((0, 0))
             bottom_right = tuple((w, h//2))
-            img_crop = crop_img(img, top_left, bottom_right)
+            img_crop = image_crop(img, top_left, bottom_right)
 
             # cache
             then = time.time()
