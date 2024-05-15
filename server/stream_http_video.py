@@ -40,7 +40,7 @@ ROOT = os.path.dirname(__file__)
 app = Flask(__name__,
             static_url_path='',
             static_folder='../html')
-app.wsgi_app = ProxyFix(app.wsgi_app)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = Config.SECRET_KEY
 app.config.from_object(Config)
 app.register_blueprint(google_oauth_blueprint, url_prefix="/login")
