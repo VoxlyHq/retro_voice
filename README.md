@@ -116,3 +116,7 @@ python ss.py -w -is -v ~/Desktop/ff2-screenrecord-first4min.mov
    ```bash
    flask --app server/stream_http_video.py run --port 5001
    ```
+
+## prod
+
+gunicorn -w 1 --bind unix:/tmp/voxly_app.sock server.stream_http_video:app

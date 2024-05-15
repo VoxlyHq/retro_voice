@@ -31,6 +31,7 @@ class Config(object):
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
     # OAuth2 client secret from Google Console
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
+    PREFERRED_URL_SCHEME = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET") or 'http'
 
 
 ROOT = os.path.dirname(__file__)
