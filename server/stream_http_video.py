@@ -13,7 +13,7 @@ from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from aiortc.contrib.media import MediaRelay, MediaBlackhole
 from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, url_for
 from flask_login import LoginManager, logout_user, login_required, current_user
-
+from werkzeug.middleware.proxy_fix import ProxyFix
 from .models import db, User
 from .oauth import google_oauth_blueprint
 from .commands import create_db
@@ -31,7 +31,7 @@ class Config(object):
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
     # OAuth2 client secret from Google Console
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
-    PREFERRED_URL_SCHEME = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET") or 'http'
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") or 'http'
 
 
 ROOT = os.path.dirname(__file__)
@@ -40,6 +40,7 @@ ROOT = os.path.dirname(__file__)
 app = Flask(__name__,
             static_url_path='',
             static_folder='../html')
+app.wsgi_app = ProxyFix(app.wsgi_app)
 app.secret_key = Config.SECRET_KEY
 app.config.from_object(Config)
 app.register_blueprint(google_oauth_blueprint, url_prefix="/login")
