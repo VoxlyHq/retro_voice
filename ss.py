@@ -229,15 +229,10 @@ def main():
 
     args = parser.parse_args()
     disable_dialog = args.disable_dialog
-    if args.japanese:
-        set_dialog_file("static/dialogues_jp_web.json")
-        lang = "jp"
-        
-        frameProcessor =  FrameProcessor(lang, disable_dialog) 
+    lang = 'jp' if args.japanese else 'en'    
     
-    if not args.japanese:
-        frameProcessor = FrameProcessor(disable_dialog=disable_dialog)
-
+    frameProcessor =  FrameProcessor(lang, disable_dialog) 
+    
     if args.webserver:
         server_thread = threading.Thread(target=run_server)
         server_thread.start()
