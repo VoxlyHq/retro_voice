@@ -16,6 +16,7 @@ from webserv import run_server, set_dialog_file
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
 #from image_window import ImageWindow
+from text_detector import TextDetector
 
 # Detect the operating system
 os_name = platform.system()
@@ -145,27 +146,34 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
     global last_played
     global frameProcessor
     global dialogues
-    
-    closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
+    global textDetector
 
-    if closest_match != None and closest_match != last_played:
-        start_time = time.time() # Record the start time
-        formated_filenames = [format_filename(i) for i in closest_match]
-        play_audio_threaded(formated_filenames)
-        end_time = time.time()
-        print(f"Audio Time taken: {end_time - start_time} seconds")
-        last_played = closest_match
-        if show_image_screen:
-            set_annotation_text(annotations)
-            set_translation_text(translation)
-    elif annotations != None:
-        if show_image_screen:
-            set_annotation_text(annotations)
-            set_translation_text(translation)
-    elif closest_match == None:
-        if show_image_screen:
-            set_annotation_text(None)
-            set_translation_text(None)
+    image = textDetector.preprocess_image(img)
+    if not textDetector.has_text(image):
+        print("No text Found in this frame. Skipping run_image")
+        set_annotation_text([])
+    else:
+    
+        closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
+
+        if closest_match != None and closest_match != last_played:
+            start_time = time.time() # Record the start time
+            formated_filenames = [format_filename(i) for i in closest_match]
+            play_audio_threaded(formated_filenames)
+            end_time = time.time()
+            print(f"Audio Time taken: {end_time - start_time} seconds")
+            last_played = closest_match
+            if show_image_screen:
+                set_annotation_text(annotations)
+                set_translation_text(translation)
+        elif annotations != None:
+            if show_image_screen:
+                set_annotation_text(annotations)
+                set_translation_text(translation)
+        elif closest_match == None:
+            if show_image_screen:
+                set_annotation_text(None)
+                set_translation_text(None)
 
 def timed_action_screencapture(translate=None, show_image_screen=False):
     print("Action triggered by timer")
@@ -202,7 +210,7 @@ def process_cv2_screenshots(translate, enable_cache=False):
         if frame is not None:
             print("Background task accessing the latest frame...")
             process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache)
-            time.sleep(1)  # Wait for 1 second
+            # time.sleep(1)  # Wait for 1 second
 
 def main():
     global dialogues
@@ -210,6 +218,7 @@ def main():
     global lang
     global frameProcessor
     global show_image_screen
+    global textDetector
 
     #setup_screen()
 
@@ -227,6 +236,9 @@ def main():
     
 
     args = parser.parse_args()
+    
+    textDetector = TextDetector('frozen_east_text_detection.pb')
+
     if args.japanese:
         set_dialog_file("static/dialogues_jp_web.json")
         lang = "jp"
