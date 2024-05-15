@@ -62,9 +62,22 @@ def load_user(user_id):
 
 @app.route('/test')
 def test():
+    # Print the request scheme
     scheme = request.scheme
     print(f"Request Scheme: {scheme}")
-    return f"Request Scheme: {scheme}"
+    
+    # Print all the request headers
+    headers = request.headers
+    print("Request Headers:")
+    for header, value in headers.items():
+        print(f"{header}: {value}")
+    
+    # Create a response that includes the scheme and headers
+    response = f"Request Scheme: {scheme}\n\nRequest Headers:\n"
+    for header, value in headers.items():
+        response += f"{header}: {value}\n"
+    
+    return response
 
 @app.route('/logout')
 @login_required
