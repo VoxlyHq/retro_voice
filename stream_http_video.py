@@ -2,6 +2,7 @@ import asyncio
 from io import BytesIO
 import logging
 import atexit
+from threading import Thread
 import time
 
 import numpy as np
@@ -9,11 +10,75 @@ import av
 import cv2
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from aiortc.contrib.media import MediaRelay, MediaBlackhole
-from quart import Quart, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, request, jsonify, redirect, url_for
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
-app = Quart(__name__,
+app = Flask(__name__,
             static_url_path='',
             static_folder='html')
+
+# flask_login setup
+app.secret_key = 'mysupersecretkey123'
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+
+class User(UserMixin):
+    def __init__(self, username, password):
+        self.id = username
+        self.password = password
+
+    def get_id(self):
+        return self.id
+
+
+# mock user database... replace with sqlite or something later
+users = {
+    'user': User('user', 'password'),
+}
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return users.get(user_id)
+
+
+@app.route('/login', methods=['GET'])
+def login_form():
+    return '''
+        <form method="post">
+            Username: <input type="text" name="username"><br>
+            Password: <input type="password" name="password"><br>
+            <input type="submit" value="Login">
+        </form>
+    '''
+
+@app.route('/login', methods=['POST'])
+def login():
+    form = request.form
+    username = form.get('username')
+    password = form.get('password')
+
+    user = users.get(username)
+    if user is None or user.password != password:
+      return redirect(url_for('login'))  
+    
+    login_user(user)
+    return redirect(url_for('protected'))
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('webrtc'))
+
+
+@app.route('/protected')
+@login_required
+def protected():
+    return f'Hello, {current_user.id}! You are logged in.'
 
 
 def generate_encoded():
@@ -84,7 +149,7 @@ def generate_encoded():
 
 
 @app.route('/video')
-async def video():
+def video():
     return generate_encoded(), 200, { 'mimetype': 'video/mp2t' }
 
 
@@ -127,16 +192,7 @@ pcs = set() # current WebRTC  peer connections
 relay = MediaRelay()
 
 
-@app.route('/offer', methods=['POST'])
-async def offer():
-    """
-    This endpoint is used to establish a WebRTC connection between a client
-    and the server. Once the connection has been established the client
-    will stream video to the server, the server will add a watermark to each
-    video frame and stream the modified video back to the client. 
-    """
-    params = await request.get_json()
-    #print('Offer params', params)
+async def handle_offer(params):
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
     pc = RTCPeerConnection()
@@ -188,6 +244,35 @@ async def offer():
     return jsonify({'sdp': pc.localDescription.sdp, 'type': pc.localDescription.type})
 
 
+@app.route('/offer', methods=['POST'])
+def offer():
+    """
+    This endpoint is used to establish a WebRTC connection between a client
+    and the server. Once the connection has been established the client
+    will stream video to the server, the server will add a watermark to each
+    video frame and stream the modified video back to the client. 
+    """
+
+    # While Flask does support async route handlers (with flask[async] extension),
+    # it will kill the WebRTC connections spawned by the handler as soon as the
+    # handler returns a response. The workaround is to use asyncio to run
+    # the async part of the handler and then keep the WebRTC connections alive
+    # on another thread... it's not clear though if the WebRTC stuff will get
+    # cleaned up properly when the client disconnects, might need to do some
+    # additional housekeeping!
+    #
+    # See https://github.com/aiortc/aiortc/issues/792 for additional context. 
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    resp = loop.run_until_complete(handle_offer(request.get_json()))
+    Thread(target = loop.run_forever).start()
+    return resp
+
+
 def load_watermark():
     watermark_data = cv2.imread('watermark.png', cv2.IMREAD_UNCHANGED)
     # convert to RGBA if needed
@@ -207,13 +292,13 @@ def on_shutdown():
 
 
 @app.route('/')
-async def index():
-    return await send_from_directory('html', 'video.html')
+def index():
+    return send_from_directory('html', 'video.html')
 
 
 @app.route('/webrtc')
-async def webrtc():
-    return await send_from_directory('html', 'webrtc.html')
+def webrtc():
+    return send_from_directory('html', 'webrtc.html')
 
 
 if __name__ == '__main__':
