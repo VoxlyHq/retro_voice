@@ -31,6 +31,7 @@ google-crc32c==1.5.0
 googleapis-common-protos==1.63.0
 grpcio==1.63.0
 grpcio-status==1.62.2
+gunicorn==22.0.0
 h11==0.14.0
 h2==4.1.0
 hpack==4.0.0

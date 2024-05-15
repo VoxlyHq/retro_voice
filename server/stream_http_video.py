@@ -18,6 +18,8 @@ from .models import db, User
 from .oauth import google_oauth_blueprint
 from .commands import create_db
 
+from dotenv import load_dotenv
+load_dotenv()
 
 class Config(object):
     # used for signing the Flask session cookie
