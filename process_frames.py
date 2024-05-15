@@ -373,7 +373,11 @@ class FrameProcessor:
             # print("Images are more than 10% different. Proceed with OCR.")
             print("Images are more than 7 hamming distance. Proceed with OCR")
 
-            img_crop = crop_img(img)
+            # crop the image to top half
+            w,h = img.size
+            top_left = tuple((0, 0))
+            bottom_right = tuple((w, h//2))
+            img_crop = crop_img(img, top_left, bottom_right)
 
             # cache
             then = time.time()
