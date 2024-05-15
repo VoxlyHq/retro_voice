@@ -31,7 +31,7 @@ class Config(object):
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
     # OAuth2 client secret from Google Console
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
-    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") or 'http'
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") #or 'http'
 
 
 ROOT = os.path.dirname(__file__)
@@ -43,6 +43,7 @@ app = Flask(__name__,
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = Config.SECRET_KEY
 app.config.from_object(Config)
+print(app.config)
 app.register_blueprint(google_oauth_blueprint, url_prefix="/login")
 db.init_app(app)
 
@@ -58,6 +59,12 @@ login_manager.init_app(app)
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
+@app.route('/test')
+def test():
+    scheme = request.scheme
+    print(f"Request Scheme: {scheme}")
+    return f"Request Scheme: {scheme}"
 
 @app.route('/logout')
 @login_required

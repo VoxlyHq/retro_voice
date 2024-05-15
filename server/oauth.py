@@ -10,7 +10,7 @@ from .models import db, User, OAuth
 
 google_oauth_blueprint = make_google_blueprint(
     scope=["profile", "email"],
-    storage=SQLAlchemyStorage(OAuth, db.session, user=current_user),
+    storage=SQLAlchemyStorage(OAuth, db.session, user=current_user)
 )
 
 
