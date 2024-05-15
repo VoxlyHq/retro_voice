@@ -12,6 +12,24 @@ def image_crop(img, top_left, bottom_right):
 
     return img
 
+def image_crop_in_top_half(img):
+    w,h = img.size
+    top_left = tuple((0, 0))
+    bottom_right = tuple((w, h//2))
+    
+    img = image_crop(img, top_left, bottom_right)
+
+    return img
+
+def image_crop_title_bar(pil_image, crop_y_coordiante=37):
+    # crop the title bar
+    w,h = pil_image.size
+    top_left = tuple((0, crop_y_coordiante))
+    bottom_right = tuple((w, h))
+    pil_image = image_crop(pil_image, top_left, bottom_right)
+
+    return pil_image
+
 def calculate_image_difference(img1, img2):
     if img1 == None or img2 == None:
         return 0
@@ -29,16 +47,6 @@ def calculate_image_difference(img1, img2):
     total_pixels = np.prod(img1.size) * 3  # Total number of values in the array
     percent_diff = (num_diff_pixels / total_pixels) * 100
     return percent_diff
-
-
-def image_crop_in_top_half(img):
-    w,h = img.size
-    top_left = tuple((0, 0))
-    bottom_right = tuple((w, h//2))
-    
-    img = image_crop(img, top_left, bottom_right)
-
-    return img
 
 def calculate_image_hash_different(img1, img2):
     if img1 == None or img2 == None:

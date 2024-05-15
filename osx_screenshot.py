@@ -10,7 +10,7 @@ import Quartz.CoreGraphics as CG
 import os
 import numpy as np
 from PIL import Image
-from image_diff import image_crop
+from image_diff import image_crop_title_bar
 
 def cgimage_to_pil(cgimage):
     width = CGImageGetWidth(cgimage)
@@ -71,11 +71,7 @@ def capture_window_to_pil(window_id, file_path, crop_y_coordiante=37):
         if pil_image.mode == 'RGBA':
             pil_image = pil_image.convert('RGB')
 
-        # crop the title bar
-        w,h = pil_image.size
-        top_left = tuple((0, crop_y_coordiante))
-        bottom_right = tuple((w, h))
-        pil_image = image_crop(pil_image, top_left, bottom_right)
+        pil_image = image_crop_title_bar(pil_image, crop_y_coordiante)
 
         return pil_image         
     else:
