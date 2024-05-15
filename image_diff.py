@@ -31,17 +31,12 @@ def calculate_image_difference(img1, img2):
     return percent_diff
 
 
-def old_crop_img(img):
+def image_crop_in_top_half(img):
     w,h = img.size
     top_left = tuple((0, 0))
     bottom_right = tuple((w, h//2))
-
-    left = top_left[0]
-    upper = top_left[1]
-    right = bottom_right[0]
-    lower = bottom_right[1]
-
-    img = img.crop((left, upper, right, lower))
+    
+    img = image_crop(img, top_left, bottom_right)
 
     return img
 
@@ -49,8 +44,9 @@ def calculate_image_hash_different(img1, img2):
     if img1 == None or img2 == None:
         return 0
     
-    img1 = old_crop_img(img1)
-    img2 = old_crop_img(img2)
+    img1 = image_crop_in_top_half(img1)
+
+    img2 = image_crop_in_top_half(img2)
 
     img1_hash = imagehash.average_hash(img1, hash_size=16)
     img2_hash = imagehash.average_hash(img2, hash_size=16)
