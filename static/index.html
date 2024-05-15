@@ -32,10 +32,14 @@
         const evtSource = new EventSource("/stream");
         evtSource.onmessage = function(event) {
             console.log("first!")
-            // Assume event.data is base64 encoded PNG image data
-            //const base64Image = `data:image/png;base64,${event.data}`;
-            document.getElementById('liveImage').src = event.data;
-            console.log('Image updated');
+            if(event.data == "none") {
+                console.log('No image available');
+            }else {
+                // Assume event.data is base64 encoded PNG image data
+                //const base64Image = `data:image/png;base64,${event.data}`;
+                document.getElementById('liveImage').src = event.data;
+                console.log('Image updated');
+            }
         };
     </script>
 </td>    

@@ -7,6 +7,11 @@ Currently the project requires python 3+, runs on OSX and will shortly be ported
 You can run it 1 of two modes. Completely from command line, this can take a video stream, or find a window on your operating system with the game running. The second mode, uses an html page and then uploads screenshots to the webserver 
 
 
+# GIT LFS, large files, the audio files are stored on git lfs 
+```bash
+git lfs install
+git lfs pull
+```
 
 # installation
 
