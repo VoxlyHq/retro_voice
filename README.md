@@ -13,6 +13,7 @@ You can run it 1 of two modes. Completely from command line, this can take a vid
 1) setup a venv 
 ```bash
 python3 -m venv venv
+source ./venv/bin/activate
 ```
 
 note this hasn't been tested on non-mac systems.
@@ -95,3 +96,18 @@ python ss.py -w -is -v webcam
 ```bash
 python ss.py -w -is -v ~/Desktop/ff2-screenrecord-first4min.mov
 ```
+
+## Flask WebRTC server
+
+### Development
+1. Copy `.env.default` to `.env` and fill out the env vars.
+   You should set `OAUTHLIB_INSECURE_TRANSPORT=true` in the dev env so OAuth works with `HTTP`,
+   in production this should be `false` so that only `HTTPS` is allowed.
+2. Create the local db:
+   ```bash
+   flask --app server/stream_http_video.py create_db
+   ```
+3. Run the server:
+   ```bash
+   flask --app server/stream_http_video.py run --port 5001
+   ```

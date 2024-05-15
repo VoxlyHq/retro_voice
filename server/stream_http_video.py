@@ -1,3 +1,4 @@
+import os
 import asyncio
 from io import BytesIO
 import logging
@@ -10,62 +11,48 @@ import av
 import cv2
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from aiortc.contrib.media import MediaRelay, MediaBlackhole
-from flask import Flask, send_from_directory, request, jsonify, redirect, url_for
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, url_for
+from flask_login import LoginManager, logout_user, login_required, current_user
+
+from .models import db, User
+from .oauth import google_oauth_blueprint
+from .commands import create_db
+
+
+class Config(object):
+    # used for signing the Flask session cookie
+    SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Google Auth2 stuff can be obtained from https://console.developers.google.com
+    # OAuth2 client ID from Google Console
+    GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
+    # OAuth2 client secret from Google Console
+    GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
+
+
+ROOT = os.path.dirname(__file__)
+
 
 app = Flask(__name__,
             static_url_path='',
-            static_folder='html')
+            static_folder='../html')
+app.secret_key = Config.SECRET_KEY
+app.config.from_object(Config)
+app.register_blueprint(google_oauth_blueprint, url_prefix="/login")
+db.init_app(app)
 
-# flask_login setup
-app.secret_key = 'mysupersecretkey123'
+app.cli.add_command(create_db)
+
+
+# Flask-Login setup
 login_manager = LoginManager()
+login_manager.login_view = 'google.login'
 login_manager.init_app(app)
-login_manager.login_view = 'login'
-
-
-class User(UserMixin):
-    def __init__(self, username, password):
-        self.id = username
-        self.password = password
-
-    def get_id(self):
-        return self.id
-
-
-# mock user database... replace with sqlite or something later
-users = {
-    'user': User('user', 'password'),
-}
-
 
 @login_manager.user_loader
 def load_user(user_id):
-    return users.get(user_id)
-
-
-@app.route('/login', methods=['GET'])
-def login_form():
-    return '''
-        <form method="post">
-            Username: <input type="text" name="username"><br>
-            Password: <input type="password" name="password"><br>
-            <input type="submit" value="Login">
-        </form>
-    '''
-
-@app.route('/login', methods=['POST'])
-def login():
-    form = request.form
-    username = form.get('username')
-    password = form.get('password')
-
-    user = users.get(username)
-    if user is None or user.password != password:
-      return redirect(url_for('login'))  
-    
-    login_user(user)
-    return redirect(url_for('protected'))
+    return User.query.get(int(user_id))
 
 
 @app.route('/logout')
@@ -244,7 +231,7 @@ async def handle_offer(params):
     return jsonify({'sdp': pc.localDescription.sdp, 'type': pc.localDescription.type})
 
 
-@app.route('/offer', methods=['POST'])
+@app.post('/offer')
 def offer():
     """
     This endpoint is used to establish a WebRTC connection between a client
@@ -274,7 +261,7 @@ def offer():
 
 
 def load_watermark():
-    watermark_data = cv2.imread('watermark.png', cv2.IMREAD_UNCHANGED)
+    watermark_data = cv2.imread(os.path.join(ROOT, 'watermark.png'), cv2.IMREAD_UNCHANGED)
     # convert to RGBA if needed
     if watermark_data.shape[2] == 3:
         watermark_data = cv2.cvtColor(watermark_data, cv2.COLOR_BGR2RGBA)
@@ -291,16 +278,23 @@ def on_shutdown():
     pcs.clear()
 
 
-@app.route('/')
-def index():
-    return send_from_directory('html', 'video.html')
+@app.route('/mpegts')
+def mpegts():
+    return send_from_directory('../html', 'video.html')
 
 
 @app.route('/webrtc')
 def webrtc():
-    return send_from_directory('html', 'webrtc.html')
+    return send_from_directory('../html', 'webrtc.html')
+
+
+@app.route('/')
+def index():
+    return render_template('index.j2')
+
+
+atexit.register(on_shutdown)
 
 
 if __name__ == '__main__':
-    atexit.register(on_shutdown)
     app.run(debug=True, threaded=True, port=5001)
