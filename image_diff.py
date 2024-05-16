@@ -2,33 +2,22 @@ from PIL import Image
 import numpy as np
 import imagehash
 
-def image_crop(img, top_left, bottom_right):
-    left = top_left[0]
-    upper = top_left[1]
-    right = bottom_right[0]
-    lower = bottom_right[1]
-
-    img = img.crop((left, upper, right, lower))
-
-    return img
-
 def image_crop_in_top_half(img):
     w,h = img.size
-    top_left = tuple((0, 0))
-    bottom_right = tuple((w, h//2))
-    
-    img = image_crop(img, top_left, bottom_right)
+    top_left = (0, 0)
+    bottom_right = (w, h//2)
+    img = img.crop((*top_left, *bottom_right))
 
     return img
 
-def image_crop_title_bar(pil_image, crop_y_coordinate=37):
+def image_crop_title_bar(img, crop_y_coordinate=37):
     # crop the title bar
-    w,h = pil_image.size
+    w,h = img.size
     top_left = tuple((0, crop_y_coordinate))
     bottom_right = tuple((w, h))
-    pil_image = image_crop(pil_image, top_left, bottom_right)
+    img = img.crop((*top_left, *bottom_right))
 
-    return pil_image
+    return img
 
 def calculate_image_difference(img1, img2):
     if img1 == None or img2 == None:
