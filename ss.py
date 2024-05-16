@@ -238,7 +238,9 @@ def main():
         crop_y_coordinate = 50
 
     disable_dialog = args.disable_dialog
-    lang = 'jp' if args.japanese else 'en'    
+    lang = 'jp' if args.japanese else 'en'
+    if lang == 'jp':
+        set_dialog_file("static/dialogues_jp_web.json")
     
     frameProcessor =  FrameProcessor(lang, disable_dialog) 
     
