@@ -10,7 +10,7 @@ import easyocr
 import base64
 import json
 from PIL import Image
-from image_diff import calculate_image_difference, calculate_image_hash_different, crop_img
+from image_diff import calculate_image_difference, calculate_image_hash_different, image_crop_in_top_half
 from openai_api import OpenAI_API
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
@@ -379,7 +379,8 @@ class FrameProcessor:
             # print("Images are more than 10% different. Proceed with OCR.")
             print("Images are more than 7 hamming distance. Proceed with OCR")
 
-            img_crop = crop_img(img)
+            # crop the image to top half
+            img_crop = image_crop_in_top_half(img)
 
             # cache
             then = time.time()
