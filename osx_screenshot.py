@@ -54,7 +54,7 @@ def find_window_id(window_name):
     return None
 
 
-def capture_window_to_pil(window_id, file_path, crop_y_coordiante=37):
+def capture_window_to_pil(window_id, file_path, crop_y_coordinate=37):
     #print(f"Capturing window {window_id}")
     #kCGWindowListOptionIncludingWindow
     image = CGWindowListCreateImage(CGRectNull, CG.kCGWindowListOptionIncludingWindow, window_id, 0)
@@ -71,7 +71,7 @@ def capture_window_to_pil(window_id, file_path, crop_y_coordiante=37):
         if pil_image.mode == 'RGBA':
             pil_image = pil_image.convert('RGB')
 
-        pil_image = image_crop_title_bar(pil_image, crop_y_coordiante)
+        pil_image = image_crop_title_bar(pil_image, crop_y_coordinate)
 
         return pil_image         
     else:

@@ -38,6 +38,7 @@ class VideoStreamWithAnnotations:
             self.font_path = "C:/Windows/Fonts/YuGothB.ttc"  # Path to MS Gothic on Windows
         elif platform.system() == "Darwin":  # Darwin is the system name for macOS
             self.font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"  # Path to Hiragino Maru Gothic Pro
+            self.crop_y_coordinate = 37
         self.cap = None
         self.background_task = background_task
         self.background_task_args = background_task_args
@@ -52,7 +53,10 @@ class VideoStreamWithAnnotations:
         file_path = os.path.expanduser("window_capture.jpg")  # Save location
         window_id = find_window_id(window_name)
         if window_id:
-            img = capture_window_to_pil(window_id, file_path)
+            if os_name == "Darwin":
+                img = capture_window_to_pil(window_id, file_path, self.crop_y_coordinate)
+            else:
+                img = capture_window_to_pil(window_id, file_path)
             if not img:
                 print("Error: Can't receive frame (stream end?). Exiting ...")
                 return None

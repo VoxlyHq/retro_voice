@@ -21,10 +21,10 @@ def image_crop_in_top_half(img):
 
     return img
 
-def image_crop_title_bar(pil_image, crop_y_coordiante=37):
+def image_crop_title_bar(pil_image, crop_y_coordinate=37):
     # crop the title bar
     w,h = pil_image.size
-    top_left = tuple((0, crop_y_coordiante))
+    top_left = tuple((0, crop_y_coordinate))
     bottom_right = tuple((w, h))
     pil_image = image_crop(pil_image, top_left, bottom_right)
 
