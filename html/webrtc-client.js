@@ -89,8 +89,10 @@ function startGatheringStats() {
                 document.getElementById('outbound-fps').innerText = stat.framesPerSecond;
             } else if (stat.type === 'inbound-rtp' && stat.kind === 'video') {
                 const codec = stats.get(stat.codecId)
-                document.getElementById('inbound-codec').innerText = codec.mimeType;
-                document.getElementById('inbound-fps').innerText = stat.framesPerSecond;
+                if(codec != undefined){
+                    document.getElementById('inbound-codec').innerText = codec.mimeType;
+                    document.getElementById('inbound-fps').innerText = stat.framesPerSecond;
+                }
             }
         })
     }, 1000)
