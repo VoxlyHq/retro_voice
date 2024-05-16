@@ -9,6 +9,10 @@ import torch.profiler
 from easyocr.imgproc import resize_aspect_ratio, loadImage
 from easyocr.craft_utils import getDetBoxes
 
+from local_craft import getDetBoxes
+
+
+
 # Initialize the OCR reader
 reader = Reader(['en'])
 
@@ -45,7 +49,7 @@ with torch.cuda.amp.autocast():
     # Process the first image 60 times with PyTorch Profiler
     for _ in range(100):
         start = time.time()
-        boxes, polys, mapper = getDetBoxes(score_text, score_link, text_threshold, link_threshold, low_text, poly, estimate_num_chars)
+        boxes, polys, mapper = getDetBoxes(score_text, score_link, text_threshold, link_threshold, low_text, poly, estimate_num_chars) #,device='cpu')
 #        print(boxes)
 #        print(poly)
 #        print(mapper)
