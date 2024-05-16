@@ -22,12 +22,7 @@ def capture_window_to_pil(window_handle, file_path):
 
     left, top, right, bottom = win32gui.GetWindowRect(window_handle)
     
-    # removing drop menu
-    top = top + 50
-
-    width = right - left
-    height = bottom - top
-    monitor = {"top": top, "left": left, "width": width, "height": height}
+    monitor = {"top": top, "left": left, "width": right, "height": bottom}
 
     with mss() as sct:
         # Capture the screen
