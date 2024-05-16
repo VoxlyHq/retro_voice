@@ -227,6 +227,13 @@ def main():
     
 
     args = parser.parse_args()
+
+    crop_y_coordinate = None
+    if os_name == 'Darwin': 
+        crop_y_coordinate = 37
+    if os_name == 'Windows':
+        crop_y_coordinate = 50
+
     if args.japanese:
         set_dialog_file("static/dialogues_jp_web.json")
         lang = "jp"
@@ -248,7 +255,8 @@ def main():
 
     if args.show_image_screen:
         global video_stream
-        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},show_fps=args.show_fps)
+        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},
+                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()

@@ -22,7 +22,10 @@ def capture_window_to_pil(window_handle, file_path):
 
     left, top, right, bottom = win32gui.GetWindowRect(window_handle)
     
-    monitor = {"top": top, "left": left, "width": right, "height": bottom}
+
+    width = right - left
+    height = bottom - top
+    monitor = {"top": top, "left": left, "width": width, "height": height}
 
     with mss() as sct:
         # Capture the screen
