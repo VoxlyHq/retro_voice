@@ -232,7 +232,7 @@ def main():
 
     crop_y_coordinate = None
     if os_name == 'Darwin': 
-        crop_y_coordinate = 37
+        crop_y_coordinate = 72
     if os_name == 'Windows':
         crop_y_coordinate = 50
 
