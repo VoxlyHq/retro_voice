@@ -26,7 +26,6 @@ os_name = platform.system()
 dialogues = {}
 
 
-frameProcessor =  FrameProcessor()
 last_played = -1
 show_image_screen = False 
 video_stream = None
@@ -212,7 +211,7 @@ def process_cv2_screenshots(translate, enable_cache=False):
         if frame is not None:
             print("Background task accessing the latest frame...")
             process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache)
-            # time.sleep(1)  # Wait for 1 second
+            time.sleep(1)  # Wait for 1 second
 
 def main():
     global dialogues
@@ -248,10 +247,12 @@ def main():
     
     textDetector = TextDetector('frozen_east_text_detection.pb')
 
-    if args.japanese:
+    lang = 'en'
+    if args.japanese or (args.translate is not None and args.translate.startswith('jp')):
+        lang = 'jp' 
         set_dialog_file("static/dialogues_jp_web.json")
-        lang = "jp"
-        frameProcessor =  FrameProcessor(lang) 
+    
+    frameProcessor =  FrameProcessor(lang)
 
     if args.webserver:
         server_thread = threading.Thread(target=run_server)
