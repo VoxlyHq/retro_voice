@@ -22,8 +22,6 @@ def capture_window_to_pil(window_handle, file_path):
 
     left, top, right, bottom = win32gui.GetWindowRect(window_handle)
     
-    # removing drop menu
-    top = top + 50
 
     width = right - left
     height = bottom - top

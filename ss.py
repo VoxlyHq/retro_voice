@@ -15,6 +15,7 @@ from image_window import VideoStreamWithAnnotations
 from webserv import run_server, set_dialog_file
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
+from image_diff import image_crop_title_bar
 #from image_window import ImageWindow
 from text_detector import TextDetector
 
@@ -175,7 +176,7 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
                 set_annotation_text(None)
                 set_translation_text(None)
 
-def timed_action_screencapture(translate=None, show_image_screen=False):
+def timed_action_screencapture(translate=None, show_image_screen=False, crop_y_coordinate=None):
     print("Action triggered by timer")
 
     window_name = "RetroArch"  # Adjust this to the target window's name
@@ -183,6 +184,7 @@ def timed_action_screencapture(translate=None, show_image_screen=False):
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
+        img = image_crop_title_bar(img, crop_y_coordinate)
         process_screenshot(img, translate, show_image_screen)
 
     else:
@@ -195,9 +197,9 @@ def set_annotation_text(annotations):
 def set_translation_text(translation):
     video_stream.set_translation(translation)
 
-def process_screenshots(translate=None, show_image_screen=False):
+def process_screenshots(translate=None, show_image_screen=False, crop_y_coordinate=None):
     while True:
-        timed_action_screencapture(translate=translate, show_image_screen=show_image_screen)
+        timed_action_screencapture(translate=translate, show_image_screen=show_image_screen, crop_y_coordinate=crop_y_coordinate)
         print("timed_action_screencapture")
         time.sleep(1)  # Wait for 1 second
 
@@ -236,6 +238,13 @@ def main():
     
 
     args = parser.parse_args()
+
+    crop_y_coordinate = None
+    if os_name == 'Darwin': 
+        crop_y_coordinate = 72
+    if os_name == 'Windows':
+        crop_y_coordinate = 50
+
     
     textDetector = TextDetector('frozen_east_text_detection.pb')
 
@@ -260,7 +269,8 @@ def main():
 
     if args.show_image_screen:
         global video_stream
-        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},show_fps=args.show_fps)
+        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},
+                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()
@@ -270,7 +280,7 @@ def main():
         finally:
             video_stream.stop()
     else:
-        process_screenshots(translate=args.translate, show_image_screen=args.show_image_screen)
+        process_screenshots(translate=args.translate, show_image_screen=args.show_image_screen, crop_y_coordinate=crop_y_coordinate)
 
 
 if __name__ == "__main__":

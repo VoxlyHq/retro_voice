@@ -10,6 +10,15 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "venv Python: ss.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/ss.py",
+            "args": ["-w", "-is", "--translate=jp,en", "-fps"],
+            "console": "integratedTerminal",
+            "python": "venv/bin/python"
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

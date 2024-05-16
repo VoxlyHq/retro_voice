@@ -10,7 +10,6 @@ import Quartz.CoreGraphics as CG
 import os
 import numpy as np
 from PIL import Image
-from image_diff import image_crop
 
 def cgimage_to_pil(cgimage):
     width = CGImageGetWidth(cgimage)
@@ -54,7 +53,7 @@ def find_window_id(window_name):
     return None
 
 
-def capture_window_to_pil(window_id, file_path, crop_y_coordiante=37):
+def capture_window_to_pil(window_id, file_path):
     #print(f"Capturing window {window_id}")
     #kCGWindowListOptionIncludingWindow
     image = CGWindowListCreateImage(CGRectNull, CG.kCGWindowListOptionIncludingWindow, window_id, 0)
@@ -71,20 +70,14 @@ def capture_window_to_pil(window_id, file_path, crop_y_coordiante=37):
         if pil_image.mode == 'RGBA':
             pil_image = pil_image.convert('RGB')
 
-        # crop the title bar
-        w,h = pil_image.size
-        top_left = tuple((0, crop_y_coordiante))
-        bottom_right = tuple((w, h))
-        pil_image = image_crop(pil_image, top_left, bottom_right)
-
         return pil_image         
     else:
         print("Failed to capture window.")
         return None
 
-def capture_window_to_file(window_id, file_path, crop_y_coordiante=37):
+def capture_window_to_file(window_id, file_path):
     print(f"Capturing window {window_id} to {file_path}")
-    pil_image = capture_window_to_pil(window_id, file_path, crop_y_coordiante)
+    pil_image = capture_window_to_pil(window_id, file_path)
     if pil_image != None:
         print(f"Saved window capture to {file_path}")
         pil_image.save('output.jpg')
