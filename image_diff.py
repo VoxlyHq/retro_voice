@@ -2,6 +2,23 @@ from PIL import Image
 import numpy as np
 import imagehash
 
+def image_crop_in_top_half(img):
+    w,h = img.size
+    top_left = (0, 0)
+    bottom_right = (w, h//2)
+    img = img.crop((*top_left, *bottom_right))
+
+    return img
+
+def image_crop_title_bar(img, crop_y_coordinate=37):
+    # crop the title bar
+    w,h = img.size
+    top_left = tuple((0, crop_y_coordinate))
+    bottom_right = tuple((w, h))
+    img = img.crop((*top_left, *bottom_right))
+
+    return img
+
 def calculate_image_difference(img1, img2):
     if img1 == None or img2 == None:
         return 0
@@ -20,24 +37,13 @@ def calculate_image_difference(img1, img2):
     percent_diff = (num_diff_pixels / total_pixels) * 100
     return percent_diff
 
-def crop_image(img, top_left, bottom_right):
-
-    left = top_left[0]
-    upper = top_left[1]
-    right = bottom_right[0]
-    lower = bottom_right[1]
-
-    img = img.crop((left, upper, right, lower))
-
-    return img
-
-
 def calculate_image_hash_different(img1, img2):
     if img1 == None or img2 == None:
         return 0
     
-    img1 = crop_img(img1)
-    img2 = crop_img(img2)
+    img1 = image_crop_in_top_half(img1)
+
+    img2 = image_crop_in_top_half(img2)
 
     img1_hash = imagehash.average_hash(img1, hash_size=16)
     img2_hash = imagehash.average_hash(img2, hash_size=16)
