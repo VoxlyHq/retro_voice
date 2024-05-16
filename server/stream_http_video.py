@@ -9,7 +9,7 @@ import time
 import numpy as np
 import av
 import cv2
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
+from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaRelay, MediaBlackhole
 from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, url_for
 from flask_login import LoginManager, logout_user, login_required, current_user
@@ -206,7 +206,7 @@ relay = MediaRelay()
 async def handle_offer(params):
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    pc = RTCPeerConnection()
+    pc = RTCPeerConnection(RTCConfiguration([RTCIceServer('stun:stun.l.google.com:19302')]))
     pc_id = 'PeerConnection(%s)' % id(pc)
     pcs.add(pc)
 
