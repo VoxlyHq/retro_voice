@@ -10,7 +10,7 @@ import easyocr
 import base64
 import json
 from PIL import Image
-from image_diff import calculate_image_difference, calculate_image_hash_different, image_crop
+from image_diff import calculate_image_difference, calculate_image_hash_different, image_crop_in_top_half
 from openai_api import OpenAI_API
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
@@ -29,7 +29,7 @@ class FrameProcessor:
             self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
         elif language == 'jp':
             self.dialog_file_path = "dialogues_jp_v2.json"
-            self.reader = (['en', 'jp'])  # comment this if you aren't using easy ocr
+            self.reader = easyocr.Reader(['en', 'ja'])  # comment this if you aren't using easy ocr
         else:   
             raise("Invalid language")   
 
@@ -374,10 +374,7 @@ class FrameProcessor:
             print("Images are more than 7 hamming distance. Proceed with OCR")
 
             # crop the image to top half
-            w,h = img.size
-            top_left = tuple((0, 0))
-            bottom_right = tuple((w, h//2))
-            img_crop = image_crop(img, top_left, bottom_right)
+            img_crop = image_crop_in_top_half(img)
 
             # cache
             then = time.time()
