@@ -119,4 +119,4 @@ python ss.py -w -is -v ~/Desktop/ff2-screenrecord-first4min.mov
 
 ## prod
 
-gunicorn -w 1 --bind unix:/tmp/voxly_app.sock server.stream_http_video:app
+gunicorn -k aiohttp.worker.GunicornWebWorker --bind unix:/tmp/voxly_app.sock server.stream_http_video:aioapp

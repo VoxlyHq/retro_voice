@@ -6,6 +6,8 @@ import atexit
 from threading import Thread
 import time
 
+from aiohttp import web
+import aiohttp_wsgi
 import numpy as np
 import av
 import cv2
@@ -14,6 +16,7 @@ from aiortc.contrib.media import MediaRelay, MediaBlackhole
 from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, url_for
 from flask_login import LoginManager, logout_user, login_required, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
+
 from .models import db, User
 from .oauth import google_oauth_blueprint
 from .commands import create_db
@@ -252,10 +255,11 @@ async def handle_offer(params):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
 
-    return jsonify({'sdp': pc.localDescription.sdp, 'type': pc.localDescription.type})
+    return pc.localDescription
 
 
-@app.post('/offer')
+# NOTE: This route is currently handled by aiohttp server
+#@app.post('/offer')
 def offer():
     """
     This endpoint is used to establish a WebRTC connection between a client
@@ -279,10 +283,18 @@ def offer():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    resp = loop.run_until_complete(handle_offer(request.get_json()))
+    localDescription = loop.run_until_complete(handle_offer(request.get_json()))
     Thread(target = loop.run_forever).start()
-    return resp
+    return jsonify({'sdp': localDescription.sdp, 'type': localDescription.type})
 
+
+async def async_offer(request):
+    params = await request.json()
+    localDescription = await handle_offer(params)
+    return web.json_response({
+        'sdp': localDescription.sdp,
+        'type': localDescription.type
+    })
 
 def load_watermark():
     watermark_data = cv2.imread(os.path.join(ROOT, 'watermark.png'), cv2.IMREAD_UNCHANGED)
@@ -302,6 +314,13 @@ def on_shutdown():
     pcs.clear()
 
 
+async def on_async_shutdown(app):
+    # close peer connections
+    coros = [pc.close() for pc in pcs]
+    await asyncio.gather(*coros)
+    pcs.clear()
+
+
 @app.route('/mpegts')
 def mpegts():
     return send_from_directory('../html', 'video.html')
@@ -317,8 +336,17 @@ def index():
     return render_template('index.j2')
 
 
-atexit.register(on_shutdown)
+#atexit.register(on_shutdown)
 
+def make_aiohttp_app(flask_app):
+    wsgi_handler = aiohttp_wsgi.WSGIHandler(flask_app)
+    aioapp = web.Application()
+    aioapp.on_shutdown.append(on_async_shutdown)
+    aioapp.router.add_post('/offer', async_offer)
+    aioapp.router.add_route('*', '/{path_info:.*}', wsgi_handler)
+    return aioapp
+
+aioapp = make_aiohttp_app(app)
 
 if __name__ == '__main__':
     app.run(debug=True, threaded=True, port=5001)
