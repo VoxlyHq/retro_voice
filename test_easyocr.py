@@ -3,9 +3,9 @@ from easyocr import Reader
 from PIL import Image
 from pathlib import Path
 import time
-
-from easyocr.imgproc import resize_aspect_ratio
-from easyocr.imgproc2 import loadImage, resize_aspect_ratio2
+import torch
+import torch.profiler
+from easyocr.imgproc import resize_aspect_ratio, loadImage
 
 # Initialize the OCR reader
 reader = Reader(['en'])
@@ -27,37 +27,42 @@ oimage = loadImage(img)
 mag_ratio = 1.
 canvas_size = 2560
 
-
-img_resized, target_ratio, size_heatmap = resize_aspect_ratio2(oimage, canvas_size,
-                                                                    interpolation=cv2.INTER_LINEAR,
-                                                                    mag_ratio=mag_ratio)
+img_resized, target_ratio, size_heatmap = resize_aspect_ratio(oimage, canvas_size,
+                                                              interpolation=cv2.INTER_LINEAR,
+                                                              mag_ratio=mag_ratio)
 print(target_ratio)
-#for img in image_arrs:
-#    img_resized, target_ratio, size_heatmap = resize_aspect_ratio(img, canvas_size,
-#                                                                    interpolation=cv2.INTER_LINEAR,
-#                                                                    mag_ratio=mag_ratio)
-#    img_resized_list.append(img_resized)
 
+# Create a list to store the results for later analysis
+results = []
 
-# Process the first image 60 times
-for _ in range(60):
-    start = time.time()
-    result = reader.detect(img_resized)
-    end = time.time()
+#ignore the first result so you dont get loading issues
+with torch.cuda.amp.autocast():
+    _ = reader.detect(img_resized)
 
-    infer_time = end - start
-    print('Infer time:', infer_time)
-    #print(result)
-    
-    total_durations += infer_time
-    item_count += 1
+    # Process the first image 60 times with PyTorch Profiler
+    for _ in range(60):
+        start = time.time()
+        result = reader.detect(img_resized)
+        end = time.time()
 
-# Calculate the average time per item
-if item_count > 0:
-    average_time_per_item = total_durations / item_count
-else:
-    average_time_per_item = 0
+        infer_time = end - start
+        print('Infer time:', infer_time)
+        
+        total_durations += infer_time
+        item_count += 1
 
-print("Total elapsed time:", total_durations)
-print("Number of items:", item_count)
-print("Average time per item:", average_time_per_item)
+        # Step through the profiler
+    #    prof.step()
+
+        # Store the result for later analysis
+        results.append(result)
+
+    # Calculate the average time per item
+    if item_count > 0:
+        average_time_per_item = total_durations / item_count
+    else:
+        average_time_per_item = 0
+
+    print("Total elapsed time:", total_durations)
+    print("Number of items:", item_count)
+    print("Average time per item:", average_time_per_item)
