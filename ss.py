@@ -157,11 +157,12 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
         closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
 
         if closest_match != None and closest_match != last_played:
-            start_time = time.time() # Record the start time
-            formated_filenames = [format_filename(i) for i in closest_match]
-            play_audio_threaded(formated_filenames)
-            end_time = time.time()
-            print(f"Audio Time taken: {end_time - start_time} seconds")
+            if not frameProcessor.disable_dialog:
+                start_time = time.time() # Record the start time
+                formated_filenames = [format_filename(i) for i in closest_match]
+                play_audio_threaded(formated_filenames)
+                end_time = time.time()
+                print(f"Audio Time taken: {end_time - start_time} seconds")
             last_played = closest_match
             if show_image_screen:
                 set_annotation_text(annotations)
@@ -233,6 +234,7 @@ def main():
     parser.add_argument('-fps', '--show_fps',  action='store_true', help="Show fps")
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
+    parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
 
     
 
@@ -244,16 +246,17 @@ def main():
     if os_name == 'Windows':
         crop_y_coordinate = 50
 
-    
-    textDetector = TextDetector('frozen_east_text_detection.pb')
-
+    disable_dialog = args.disable_dialog
     lang = 'en'
     if args.japanese or (args.translate is not None and args.translate.startswith('jp')):
         lang = 'jp' 
         set_dialog_file("static/dialogues_jp_web.json")
     
-    frameProcessor =  FrameProcessor(lang)
-
+    
+    textDetector = TextDetector('frozen_east_text_detection.pb')
+        
+    frameProcessor =  FrameProcessor(lang, disable_dialog) 
+    
     if args.webserver:
         server_thread = threading.Thread(target=run_server)
         server_thread.start()
