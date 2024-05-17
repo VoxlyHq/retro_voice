@@ -20,6 +20,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from .models import db, User
 from .oauth import google_oauth_blueprint
 from .commands import create_db
+from process_frames import FrameProcessor
+
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -181,11 +183,39 @@ class VideoTransformTrack(MediaStreamTrack):
         self.watermark_data = watermark_data
         self.alpha = watermark_data[:,:,3] / 255.0 # normalize the alpha channel
         self.inverse_alpha = 1 - self.alpha
+        print("making frame processor----")
+        self.frameProcessor = FrameProcessor()
+        print("making frame processor3")
+
+        self.previous_image = av.VideoFrame.from_image(Image.new('RGB', (100, 100), (255, 255, 255)))
+#        self.previous_highlighted_image = Image.new('RGB', (100, 100), (255, 255, 255))
+        self.image_changed = False # wont need this in future
+
+
 
     async def recv(self):
         frame = await self.track.recv()
-        return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
-    
+        #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
+        return self.process_frame(frame)
+
+    def process_frame(self, frame):
+        frame_img = VideoFrame.to_image(frame)
+
+        last_played, tmp_previous_image, tmp_previous_highlighted_image, annotations, translation = self.frameProcessor.run_image(frame_img, None, None)
+
+        if last_played is not None:
+            self.image_changed = True
+            previous_image = tmp_previous_image
+            previous_highlighted_image = tmp_previous_highlighted_image
+
+
+            new_frame = av.VideoFrame.from_image(previous_image)
+            new_frame.pts = frame.pts
+            new_frame.time_base = frame.time_base
+            self.last_frame = new_frame
+
+        return self.last_frame  #TODO we are returning the frame data, but we should return the processed frame data
+
     def overlay_watermark(self, frame, watermark_data, alpha, inverse_alpha):
         frame_data = frame.to_ndarray(format='rgba')
 
