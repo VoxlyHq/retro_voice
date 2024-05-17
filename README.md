@@ -105,15 +105,23 @@ python ss.py -w -is -v ~/Desktop/ff2-screenrecord-first4min.mov
 ## Flask WebRTC server
 
 ### Development
-1. Copy `.env.default` to `.env` and fill out the env vars.
+1. Install dev packages:
+   ```bash
+   pip install -r requirements_dev.txt
+   ```
+2. Copy `.env.default` to `.env` and fill out the env vars.
    - You should set `OAUTHLIB_INSECURE_TRANSPORT=true` in the dev env so OAuth works with `HTTP`,
    in production this should be `false` so that only `HTTPS` is allowed.
    - Leave `DATABASE_URL` empty in the dev env, it'll default to `server/dev.sqlite3`.
-2. Create the local db:
+3. Create the local db:
    ```bash
    flask --app server/stream_http_video.py create_db
    ```
-3. Run the dev server:
+4. Run the dev server with hot-reloading of the Python code:
+   ```bash
+   adev runserver server/stream_http_video.py --app-factory aioapp -p 5001
+   ```
+   Or without hot-reloading:
    ```bash
    python3 -m server.stream_http_video
    ```
