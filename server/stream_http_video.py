@@ -24,10 +24,12 @@ from .commands import create_db
 from dotenv import load_dotenv
 load_dotenv()
 
+default_dev_db_path = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'dev.sqlite3')
+
 class Config(object):
     # used for signing the Flask session cookie
     SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or default_dev_db_path
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Google Auth2 stuff can be obtained from https://console.developers.google.com
     # OAuth2 client ID from Google Console
@@ -349,4 +351,4 @@ def make_aiohttp_app(flask_app):
 aioapp = make_aiohttp_app(app)
 
 if __name__ == '__main__':
-    app.run(debug=True, threaded=True, port=5001)
+    web.run_app(aioapp, host='localhost', port=5001)
