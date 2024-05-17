@@ -85,12 +85,16 @@ function startGatheringStats() {
         stats.forEach(stat => {
             if (stat.type === 'outbound-rtp' && stat.kind === 'video') {
                 const codec = stats.get(stat.codecId);
-                document.getElementById('outbound-codec').innerText = codec.mimeType;
-                document.getElementById('outbound-fps').innerText = stat.framesPerSecond;
+                document.getElementById('outbound-codec').innerText = codec ? codec.mimeType : 'N/A';
+                document.getElementById('outbound-fps').innerText = stat.framesPerSecond || '0';
+                document.getElementById('outbound-frameWidth').innerText = stat.frameWidth;
+                document.getElementById('outbound-frameHeight').innerText = stat.frameHeight;
             } else if (stat.type === 'inbound-rtp' && stat.kind === 'video') {
                 const codec = stats.get(stat.codecId)
-                document.getElementById('inbound-codec').innerText = codec.mimeType;
-                document.getElementById('inbound-fps').innerText = stat.framesPerSecond;
+                document.getElementById('inbound-codec').innerText = codec ? codec.mimeType : 'N/A';
+                document.getElementById('inbound-fps').innerText = stat.framesPerSecond || '0';
+                document.getElementById('inbound-frameWidth').innerText = stat.frameWidth;
+                document.getElementById('inbound-frameHeight').innerText = stat.frameHeight;
             }
         })
     }, 1000)
@@ -152,8 +156,40 @@ function negotiate() {
     });
 }
 
+/**
+ * Establish an simple data channel over the given peer connection.
+ * @param {RTCPeerConnection} pc
+ */
+function createDataChannel(pc) {
+    var parameters = JSON.parse(document.getElementById('datachannel-parameters').value);
+
+    dc = pc.createDataChannel('chat', parameters);
+    dc.addEventListener('close', () => {
+        clearInterval(dcInterval);
+        dataChannelLog.textContent += '- close\n';
+    });
+    dc.addEventListener('open', () => {
+        dataChannelLog.textContent += '- open\n';
+        dcInterval = setInterval(() => {
+            var message = 'ping ' + current_stamp();
+            dataChannelLog.textContent += '> ' + message + '\n';
+            dc.send(message);
+        }, 1000);
+    });
+    dc.addEventListener('message', (evt) => {
+        dataChannelLog.textContent += '< ' + evt.data + '\n';
+
+        if (evt.data.substring(0, 4) === 'pong') {
+            var elapsed_ms = current_stamp() - parseInt(evt.data.substring(5), 10);
+            dataChannelLog.textContent += ' RTT ' + elapsed_ms + ' ms\n';
+        }
+    });
+}
+
+// starts streaming the webcam (or some other video source)
 function start() {
     document.getElementById('start').style.display = 'none';
+    document.getElementById('startScreenshare').style.display = 'none';
 
     pc = createPeerConnection();
 
@@ -169,29 +205,7 @@ function start() {
     };
 
     if (document.getElementById('use-datachannel').checked) {
-        var parameters = JSON.parse(document.getElementById('datachannel-parameters').value);
-
-        dc = pc.createDataChannel('chat', parameters);
-        dc.addEventListener('close', () => {
-            clearInterval(dcInterval);
-            dataChannelLog.textContent += '- close\n';
-        });
-        dc.addEventListener('open', () => {
-            dataChannelLog.textContent += '- open\n';
-            dcInterval = setInterval(() => {
-                var message = 'ping ' + current_stamp();
-                dataChannelLog.textContent += '> ' + message + '\n';
-                dc.send(message);
-            }, 1000);
-        });
-        dc.addEventListener('message', (evt) => {
-            dataChannelLog.textContent += '< ' + evt.data + '\n';
-
-            if (evt.data.substring(0, 4) === 'pong') {
-                var elapsed_ms = current_stamp() - parseInt(evt.data.substring(5), 10);
-                dataChannelLog.textContent += ' RTT ' + elapsed_ms + ' ms\n';
-            }
-        });
+        createDataChannel(pc);
     }
 
     // Build media constraints.
@@ -251,6 +265,75 @@ function start() {
     document.getElementById('stop').style.display = 'inline-block';
 }
 
+function startScreenshare() {
+    document.getElementById('start').style.display = 'none';
+    document.getElementById('startScreenshare').style.display = 'none';
+
+    pc = createPeerConnection();
+
+    var time_start = null;
+
+    const current_stamp = () => {
+        if (time_start === null) {
+            time_start = new Date().getTime();
+            return 0;
+        } else {
+            return new Date().getTime() - time_start;
+        }
+    };
+
+    if (document.getElementById('use-datachannel').checked) {
+        createDataChannel(pc);
+    }
+
+    // Build media constraints.
+
+    const constraints = {
+        audio: false,
+        video: false
+    };
+
+    if (document.getElementById('use-audio').checked) {
+        constraints.audio = true;
+    }
+
+    if (document.getElementById('use-video').checked) {
+        // TODO: Chrome supports some additional constraints that control what's
+        // selected by default on the Chrome screenshare dialog, we don't bother
+        // setting any of them here though.
+        // See https://developer.chrome.com/docs/web-platform/screen-sharing-controls/
+        const videoConstraints = {};
+        constraints.video = Object.keys(videoConstraints).length ? videoConstraints : true;
+    }
+
+    if (constraints.audio || constraints.video) {
+        if (constraints.video) {
+            document.getElementById('media').style.display = 'block';
+        }
+        navigator.mediaDevices
+            .getDisplayMedia(constraints)
+            .then((stream) => {
+                const tracks = stream.getVideoTracks()
+                if (tracks.length > 0) {
+                    // this should fire whenever the user stops sharing via the browser UI
+                    tracks[0].addEventListener('ended', () => {
+                        stop();
+                    })
+                }
+                stream.getTracks().forEach((track) => {
+                    pc.addTrack(track, stream);
+                });
+                return negotiate();
+            }, (err) => {
+                alert('Could not acquire media: ' + err);
+            });
+    } else {
+        negotiate();
+    }
+
+    document.getElementById('stop').style.display = 'inline-block';
+}
+
 function stop() {
     document.getElementById('stop').style.display = 'none';
 
@@ -281,6 +364,9 @@ function stop() {
     // close peer connection
     setTimeout(() => {
         pc.close();
+
+        document.getElementById('start').style.display = 'inline-block';
+        document.getElementById('startScreenshare').style.display = 'inline-block';
     }, 500);
 }
 
