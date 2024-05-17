@@ -6,6 +6,7 @@ import time
 import numpy as np
 from collections import Counter
 from PIL import Image, ImageFont, ImageDraw
+from image_diff import image_crop_title_bar
 
 os_name = platform.system()
 if os_name == 'Windows':
@@ -22,7 +23,7 @@ else:
 
 
 class VideoStreamWithAnnotations:
-    def __init__(self, background_task=None, background_task_args={}, show_fps=False):
+    def __init__(self, background_task=None, background_task_args={}, show_fps=False, crop_y_coordinate=None):
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
@@ -36,8 +37,12 @@ class VideoStreamWithAnnotations:
         # Check the operating system, and language these two are for japanese
         if platform.system() == "Windows":
             self.font_path = "C:/Windows/Fonts/YuGothB.ttc"  # Path to MS Gothic on Windows
+            self.crop_y_coordinate = 50
         elif platform.system() == "Darwin":  # Darwin is the system name for macOS
             self.font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"  # Path to Hiragino Maru Gothic Pro
+            self.crop_y_coordinate = 72
+        if crop_y_coordinate is not None:
+            self.crop_y_coordinate = crop_y_coordinate
         self.cap = None
         self.background_task = background_task
         self.background_task_args = background_task_args
@@ -52,7 +57,11 @@ class VideoStreamWithAnnotations:
         file_path = os.path.expanduser("window_capture.jpg")  # Save location
         window_id = find_window_id(window_name)
         if window_id:
+            
             img = capture_window_to_pil(window_id, file_path)
+            if self.crop_y_coordinate is not None:
+                img = image_crop_title_bar(img, self.crop_y_coordinate)
+            
             if not img:
                 print("Error: Can't receive frame (stream end?). Exiting ...")
                 return None

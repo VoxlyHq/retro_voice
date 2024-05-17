@@ -10,7 +10,7 @@ import easyocr
 import base64
 import json
 from PIL import Image
-from image_diff import calculate_image_difference, calculate_image_hash_different, crop_img
+from image_diff import calculate_image_difference, calculate_image_hash_different, image_crop_in_top_half
 from openai_api import OpenAI_API
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
@@ -21,8 +21,9 @@ import imagehash
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
-    def __init__(self, language='en'):
+    def __init__(self, language='en', disable_dialog=False):
         self.counter = 0  # Convert the global variable to an instance attribute
+        self.disable_dialog = disable_dialog
         self.lang = language
         if language == 'en':
             self.dialog_file_path = "dialogues_en_v2.json"
@@ -33,7 +34,10 @@ class FrameProcessor:
         else:   
             raise("Invalid language")   
 
-        self.dialogues = self.load_dialogues()
+        if disable_dialog:
+            self.dialogues = None
+        else:
+            self.dialogues = self.load_dialogues()
         #print(self.dialogues)
         #TODO remove this from this class and store this somewhere else, so its multi user
         self.previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
@@ -287,22 +291,24 @@ class FrameProcessor:
     def run_ocr(self, image):
         start_time = time.time() # Record the start time
 
-        str, highlighted_image, annotations = self.ocr_easyocr_and_highlight(image)
+        output_text, highlighted_image, annotations = self.ocr_easyocr_and_highlight(image)
 #        str = self.ocr_openai(image)
 #        str = self.ocr_google(image)
         
         
         print("found text ocr----")
-        print(str)
+        print(output_text)
         print("----")
     
 
 
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
-            
+        if self.disable_dialog:
+            return output_text, highlighted_image, annotations
+        
         #thefuzz_test(text)
-        res = self.find_closest_entry(str)
+        res = self.find_closest_entry(output_text)
         if  res != [] and res[0] != None:
             print("found entry ")
             print(res)
@@ -369,7 +375,8 @@ class FrameProcessor:
             # print("Images are more than 10% different. Proceed with OCR.")
             print("Images are more than 7 hamming distance. Proceed with OCR")
 
-            img_crop = crop_img(img)
+            # crop the image to top half
+            img_crop = image_crop_in_top_half(img)
 
             # cache
             then = time.time()
@@ -408,14 +415,17 @@ class FrameProcessor:
                     print(f'Time Taken {time.time() - then}')
                     
                 if closest_entry is None and last_played:
-                    content_to_translate = []
-                    for entry in last_played:
-                        content = self.dialogues[entry]
-                        content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
-                        content_to_translate.append(content)
-                    content_to_translate = " ".join(content_to_translate)
+                    if self.disable_dialog:
+                        translation = self.run_translation(last_played, translate)
+                    else:
+                        content_to_translate = []
+                        for entry in last_played:
+                            content = self.dialogues[entry]
+                            content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
+                            content_to_translate.append(content)
+                        content_to_translate = " ".join(content_to_translate)
 
-                    translation = self.run_translation(content_to_translate, translate)
+                        translation = self.run_translation(content_to_translate, translate)
 
                     self.translation_cache.append({'translation' : translation,'hash' : imagehash.average_hash(img_crop, 16)})
                     self.update_cache('translation')

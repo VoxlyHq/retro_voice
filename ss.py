@@ -15,7 +15,9 @@ from image_window import VideoStreamWithAnnotations
 from webserv import run_server, set_dialog_file
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
+from image_diff import image_crop_title_bar
 #from image_window import ImageWindow
+from text_detector import TextDetector
 
 # Detect the operating system
 os_name = platform.system()
@@ -24,7 +26,6 @@ os_name = platform.system()
 dialogues = {}
 
 
-frameProcessor =  FrameProcessor()
 last_played = -1
 show_image_screen = False 
 video_stream = None
@@ -145,29 +146,37 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
     global last_played
     global frameProcessor
     global dialogues
+    global textDetector
+
+    image = textDetector.preprocess_image(img)
+    if not textDetector.has_text(image):
+        print("No text Found in this frame. Skipping run_image")
+        set_annotation_text([])
+    else:
     
-    closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
+        closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
 
-    if closest_match != None and closest_match != last_played:
-        start_time = time.time() # Record the start time
-        formated_filenames = [format_filename(i) for i in closest_match]
-        play_audio_threaded(formated_filenames)
-        end_time = time.time()
-        print(f"Audio Time taken: {end_time - start_time} seconds")
-        last_played = closest_match
-        if show_image_screen:
-            set_annotation_text(annotations)
-            set_translation_text(translation)
-    elif annotations != None:
-        if show_image_screen:
-            set_annotation_text(annotations)
-            set_translation_text(translation)
-    elif closest_match == None:
-        if show_image_screen:
-            set_annotation_text(None)
-            set_translation_text(None)
+        if closest_match != None and closest_match != last_played:
+            if not frameProcessor.disable_dialog:
+                start_time = time.time() # Record the start time
+                formated_filenames = [format_filename(i) for i in closest_match]
+                play_audio_threaded(formated_filenames)
+                end_time = time.time()
+                print(f"Audio Time taken: {end_time - start_time} seconds")
+            last_played = closest_match
+            if show_image_screen:
+                set_annotation_text(annotations)
+                set_translation_text(translation)
+        elif annotations != None:
+            if show_image_screen:
+                set_annotation_text(annotations)
+                set_translation_text(translation)
+        elif closest_match == None:
+            if show_image_screen:
+                set_annotation_text(None)
+                set_translation_text(None)
 
-def timed_action_screencapture(translate=None, show_image_screen=False):
+def timed_action_screencapture(translate=None, show_image_screen=False, crop_y_coordinate=None):
     print("Action triggered by timer")
 
     window_name = "RetroArch"  # Adjust this to the target window's name
@@ -175,6 +184,7 @@ def timed_action_screencapture(translate=None, show_image_screen=False):
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
+        img = image_crop_title_bar(img, crop_y_coordinate)
         process_screenshot(img, translate, show_image_screen)
 
     else:
@@ -187,9 +197,9 @@ def set_annotation_text(annotations):
 def set_translation_text(translation):
     video_stream.set_translation(translation)
 
-def process_screenshots(translate=None, show_image_screen=False):
+def process_screenshots(translate=None, show_image_screen=False, crop_y_coordinate=None):
     while True:
-        timed_action_screencapture(translate=translate, show_image_screen=show_image_screen)
+        timed_action_screencapture(translate=translate, show_image_screen=show_image_screen, crop_y_coordinate=crop_y_coordinate)
         print("timed_action_screencapture")
         time.sleep(1)  # Wait for 1 second
 
@@ -210,6 +220,7 @@ def main():
     global lang
     global frameProcessor
     global show_image_screen
+    global textDetector
 
     #setup_screen()
 
@@ -223,15 +234,29 @@ def main():
     parser.add_argument('-fps', '--show_fps',  action='store_true', help="Show fps")
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
+    parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
 
     
 
     args = parser.parse_args()
-    if args.japanese:
-        set_dialog_file("static/dialogues_jp_web.json")
-        lang = "jp"
-        frameProcessor =  FrameProcessor(lang) 
 
+    crop_y_coordinate = None
+    if os_name == 'Darwin': 
+        crop_y_coordinate = 72
+    if os_name == 'Windows':
+        crop_y_coordinate = 50
+
+    disable_dialog = args.disable_dialog
+    lang = 'en'
+    if args.japanese or (args.translate is not None and args.translate.startswith('jp')):
+        lang = 'jp' 
+        set_dialog_file("static/dialogues_jp_web.json")
+    
+    
+    textDetector = TextDetector('frozen_east_text_detection.pb')
+        
+    frameProcessor =  FrameProcessor(lang, disable_dialog) 
+    
     if args.webserver:
         server_thread = threading.Thread(target=run_server)
         server_thread.start()
@@ -248,7 +273,8 @@ def main():
 
     if args.show_image_screen:
         global video_stream
-        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},show_fps=args.show_fps)
+        video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},
+                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()
@@ -258,7 +284,7 @@ def main():
         finally:
             video_stream.stop()
     else:
-        process_screenshots(translate=args.translate, show_image_screen=args.show_image_screen)
+        process_screenshots(translate=args.translate, show_image_screen=args.show_image_screen, crop_y_coordinate=crop_y_coordinate)
 
 
 if __name__ == "__main__":

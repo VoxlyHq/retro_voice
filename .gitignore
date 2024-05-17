@@ -9,3 +9,4 @@ output_en_htplay
 exceptions.txt
 .env
 *.pkl
+instance/server.sqlite3
