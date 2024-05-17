@@ -78,11 +78,12 @@
     </select>
 </div>
 <div class="option">
-    <input id="use-stun" type="checkbox"/>
+    <input id="use-stun" checked="checked" type="checkbox"/>
     <label for="use-stun">Use STUN server</label>
 </div>
 
-<button id="start" onclick="start()">Start</button>
+<button id="start" onclick="start()">Start Webcam</button>
+<button id="startScreenshare" onclick="startScreenshare()">Start Screenshare</button>
 <button id="stop" style="display: none" onclick="stop()">Stop</button>
 
 <h2>State</h2>
@@ -101,13 +102,13 @@
     <div style="display: flex; justify-content: space-between;">
         <div>
             <h3>Outbound Stats</h3>
-            <p>Codec: <span id="outbound-codec"></span></p>
-            <p>FPS: <span id="outbound-fps"></span></p>    
+            <p><span id="outbound-codec"></span>@<span id="outbound-frameWidth"></span>x<span id="outbound-frameHeight"></span></p>
+            <p><span id="outbound-fps"></span> fps</p>
         </div>
         <div>
             <h3>Inbound Stats</h3>
-            <p>Codec: <span id="inbound-codec"></span></p>
-            <p>FPS: <span id="inbound-fps"></span></p>
+            <p><span id="inbound-codec"></span>@<span id="inbound-frameWidth"></span>x<span id="inbound-frameHeight"></span></p>
+            <p><span id="inbound-fps"></span> fps</p>
         </div>
     </div>
 
