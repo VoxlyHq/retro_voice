@@ -33,6 +33,7 @@ class Config(object):
     # used for signing the Flask session cookie
     SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or default_dev_db_path
+    print(f"SQLALCHEMY_DATABASE_URI: {SQLALCHEMY_DATABASE_URI}")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Google Auth2 stuff can be obtained from https://console.developers.google.com
     # OAuth2 client ID from Google Console
@@ -193,11 +194,17 @@ class VideoTransformTrack(MediaStreamTrack):
         self.image_changed = False # wont need this in future
 
 
-
     async def recv(self):
-        frame = await self.track.recv()
-        #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
-        return self.process_frame(frame)
+        try:
+#            print("before exception")
+            frame = await self.track.recv()
+            #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
+            return self.process_frame(frame)
+        except Exception as e:
+            print(f"exception - {e}")
+            logging.error("An error occurred: %s", e)
+            raise
+
 
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
