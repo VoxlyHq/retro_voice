@@ -6,29 +6,37 @@ import atexit
 from threading import Thread
 import time
 
+from aiohttp import web
+import aiohttp_wsgi
 import numpy as np
 import av
 import cv2
-from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
+from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaRelay, MediaBlackhole
 from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, url_for
 from flask_login import LoginManager, logout_user, login_required, current_user
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .models import db, User
 from .oauth import google_oauth_blueprint
 from .commands import create_db
 
+from dotenv import load_dotenv
+load_dotenv()
+
+default_dev_db_path = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'dev.sqlite3')
 
 class Config(object):
     # used for signing the Flask session cookie
     SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or default_dev_db_path
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # Google Auth2 stuff can be obtained from https://console.developers.google.com
     # OAuth2 client ID from Google Console
     GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID")
     # OAuth2 client secret from Google Console
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
+    PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") #or 'http'
 
 
 ROOT = os.path.dirname(__file__)
@@ -37,8 +45,10 @@ ROOT = os.path.dirname(__file__)
 app = Flask(__name__,
             static_url_path='',
             static_folder='../html')
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = Config.SECRET_KEY
 app.config.from_object(Config)
+print(app.config)
 app.register_blueprint(google_oauth_blueprint, url_prefix="/login")
 db.init_app(app)
 
@@ -54,6 +64,25 @@ login_manager.init_app(app)
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
+@app.route('/test')
+def test():
+    # Print the request scheme
+    scheme = request.scheme
+    print(f"Request Scheme: {scheme}")
+    
+    # Print all the request headers
+    headers = request.headers
+    print("Request Headers:")
+    for header, value in headers.items():
+        print(f"{header}: {value}")
+    
+    # Create a response that includes the scheme and headers
+    response = f"Request Scheme: {scheme}\n\nRequest Headers:\n"
+    for header, value in headers.items():
+        response += f"{header}: {value}\n"
+    
+    return response
 
 @app.route('/logout')
 @login_required
@@ -182,7 +211,7 @@ relay = MediaRelay()
 async def handle_offer(params):
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    pc = RTCPeerConnection()
+    pc = RTCPeerConnection(RTCConfiguration([RTCIceServer('stun:stun.l.google.com:19302')]))
     pc_id = 'PeerConnection(%s)' % id(pc)
     pcs.add(pc)
 
@@ -228,10 +257,11 @@ async def handle_offer(params):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
 
-    return jsonify({'sdp': pc.localDescription.sdp, 'type': pc.localDescription.type})
+    return pc.localDescription
 
 
-@app.post('/offer')
+# NOTE: This route is currently handled by aiohttp server
+#@app.post('/offer')
 def offer():
     """
     This endpoint is used to establish a WebRTC connection between a client
@@ -255,10 +285,18 @@ def offer():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-    resp = loop.run_until_complete(handle_offer(request.get_json()))
+    localDescription = loop.run_until_complete(handle_offer(request.get_json()))
     Thread(target = loop.run_forever).start()
-    return resp
+    return jsonify({'sdp': localDescription.sdp, 'type': localDescription.type})
 
+
+async def async_offer(request):
+    params = await request.json()
+    localDescription = await handle_offer(params)
+    return web.json_response({
+        'sdp': localDescription.sdp,
+        'type': localDescription.type
+    })
 
 def load_watermark():
     watermark_data = cv2.imread(os.path.join(ROOT, 'watermark.png'), cv2.IMREAD_UNCHANGED)
@@ -278,6 +316,13 @@ def on_shutdown():
     pcs.clear()
 
 
+async def on_async_shutdown(app):
+    # close peer connections
+    coros = [pc.close() for pc in pcs]
+    await asyncio.gather(*coros)
+    pcs.clear()
+
+
 @app.route('/mpegts')
 def mpegts():
     return send_from_directory('../html', 'video.html')
@@ -293,8 +338,17 @@ def index():
     return render_template('index.j2')
 
 
-atexit.register(on_shutdown)
+#atexit.register(on_shutdown)
 
+def make_aiohttp_app(flask_app):
+    wsgi_handler = aiohttp_wsgi.WSGIHandler(flask_app)
+    aioapp = web.Application()
+    aioapp.on_shutdown.append(on_async_shutdown)
+    aioapp.router.add_post('/offer', async_offer)
+    aioapp.router.add_route('*', '/{path_info:.*}', wsgi_handler)
+    return aioapp
+
+aioapp = make_aiohttp_app(app)
 
 if __name__ == '__main__':
-    app.run(debug=True, threaded=True, port=5001)
+    web.run_app(aioapp, host='localhost', port=5001)
