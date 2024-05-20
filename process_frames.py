@@ -6,7 +6,6 @@ import requests
 from cloudvision import detect_text_google_pil, detect_text_google, detect_text_and_draw_boxes
 from thefuzz import fuzz
 import pytesseract
-import easyocr
 import base64
 import json
 from PIL import Image
@@ -18,21 +17,32 @@ from PIL import Image, ImageDraw, ImageFont
 from pathlib import Path
 import pickle
 import imagehash
+from ocr import OCRProcessor
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
-    def __init__(self, language='en', disable_dialog=False):
+    def __init__(self, language='en', method=1, disable_dialog=False, save_outputs=False):
         self.counter = 0  # Convert the global variable to an instance attribute
         self.disable_dialog = disable_dialog
+        self.method = method
+        self.save_outputs = save_outputs
+        if self.save_outputs:
+            # Create output directories if they do not exist
+            self.input_image_folder = Path("outputs/input_images")
+            self.annotated_image_folder = Path("outputs/annotated_images")
+            self.ocr_annotations_folder = Path("outputs/ocr_annotations")
+            self.translation_folder = Path("outputs/translations")
+
+            self.create_output_dirs()
+
         self.lang = language
         if language == 'en':
             self.dialog_file_path = "dialogues_en_v2.json"
-            self.reader = easyocr.Reader(['en']) #(['ja', 'en'])  # comment this if you aren't using easy ocr
         elif language == 'jp':
             self.dialog_file_path = "dialogues_jp_v2.json"
-            self.reader = easyocr.Reader(['en', 'ja'])  # comment this if you aren't using easy ocr
         else:   
             raise("Invalid language")   
+        self.ocr_processor =  OCRProcessor(self.lang, self.method) # comment this if you aren't using easy ocr
 
         if disable_dialog:
             self.dialogues = None
@@ -183,129 +193,16 @@ class FrameProcessor:
         score = fuzz.ratio(ocr_text, known_text)
 
         print(score)  # This will print the similarity score as a percentage
-
-    def ocr_tesseract(self, image_path):
-        # Use Tesseract to do OCR on the image
-        #        text = pytesseract.image_to_string(img)
-    
-        # start_time = time.time() # Record the start time
-        # text = pytesseract.image_to_string('window_capture.jpg') #, lang='jpn')
-        # print("found text terrasect----")
-        # print(text)
-        # print("----")
-        # end_time = time.time() # Record the end time
-        # print(f"Time taken: {end_time - start_time} seconds")
-        return None 
-
-    def ocr_easyocr_and_highlight(self, image):
-        # Convert the PIL Image to bytes
-        byte_buffer = io.BytesIO()
-        image.save(byte_buffer, format='JPEG')  # Change format if needed
-        image_bytes = byte_buffer.getvalue()
-
-        # Now, we want the locations as well, so detail=1
-        result = self.reader.readtext(image_bytes, detail=1)
-
-        # Creating a drawable image
-        drawable_image = Image.open(io.BytesIO(image_bytes))
-        draw = ImageDraw.Draw(drawable_image)
-        
-        # Optionally, load a font.
-        # font = ImageFont.truetype("arial.ttf", 15)  # You might need to adjust the path and size
-
-        filtered_result = []
-        for (bbox, text, prob) in result:
-            if 'RetroArch' not in text:
-                filtered_result.append((bbox, text, prob))
-                
-                # Extracting min and max coordinates for the rectangle
-                top_left = bbox[0]
-                bottom_right = bbox[2]
-                
-                # Ensure the coordinates are in the correct format (floats or integers)
-                top_left = tuple(map(int, top_left))
-                bottom_right = tuple(map(int, bottom_right))
-                
-                # Draw the bounding box
-                try:
-                    draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                except:
-                    print(f"error drawing rectangle -{top_left} - {bottom_right}")
-                    #image.show(image)
-                # Annotate text. Adjust the position if necessary.
-                draw.text(top_left, text, fill="yellow")
-                
-        # Assuming you want to return the concatenated text that doesn't include 'RetroArch'
-        filtered_text = ' '.join([text for (_, text, _) in filtered_result])
-        return filtered_text, drawable_image, filtered_result  # Now also returning the image with annotations
-
-    def ocr_easyocr(self, image):
-        # Convert the PIL Image to bytes
-        byte_buffer = io.BytesIO()
-
-        image.save(byte_buffer, format='JPEG')  # You can change format if needed
-        image_bytes = byte_buffer.getvalue()
-
-
-        result =  self.reader.readtext(image_bytes,detail = 0) #change detail if you want the locations
-        filtered_array = [entry for entry in result if 'RetroArch' not in entry]
-        str = ' '.join(filtered_array)
-        return str
-
-
-
-    def ocr_openai(self, image):
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        filename = f"frame_{timestamp}.png"
-        # Convert the PIL Image to bytes
-        byte_buffer = io.BytesIO()
-
-        width, height = image.size
-        new_height = height // 3
-
-        # Crop the top half
-        top_half = image.crop((0, 0, width, new_height))
-        top_half.save(byte_buffer, format='JPEG')  # You can change format if needed
-        image_bytes = byte_buffer.getvalue()
-
-        result = self.openai_api.call_vision_api(image_bytes)
-
-        result_filename = f"result_{timestamp}.json"
-        with open(result_filename, 'w') as f:
-            json.dump(result, f, indent=4)
-        print(f"Saved analysis result to {result_filename}")
-        content =  result['choices'][0]['message']['content']
-        part_to_remove = " The text in the photo reads:"
-        part_to_remove2 = "The text in the photo is"
-        cleaned_string = content.replace(part_to_remove, "").replace(part_to_remove2, "").replace('"', '')    
-        print(cleaned_string)
-        return cleaned_string
-    
-    def ocr_google(self, image):
-        result = detect_text_google_pil(image)
-#        result = detect_text_and_draw_boxes('window_capture.jpg')
-
-        filtered_array = [entry for entry in result if 'RetroArch' not in entry]
-        str = ' '.join(filtered_array)
-        print("found text google----")
-        print(str)
-        print("----")
-        return str
     
     def run_ocr(self, image):
         start_time = time.time() # Record the start time
 
-        output_text, highlighted_image, annotations = self.ocr_easyocr_and_highlight(image)
-#        str = self.ocr_openai(image)
-#        str = self.ocr_google(image)
-        
+        output_text, highlighted_image, annotations = self.ocr_processor.run_ocr(image)
         
         print("found text ocr----")
         print(output_text)
         print("----")
     
-
-
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
         if self.disable_dialog:
@@ -335,13 +232,13 @@ class FrameProcessor:
         
         cleaned_string = str(content)
         print(f"{cleaned_string=}")
-        return cleaned_string
+        return cleaned_string, result
     
     def run_translation(self, content, translate):
         start_time = time.time() # Record the start time
 
         target_lang = translate.split(',')[1]
-        str = self.translate_openai(content, target_lang)
+        str, result = self.translate_openai(content, target_lang)
         
         print("---- Translated Text ----")
         print(str)
@@ -350,7 +247,7 @@ class FrameProcessor:
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
                   
-        return str
+        return str, result
 
 
 
@@ -398,6 +295,10 @@ class FrameProcessor:
                 print(f'Time Taken {time.time() - then}')
             else:
                 last_played, highlighted_image, annotations = self.run_ocr(img)
+                
+                # save outputs to disk
+                if self.save_outputs and translate is None:
+                    self.save_outputs_to_disk(img, highlighted_image, annotations, None)
                 self.ocr_cache.append({'string' : last_played, 'annotations' : annotations, 'hash' : imagehash.average_hash(img_crop, 16)})
                 self.update_cache('ocr')
 
@@ -420,7 +321,7 @@ class FrameProcessor:
                     
                 if closest_entry is None and last_played:
                     if self.disable_dialog:
-                        translation = self.run_translation(last_played, translate)
+                        translation, result = self.run_translation(last_played, translate)
                     else:
                         content_to_translate = []
                         for entry in last_played:
@@ -429,7 +330,11 @@ class FrameProcessor:
                             content_to_translate.append(content)
                         content_to_translate = " ".join(content_to_translate)
 
-                        translation = self.run_translation(content_to_translate, translate)
+                        translation, result = self.run_translation(content_to_translate, translate)
+
+                    # save outputs to disk
+                    if self.save_outputs:
+                        self.save_outputs_to_disk(img, highlighted_image, annotations, result)
 
                     self.translation_cache.append({'translation' : translation,'hash' : imagehash.average_hash(img_crop, 16)})
                     self.update_cache('translation')
@@ -444,3 +349,40 @@ class FrameProcessor:
             print("Difference is less than 10%. No need to call OCR again.")
             
             return None, None, None, self.last_annotations, None
+        
+    def create_output_dirs(self):
+
+        self.input_image_folder.mkdir(parents=True, exist_ok=True)
+        self.annotated_image_folder.mkdir(parents=True, exist_ok=True)
+        self.ocr_annotations_folder.mkdir(parents=True, exist_ok=True)
+        self.translation_folder.mkdir(parents=True, exist_ok=True)
+
+    def save_outputs_to_disk(self, input_image, annotated_image, ocr_annotations, translation_output):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        # Save input image
+        input_image_path = self.input_image_folder.joinpath(f"input_image_{timestamp}.jpg")
+        input_image.save(input_image_path)
+        
+        # Save annotated image
+        if annotated_image:
+            annotated_image_path = self.annotated_image_folder.joinpath(f"annotated_image_{timestamp}.jpg")
+            annotated_image.save(annotated_image_path)
+        
+        # Save OCR annotations as JSON
+        ocr_annotations_path = self.ocr_annotations_folder.joinpath(f"ocr_annotations_{timestamp}.json")
+        ocr_annotations = [
+            {
+                "bbox": [[int(point[0]), int(point[1])] for point in bbox],
+                "text": text,
+                "prob": float(prob)
+            } for bbox, text, prob in ocr_annotations
+        ]
+        with open(ocr_annotations_path, 'w', encoding='utf-8') as f:
+            json.dump(ocr_annotations, f, ensure_ascii=False, indent=4)
+        
+        # Save translation output as JSON
+        if translation_output:
+            translation_output_path = self.translation_folder.joinpath(f"translation_{timestamp}.json")
+            with open(translation_output_path, 'w', encoding='utf-8') as f:
+                json.dump(translation_output, f, ensure_ascii=False, indent=4)
