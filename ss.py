@@ -235,6 +235,7 @@ def main():
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
+    parser.add_argument('-m', '--method', type=int, help="option for text detection and recognition. {1: easyocr detection + easyocr recognition}")
 
     
 
@@ -254,8 +255,9 @@ def main():
     
     
     textDetector = TextDetector('frozen_east_text_detection.pb')
-        
-    frameProcessor =  FrameProcessor(lang, disable_dialog) 
+    
+    method = 1 if args.method is None else args.method
+    frameProcessor =  FrameProcessor(lang, disable_dialog, method) 
     
     if args.webserver:
         server_thread = threading.Thread(target=run_server)
