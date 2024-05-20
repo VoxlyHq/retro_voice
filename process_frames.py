@@ -203,6 +203,7 @@ class FrameProcessor:
         print(output_text)
         print("----")
     
+    
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
         if self.disable_dialog:
@@ -248,8 +249,6 @@ class FrameProcessor:
         print(f"Time taken: {end_time - start_time} seconds")
                   
         return str, result
-
-
 
     def process_frame(self, frame_pil, frame_count, fps):
         """
