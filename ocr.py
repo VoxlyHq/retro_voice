@@ -121,6 +121,7 @@ class OCRProcessor:
                     if filtered_text != []:
                         filtered_text = filtered_text[0].replace('\n', ' ').replace('"', '').replace('`', '')
                 return filtered_text, drawable_image, detection_result
+            return '', None, []
 
     def run_ocr(self, image):
         """
