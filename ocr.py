@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw
 import easyocr
 from openai_api import OpenAI_API
 from image_diff import image_crop_dialogue_box
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -112,7 +113,10 @@ class OCRProcessor:
             dialogue_box_image_bytes = self.process_image(dialogue_box_img)
             drawable_image = self.draw_highlight(image_bytes, detection_result)
             ocr_result = self.ocr_openai(dialogue_box_image_bytes)
-            filtered_text = ocr_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
+            if self.lang == 'en':
+                filtered_text = ocr_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
+            else:
+                filtered_text = [i for i in ocr_result.split("\n\n") if self.extract_non_english_text(i) != ""][0].replace('\n', ' ').replace('"', '').replace('`', '')
             return filtered_text, drawable_image, detection_result
 
     def run_ocr(self, image):
@@ -140,6 +144,23 @@ class OCRProcessor:
             reformatted_output.append(([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], '', 0.0))
 
         return reformatted_output
+    
+    import re
+
+    def extract_non_english_text(self, response):
+        """
+        Extracts non-English characters from the provided response.
+        
+        :param response: The response containing the text
+        :return: The extracted non-English text
+        """
+        # Use a regular expression to match non-English characters
+        match = re.findall(r'[^\x00-\x7F]+', response)
+        if match:
+            non_english_text = ' '.join(match)
+            return non_english_text.strip()
+        return ""
+
 
 if __name__ == "__main__":
     ocr_processor = OCRProcessor()
