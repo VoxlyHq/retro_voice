@@ -4,6 +4,7 @@ import logging
 from PIL import Image, ImageDraw
 import easyocr
 from openai_api import OpenAI_API
+from image_diff import image_crop_dialogue_box
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -73,7 +74,23 @@ class OCRProcessor:
         :param detail: Level of detail for OCR results
         :return: OCR result containing bounding boxes and text
         """
-        return self.reader.readtext(image_bytes, detail=detail)
+        if self.method == 1:
+            return self.reader.readtext(image_bytes, detail=detail)
+    
+    def det_easyocr(self, image_bytes):
+        """
+        Perform text detection using easyocr.
+
+        :param image_bytes: The image in byes
+        :return:OCR result containing bounding boxes
+        """
+        return self.reformat(self.reader.detect(image_bytes))
+    
+    def ocr_openai(self, image_bytes):
+        response = self.openai_api.call_vision_api(image_bytes)
+        content = response['choices'][0]['message']['content']
+        return content
+
 
     def ocr_and_highlight(self, image):
         """
@@ -89,6 +106,14 @@ class OCRProcessor:
             drawable_image = self.draw_highlight(image_bytes, filtered_result)
             filtered_text = ' '.join([text for _, text, _ in filtered_result])
             return filtered_text, drawable_image, filtered_result
+        elif self.method == 2:
+            detection_result = self.det_easyocr(image_bytes)
+            dialogue_box_img = image_crop_dialogue_box(image, detection_result)
+            dialogue_box_image_bytes = self.process_image(dialogue_box_img)
+            drawable_image = self.draw_highlight(image_bytes, detection_result)
+            ocr_result = self.ocr_openai(dialogue_box_image_bytes)
+            filtered_text = ocr_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
+            return filtered_text, drawable_image, detection_result
 
     def run_ocr(self, image):
         """
@@ -103,6 +128,18 @@ class OCRProcessor:
         logging.info(f"OCR found text: {output_text}")
         logging.info(f"Time taken: {end_time - start_time} seconds")
         return output_text, highlighted_image, annotations
+
+    def reformat(self,det_res):
+        '''
+        reformat detection result as the details 1 format of easyocr readtext output
+        :params: det_res a tuple containing (a list of detection bbox)
+        :returns: reformatted output 
+        '''
+        reformatted_output = []
+        for x1, x2, y1, y2 in det_res[0][0]:
+            reformatted_output.append(([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], '', 0.0))
+
+        return reformatted_output
 
 if __name__ == "__main__":
     ocr_processor = OCRProcessor()
