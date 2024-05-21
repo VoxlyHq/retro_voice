@@ -113,6 +113,7 @@ class OCRProcessor:
                 dialogue_box_image_bytes = self.process_image(dialogue_box_img)
                 drawable_image = self.draw_highlight(image_bytes, detection_result)
                 ocr_result = self.ocr_openai(dialogue_box_image_bytes)
+                # TODO : experiment with prompts to get better results
                 if self.lang == 'en':
                     filtered_text = ocr_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
                 else:
