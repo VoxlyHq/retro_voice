@@ -151,7 +151,8 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
     image = textDetector.preprocess_image(img)
     if not textDetector.has_text(image):
         print("No text Found in this frame. Skipping run_image")
-        set_annotation_text([])
+        if show_image_screen:
+            set_annotation_text([])
     else:
     
         closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
@@ -235,7 +236,7 @@ def main():
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
-    parser.add_argument('-m', '--method', type=int, help="option for text detection and recognition. {1: easyocr detection + easyocr recognition}")
+    parser.add_argument('-m', '--method', type=int, help="option for text detection and recognition. {1: easyocr detection + easyocr recognition, 2: easyocr detection + openai recognition}")
     parser.add_argument('-so', '--save_outputs', action='store_true', help="Enable saving input image, ocr and translation outputs and annotated image")
 
     args = parser.parse_args()

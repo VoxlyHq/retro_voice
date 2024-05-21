@@ -1,15 +1,13 @@
 import unittest
-from unittest.mock import patch, MagicMock
 from PIL import Image
-from io import BytesIO
-import easyocr
-from openai_api import OpenAI_API
 from ocr import OCRProcessor  
+from thefuzz import fuzz
 
 class TestOCRProcessor(unittest.TestCase):
     def setUp(self):
         self.ocr_processor = OCRProcessor(language='en', method=1)
         self.image = Image.open('unit_test_data/windows_eng_ff4.png').convert('RGB')
+        self.dialogue_image = Image.open('unit_test_data/orig_dialogue_box.jpg')
     
     def test_process_image(self):
         image_bytes = self.ocr_processor.process_image(self.image)
@@ -46,6 +44,32 @@ class TestOCRProcessor(unittest.TestCase):
         self.assertIsInstance(drawable_image, Image.Image)
         self.assertEqual(len(annotations[0]), 3)
 
-    
+    def test_det_easyocr(self):
+        """
+        Test the det_easyocr method 
+        """
+        image_bytes = self.ocr_processor.process_image(self.dialogue_image)
+        detection_results = self.ocr_processor.det_easyocr(image_bytes)
+
+        # Check if the detection results are formatted correctly
+        self.assertIsInstance(detection_results[0], tuple)
+        self.assertEqual(len(detection_results[0]), 3)
+        self.assertIsInstance(detection_results[0][0], list)
+        self.assertIsInstance(detection_results[0][0][0], list)
+        self.assertEqual(len(detection_results[0][0][0]), 2)
+        self.assertEqual(detection_results[0][0][0], [97, 203])
+
+    def test_ocr_and_highlight_method2(self):
+        """
+        Test the ocr_and_highlight method for method 2.
+        """
+        self.ocr_processor.method = 2
+        # Process the image and get the OCR results
+        output_text, highlighted_image, detection_results = self.ocr_processor.ocr_and_highlight(self.dialogue_image)
+
+        # Check the OCR output text
+        similarity_ratio = similarity_ratio = fuzz.ratio(output_text, "Crew: Why are we robbing crystals from innocent people? Crew: That's our duty.") / 100.0
+        self.assertGreater(similarity_ratio, 0.33)
+
 if __name__ == '__main__':
     unittest.main()
