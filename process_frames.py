@@ -21,7 +21,7 @@ from ocr import OCRProcessor
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
-    def __init__(self, language='en', disable_dialog=False, method=1):
+    def __init__(self, language='en', disable_dialog=False, method="easyocr"):
         self.counter = 0  # Convert the global variable to an instance attribute
         self.disable_dialog = disable_dialog
         self.method = method
