@@ -116,7 +116,9 @@ class OCRProcessor:
             if self.lang == 'en':
                 filtered_text = ocr_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
             else:
-                filtered_text = [i for i in ocr_result.split("\n\n") if self.extract_non_english_text(i) != ""][0].replace('\n', ' ').replace('"', '').replace('`', '')
+                filtered_text = [i for i in ocr_result.split("\n\n") if self.extract_non_english_text(i) != ""]
+                if filtered_text != []:
+                    filtered_text = filtered_text[0].replace('\n', ' ').replace('"', '').replace('`', '')
             return filtered_text, drawable_image, detection_result
 
     def run_ocr(self, image):
@@ -144,8 +146,6 @@ class OCRProcessor:
             reformatted_output.append(([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], '', 0.0))
 
         return reformatted_output
-    
-    import re
 
     def extract_non_english_text(self, response):
         """
