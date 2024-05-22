@@ -48,7 +48,7 @@ def upload_screenshot():
 @app.route('/stream')
 def stream():
     def generate():
-        global image_changed
+        global previous_image, previous_highlighted_image, image_changed
         while True:
             if image_changed:
                 img_byte_arr = io.BytesIO()
