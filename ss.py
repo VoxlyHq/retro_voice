@@ -19,8 +19,6 @@ from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
 from image_diff import image_crop_title_bar
 #from image_window import ImageWindow
-from text_detector import TextDetector
-from text_detector_fast import TextDetectorFast
 
 # Define the enumeration
 class TextDetectEngine(Enum):
@@ -30,7 +28,7 @@ class TextDetectEngine(Enum):
     @staticmethod
     def from_str(label):
         if label.lower() in ('east', 'fast'):
-            return TextDetector[label.upper()]
+            return TextDetectEngine[label.upper()]
         else:
             raise argparse.ArgumentTypeError(f"Invalid value for text_detector: {label}")
 
@@ -273,9 +271,11 @@ def main():
     # Use the enumeration to determine the selected engine
     if args.text_detector == TextDetectEngine.EAST:
         print("Using EAST text detection engine.")
+        from text_detector import TextDetector
         textDetector = TextDetector('frozen_east_text_detection.pb')
     elif args.text_detector == TextDetectEngine.FAST:
         print("Using FAST text detection engine.")
+        from text_detector_fast import TextDetectorFast
         textDetector = TextDetectorFast()
     else:
         print("Invalid text detection engine selected.")

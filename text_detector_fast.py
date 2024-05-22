@@ -4,7 +4,7 @@ import time
 import os
 
 from PIL import Image
-
+from fast import FAST
 class TextDetectorFast:
     def __init__(self, east_path, min_confidence=0.5, width=320, height=320, padding=0.0):
         self.east_path = east_path
@@ -14,6 +14,7 @@ class TextDetectorFast:
         self.padding = padding
 
         self.graph = self.load_model()
+        self.fast = FAST()
 
     def load_image(self, image_path):
         image = Image.open(image_path).convert('RGB')
