@@ -249,7 +249,7 @@ def main():
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
     parser.add_argument('-m', '--method', type=int, help="option for text detection and recognition. {1: easyocr detection + easyocr recognition}")
-    parser.add_argument('--text_detector', type=TextDetectEngine.from_str, help="Which textdetection engine, {east, fast}", default=TextDetectEngine.EAST)
+    parser.add_argument('--text_detector', type=TextDetectEngine.from_str, help="Which textdetection engine, {east, fast}", default=TextDetectEngine.FAST)
 
     
 
