@@ -7,7 +7,12 @@ from process_frames import FrameProcessor
 from thread_safe import shared_data_get_data
 
 app = Flask(__name__, static_folder='static', static_url_path='/')
-frameProcessor = FrameProcessor()
+
+
+frameProcessor = None
+
+def init_web(lang="en", disable_dialog=False, disable_translation=False, disable_cache=False):
+    FrameProcessor(lang, disable_dialog)
 
 previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
 previous_highlighted_image = Image.new('RGB', (100, 100), (255, 255, 255))
@@ -78,4 +83,5 @@ def run_server():
 
 # Static file handling is automatically done by Flask for the 'static' folder
 if __name__ == '__main__':
+    init_web("en", False, False, False)
     app.run(host='localhost', port=8000, debug=True)

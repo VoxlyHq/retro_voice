@@ -100,6 +100,7 @@ class FrameProcessor:
 
     def load_dialogues(self):
         print("load_dialogues-")
+        panic("load_dialogues")
         # File path to your JSON data
         file_path = self.dialog_file_path
 

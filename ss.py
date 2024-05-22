@@ -14,7 +14,7 @@ from enum import Enum
 
 
 from image_window import VideoStreamWithAnnotations
-from webserv import run_server, set_dialog_file
+from webserv import run_server, set_dialog_file, init_web
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
 from image_diff import image_crop_title_bar
@@ -26,6 +26,13 @@ from text_detector_fast import TextDetectorFast
 class TextDetectEngine(Enum):
     EAST = 1
     FAST = 2
+
+    @staticmethod
+    def from_str(label):
+        if label.lower() in ('east', 'fast'):
+            return TextDetector[label.upper()]
+        else:
+            raise argparse.ArgumentTypeError(f"Invalid value for text_detector: {label}")
 
 # Detect the operating system
 os_name = platform.system()
@@ -244,7 +251,7 @@ def main():
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
     parser.add_argument('-m', '--method', type=int, help="option for text detection and recognition. {1: easyocr detection + easyocr recognition}")
-    parser.add_argument('--text_detector', type=str, help="Which textdetection engine, {1: east, 2: fast}", default=TextDetectEngine.EAST.value)
+    parser.add_argument('--text_detector', type=TextDetectEngine.from_str, help="Which textdetection engine, {east, fast}", default=TextDetectEngine.EAST)
 
     
 
@@ -264,10 +271,10 @@ def main():
     
     
     # Use the enumeration to determine the selected engine
-    if args.text_detector == TextDetectEngine.EAST.value:
+    if args.text_detector == TextDetectEngine.EAST:
         print("Using EAST text detection engine.")
         textDetector = TextDetector('frozen_east_text_detection.pb')
-    elif args.text_detector == TextDetectEngine.FAST.value:
+    elif args.text_detector == TextDetectEngine.FAST:
         print("Using FAST text detection engine.")
         textDetector = TextDetectorFast()
     else:
@@ -279,6 +286,7 @@ def main():
     frameProcessor =  FrameProcessor(lang, disable_dialog, method) 
     
     if args.webserver:
+        init_web(lang, disable_dialog)
         server_thread = threading.Thread(target=run_server)
         server_thread.start()
 
