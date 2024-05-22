@@ -3,18 +3,20 @@ import argparse
 import time
 import os
 
+
 from PIL import Image
-from fast import FAST
+import fast
+
 class TextDetectorFast:
-    def __init__(self, east_path, min_confidence=0.5, width=320, height=320, padding=0.0):
-        self.east_path = east_path
+    def __init__(self, model_path, min_confidence=0.5, width=320, height=320, padding=0.0):
+        self.model_path = model_path
         self.min_confidence = min_confidence
         self.width = width
         self.height = height
         self.padding = padding
 
         self.graph = self.load_model()
-        self.fast = FAST()
+        self.fast = fast.FAST(config="test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py", checkpoint=None,)
 
     def load_image(self, image_path):
         image = Image.open(image_path).convert('RGB')
@@ -43,7 +45,7 @@ class TextDetectorFast:
         return results
     
     def has_text(self, image):
-        return False
+        return self.fast.has_text(image)
 
     def close_session(self):
         None

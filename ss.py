@@ -276,7 +276,7 @@ def main():
     elif args.text_detector == TextDetectEngine.FAST:
         print("Using FAST text detection engine.")
         from text_detector_fast import TextDetectorFast
-        textDetector = TextDetectorFast()
+        textDetector = TextDetectorFast("weeeee")
     else:
         print("Invalid text detection engine selected.")
         textDetector = None # probably should just exit?
