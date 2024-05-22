@@ -10,6 +10,8 @@ import cv2
 from PIL import Image
 import concurrent.futures
 import numpy as np
+from enum import Enum
+
 
 from image_window import VideoStreamWithAnnotations
 from webserv import run_server, set_dialog_file
@@ -18,6 +20,12 @@ from process_frames import FrameProcessor
 from image_diff import image_crop_title_bar
 #from image_window import ImageWindow
 from text_detector import TextDetector
+from text_detector_fast import TextDetectorFast
+
+# Define the enumeration
+class TextDetectEngine(Enum):
+    EAST = 1
+    FAST = 2
 
 # Detect the operating system
 os_name = platform.system()
@@ -236,6 +244,7 @@ def main():
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
     parser.add_argument('-m', '--method', type=int, help="option for text detection and recognition. {1: easyocr detection + easyocr recognition}")
+    parser.add_argument('--text_detector', type=str, help="Which textdetection engine, {1: east, 2: fast}", default=TextDetectEngine.EAST.value)
 
     
 
@@ -254,7 +263,17 @@ def main():
         set_dialog_file("static/dialogues_jp_web.json")
     
     
-    textDetector = TextDetector('frozen_east_text_detection.pb')
+    # Use the enumeration to determine the selected engine
+    if args.text_detector == TextDetectEngine.EAST.value:
+        print("Using EAST text detection engine.")
+        textDetector = TextDetector('frozen_east_text_detection.pb')
+    elif args.text_detector == TextDetectEngine.FAST.value:
+        print("Using FAST text detection engine.")
+        textDetector = TextDetectorFast()
+    else:
+        print("Invalid text detection engine selected.")
+        textDetector = None # probably should just exit?
+    
     
     method = 1 if args.method is None else args.method
     frameProcessor =  FrameProcessor(lang, disable_dialog, method) 
