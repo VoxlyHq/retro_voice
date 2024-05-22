@@ -7,7 +7,7 @@ import time
 import torch
 import torch.profiler
 from easyocr.imgproc import resize_aspect_ratio, loadImage
-from easyocr.craft_utils import getDetBoxes
+#from easyocr.craft_utils import getDetBoxes
 
 from local_craft import getDetBoxes
 
@@ -22,13 +22,16 @@ img_files = [i for i in Path('data/MSRA-TD500/test').iterdir() if i.is_file() an
 # Load the first image
 if img_files:
     img = img_files[0]
-else:
-    raise FileNotFoundError("No image files found in the specified directory.")
+#else:
+#    raise FileNotFoundError("No image files found in the specified directory.")
+
+#img = loadImage("ff2_en_1.png")
 
 # Initialize total durations and item count
 total_durations = 0
 item_count = 0
 
+#oimage = loadImage("ff2_en_1.png")
 oimage = loadImage(img)
 mag_ratio = 1.
 canvas_size = 2560
