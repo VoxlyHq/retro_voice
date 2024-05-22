@@ -60,7 +60,7 @@ for _ in range(400):
 profiler.disable()
 
 # Save the profiling results to a file
-profiler.dump_stats('tmp19.pro')
+profiler.dump_stats('f2.pro')
 
 # Calculate the average time per item
 if item_count > 0:
