@@ -16,7 +16,7 @@ class TextDetectorFast:
         self.padding = padding
 
         self.graph = self.load_model()
-        self.fast = fast.FAST(config="test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py", checkpoint=None,)
+        self.fast = fast.FAST(config="test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py", checkpoint="checkpoints/fast_base_tt_640_finetune_ic17mlt.pth",ema=True)
 
     def load_image(self, image_path):
         image = Image.open(image_path).convert('RGB')

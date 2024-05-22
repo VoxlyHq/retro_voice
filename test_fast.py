@@ -15,7 +15,8 @@ total_durations = 0
 item_count = 0
 
 #oimage = loadImage(img)
-oimage = Image.open("ff2_en_1.png")
+#oimage = Image.open("ff2_en_1.png")
+oimage = "ff2_en_1.png"
 
 mag_ratio = 1.
 canvas_size = 2560

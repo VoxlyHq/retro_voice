@@ -11,21 +11,11 @@ import cProfile
 # Initialize the OCR reader
 reader = Reader(['en'])
 
-# Get the list of image files
-img_files = [i for i in Path('data/MSRA-TD500/test').iterdir() if i.is_file() and i.suffix.lower() in {'.jpg', '.jpeg'}]
-
-# Load the first image
-if img_files:
-    print(img_files[0])
-    img = img_files[0]
-else:
-    raise FileNotFoundError("No image files found in the specified directory.")
-
 # Initialize total durations and item count
 total_durations = 0
 item_count = 0
 
-oimage = loadImage(img)
+#oimage = loadImage(img)
 oimage = loadImage("ff2_en_1.png")
 
 mag_ratio = 1.
