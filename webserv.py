@@ -12,7 +12,8 @@ app = Flask(__name__, static_folder='static', static_url_path='/')
 frameProcessor = None
 
 def init_web(lang="en", disable_dialog=False, disable_translation=False, disable_cache=False):
-    FrameProcessor(lang, disable_dialog)
+    global frameProcessor
+    frameProcessor = FrameProcessor(lang, disable_dialog)
 
 previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
 previous_highlighted_image = Image.new('RGB', (100, 100), (255, 255, 255))
@@ -66,7 +67,7 @@ def script_json():
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory('static', 'index.html')
 
 @app.route('/log')
 def log():
