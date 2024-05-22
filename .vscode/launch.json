@@ -19,6 +19,14 @@
             "python": "venv/bin/python"
         },
         {
+            "name": "stream video",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "server.stream_http_video",
+            "console": "integratedTerminal",
+            "python": "venv/bin/python"
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
