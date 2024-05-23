@@ -89,8 +89,7 @@ class OCRProcessor:
     
     def ocr_openai(self, image_bytes):
         response = self.openai_api.call_vision_api(image_bytes)
-        content = response['choices'][0]['message']['content']
-        return content
+        return response
 
 
     def ocr_and_highlight(self, image):
@@ -106,22 +105,23 @@ class OCRProcessor:
             filtered_result = self.filter_ocr_result(result)
             drawable_image = self.draw_highlight(image_bytes, filtered_result)
             filtered_text = ' '.join([text for _, text, _ in filtered_result])
-            return filtered_text, drawable_image, filtered_result
+            return filtered_text, drawable_image, filtered_result, None
         elif self.method == OCREngine.OPENAI:
             detection_result = self.det_easyocr(image_bytes)
             if detection_result != []:
                 dialogue_box_img = image_crop_dialogue_box(image, detection_result)
                 dialogue_box_image_bytes = self.process_image(dialogue_box_img)
                 drawable_image = self.draw_highlight(image_bytes, detection_result)
-                ocr_result = self.ocr_openai(dialogue_box_image_bytes)
+                response = self.ocr_openai(dialogue_box_image_bytes)
+                reg_result = response['choices'][0]['message']['content']
                 # TODO : experiment with prompts to get better results
                 if self.lang == 'en':
-                    filtered_text = ocr_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
+                    filtered_text = reg_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
                 else:
-                    filtered_text = [i for i in ocr_result.split("\n\n") if self.extract_non_english_text(i) != ""]
+                    filtered_text = [i for i in reg_result.split("\n\n") if self.extract_non_english_text(i) != ""]
                     if filtered_text != []:
                         filtered_text = filtered_text[0].replace('\n', ' ').replace('"', '').replace('`', '')
-                return filtered_text, drawable_image, detection_result
+                return filtered_text, drawable_image, detection_result, response
             return '', None, []
 
     def run_ocr(self, image):
@@ -129,14 +129,14 @@ class OCRProcessor:
         Perform OCR on the image, log the time taken, and return the results.
 
         :param image: The input PIL Image
-        :return: Tuple containing the concatenated detected text, annotated image, and OCR result
+        :return: Tuple containing the concatenated detected text, annotated image, annotations and recognition result
         """
         start_time = time.time()
-        output_text, highlighted_image, annotations = self.ocr_and_highlight(image)
+        output_text, highlighted_image, annotations, reg_result = self.ocr_and_highlight(image)
         end_time = time.time()
         logging.info(f"OCR found text: {output_text}")
         logging.info(f"Time taken: {end_time - start_time} seconds")
-        return output_text, highlighted_image, annotations
+        return output_text, highlighted_image, annotations, reg_result
 
     def reformat(self,det_res):
         '''

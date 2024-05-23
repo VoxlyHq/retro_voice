@@ -30,7 +30,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/ss.py",
-            "args": ["-w", "-is", "--translate=jp,en", "-fps", "-so"],
+            "args": ["-w", "-is", "--translate=jp,en", "-fps", "-so", "--method=openai"],
             "console": "integratedTerminal"
         }
     ]

@@ -2,10 +2,11 @@ import unittest
 from PIL import Image
 from ocr import OCRProcessor  
 from thefuzz import fuzz
+from ocr_enum import OCREngine
 
 class TestOCRProcessor(unittest.TestCase):
     def setUp(self):
-        self.ocr_processor = OCRProcessor(language='en', method=1)
+        self.ocr_processor = OCRProcessor(language='en', method=OCREngine.EASYOCR)
         self.image = Image.open('unit_test_data/windows_eng_ff4.png').convert('RGB')
         self.dialogue_image = Image.open('unit_test_data/orig_dialogue_box.jpg')
     
@@ -39,10 +40,11 @@ class TestOCRProcessor(unittest.TestCase):
         self.assertEqual(filtered_result[0][1], 'Crew:do')
 
     def test_ocr_and_highlight(self):
-        text, drawable_image, annotations = self.ocr_processor.ocr_and_highlight(self.image)
+        text, drawable_image, annotations, reg_result = self.ocr_processor.ocr_and_highlight(self.image)
         self.assertIsInstance(text, str)
         self.assertIsInstance(drawable_image, Image.Image)
         self.assertEqual(len(annotations[0]), 3)
+        self.assertIsNone(reg_result)
 
     def test_det_easyocr(self):
         """
@@ -63,9 +65,9 @@ class TestOCRProcessor(unittest.TestCase):
         """
         Test the ocr_and_highlight method for method 2.
         """
-        self.ocr_processor.method = 2
+        self.ocr_processor.method = OCREngine.OPENAI
         # Process the image and get the OCR results
-        output_text, highlighted_image, detection_results = self.ocr_processor.ocr_and_highlight(self.dialogue_image)
+        output_text, highlighted_image, detection_results, reg_results = self.ocr_processor.ocr_and_highlight(self.dialogue_image)
 
         # Check the OCR output text
         similarity_ratio = similarity_ratio = fuzz.ratio(output_text, "Crew: Why are we robbing crystals from innocent people? Crew: That's our duty.") / 100.0
