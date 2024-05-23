@@ -10,6 +10,7 @@ import cv2
 from PIL import Image
 import concurrent.futures
 import numpy as np
+from ocr_enum import OCREngine
 
 from image_window import VideoStreamWithAnnotations
 from webserv import run_server, set_dialog_file
@@ -151,7 +152,8 @@ def process_screenshot(img,translate=None, show_image_screen=False, enable_cache
     image = textDetector.preprocess_image(img)
     if not textDetector.has_text(image):
         print("No text Found in this frame. Skipping run_image")
-        set_annotation_text([])
+        if show_image_screen:
+            set_annotation_text([])
     else:
     
         closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
@@ -235,7 +237,7 @@ def main():
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
-    parser.add_argument('-m', '--method', type=int, help="option for text detection and recognition. {1: easyocr detection + easyocr recognition}")
+    parser.add_argument('-m', '--method', type=OCREngine.from_str, choices=list(OCREngine), default=OCREngine.EASYOCR, help="option for text detection and recognition. {easyocr: easyocr detection + easyocr recognition, openai: easyocr detection + openai recognition}")
 
     
 
@@ -256,7 +258,7 @@ def main():
     
     textDetector = TextDetector('frozen_east_text_detection.pb')
     
-    method = 1 if args.method is None else args.method
+    method = args.method
     frameProcessor =  FrameProcessor(lang, disable_dialog, method) 
     
     if args.webserver:

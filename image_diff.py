@@ -19,6 +19,25 @@ def image_crop_title_bar(img, crop_y_coordinate=37):
 
     return img
 
+def image_crop_dialogue_box(img, ann):
+    top_left = ann[0][0][0]
+    # finding largest x and y coordinates for bottom_right
+    largest_x = 0
+    largest_y = 0
+    for i in ann:
+        ann = i[0][2]
+        if ann[0] >= largest_x:
+            largest_x = ann[0]
+        if ann[1] >= largest_y:
+            largest_y = ann[1]
+    bottom_right = [largest_x, largest_y]
+
+    # Ensure the coordinates are in the correct format (floats or integers)
+    top_left = tuple(map(int, top_left))
+    bottom_right = tuple(map(int, bottom_right))
+    img_crop = img.crop((*top_left, *bottom_right))
+    return img_crop
+
 def calculate_image_difference(img1, img2):
     if img1 == None or img2 == None:
         return 0
