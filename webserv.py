@@ -1,10 +1,11 @@
 from time import sleep
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, Response, jsonify, send_from_directory
 from PIL import Image
 import io
 import base64
 from process_frames import FrameProcessor
 from thread_safe import shared_data_get_data
+import time
 
 app = Flask(__name__, static_folder='static', static_url_path='/')
 
@@ -22,7 +23,29 @@ image_changed = False
 def set_dialog_file(file):
     global dialog_file
     dialog_file = file
-    
+
+frame_rate = 24 / 3 # 6 fps hack for now
+frame_delay = 1 / frame_rate  # Delay to achieve ~24 FPS
+
+def generate_mjpeg():
+    global previous_image, previous_highlighted_image, image_changed
+
+    while True:  # Loop to make it continuous
+        image_changed = False
+
+        img_byte_arr = io.BytesIO()
+        previous_highlighted_image.save(img_byte_arr, format='JPEG')
+        #encoded_img = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+            
+        frame = img_byte_arr.getvalue()
+        yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        time.sleep(frame_delay)  # Wait to control the frame rate
+
+@app.route('/video_mjpeg')
+def video_feed():
+    return Response(generate_mjpeg(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 @app.route('/upload_screenshot', methods=['POST'])
 def upload_screenshot():

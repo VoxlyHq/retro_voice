@@ -27,21 +27,7 @@
 </td>
 <td>
     <h2>Live Image Update</h2>
-    <img id="liveImage" src="" alt="Live image feed" />
-    <script>
-        const evtSource = new EventSource("/stream");
-        evtSource.onmessage = function(event) {
-            console.log("first!")
-            if(event.data == "none") {
-                console.log('No image available');
-            }else {
-                // Assume event.data is base64 encoded PNG image data
-                //const base64Image = `data:image/png;base64,${event.data}`;
-                document.getElementById('liveImage').src = event.data;
-                console.log('Image updated');
-            }
-        };
-    </script>
+    <img src="/video_mjpeg" alt="Video Stream">
 </td>    
     </tr>
 
