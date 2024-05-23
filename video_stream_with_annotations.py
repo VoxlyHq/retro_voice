@@ -290,6 +290,7 @@ class VideoStreamWithAnnotations:
         if annotations == None:
             return
         with self.frame_lock:
+            print(f"set_annotations- {annotations}")
             self.current_annotations = annotations
 
     def set_translation(self, translation):
