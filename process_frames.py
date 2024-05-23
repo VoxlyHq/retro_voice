@@ -56,6 +56,8 @@ class FrameProcessor:
         self.last_played = -1 #TODO this should be per user
 
         
+        self.last_annotations = None
+
         self.openai_api = OpenAI_API()
 
         self.ocr_cache_pkl_path = Path('ocr_cache.pkl')
@@ -339,12 +341,13 @@ class FrameProcessor:
                     print("finished translation")
 
             self.previous_image = img
+            self.last_annotations = annotations
             
             return last_played, self.previous_image, highlighted_image, annotations, translation
         else:
             print("Difference is less than 10%. No need to call OCR again.")
             
-            return None, None, None, annotations, None
+            return None, None, None, self.last_annotations, None
         
     def create_output_dirs(self):
 
