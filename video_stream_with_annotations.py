@@ -42,6 +42,9 @@ class VideoStreamWithAnnotations:
         elif platform.system() == "Darwin":  # Darwin is the system name for macOS
             self.font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"  # Path to Hiragino Maru Gothic Pro
             self.crop_y_coordinate = 72
+        else: #linux?
+            self.crop_y_coordinate = 72
+            self.font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc" #sudo apt-get install fonts-noto-cjk
         if crop_y_coordinate is not None:
             self.crop_y_coordinate = crop_y_coordinate
         self.cap = None
