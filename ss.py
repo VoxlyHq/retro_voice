@@ -10,6 +10,7 @@ import cv2
 from PIL import Image
 import concurrent.futures
 import numpy as np
+from ocr_enum import OCREngine
 
 from image_window import VideoStreamWithAnnotations
 from webserv import run_server, set_dialog_file
@@ -236,7 +237,7 @@ def main():
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
-    parser.add_argument('-m', '--method', choices=["easyocr", "openai"], default="easyocr", help="option for text detection and recognition. {easyocr: easyocr detection + easyocr recognition, openai: easyocr detection + openai recognition}")
+    parser.add_argument('-m', '--method', type=OCREngine.from_str, choices=list(OCREngine), default=OCREngine.EASYOCR, help="option for text detection and recognition. {easyocr: easyocr detection + easyocr recognition, openai: easyocr detection + openai recognition}")
 
     
 

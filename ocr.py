@@ -5,13 +5,14 @@ from PIL import Image, ImageDraw
 import easyocr
 from openai_api import OpenAI_API
 from image_diff import image_crop_dialogue_box
+from ocr_enum import OCREngine
 import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
 class OCRProcessor:
-    def __init__(self, language='en', method="easyocr"):
+    def __init__(self, language='en', method=OCREngine.EASYOCR):
         """
         Initialize the OCRProcessor with the specified language and method.
 
@@ -100,13 +101,13 @@ class OCRProcessor:
         :return: Tuple containing the concatenated detected text, annotated image, and OCR result
         """
         image_bytes = self.process_image(image)
-        if self.method == "easyocr":
+        if self.method == OCREngine.EASYOCR:
             result = self.ocr_easyocr(image_bytes, detail=1)
             filtered_result = self.filter_ocr_result(result)
             drawable_image = self.draw_highlight(image_bytes, filtered_result)
             filtered_text = ' '.join([text for _, text, _ in filtered_result])
             return filtered_text, drawable_image, filtered_result
-        elif self.method == "openai":
+        elif self.method == OCREngine.OPENAI:
             detection_result = self.det_easyocr(image_bytes)
             if detection_result != []:
                 dialogue_box_img = image_crop_dialogue_box(image, detection_result)
