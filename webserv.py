@@ -39,13 +39,13 @@ def async_process_frame(frame):
             last_frame_count = 0 # paranoia so it doesn't overflow
 
 
-def init_web(lang="en", disable_dialog=False, disable_translation=False, enable_cache=False, translate=""):
+def init_web(lang="en", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None):
     global frameProcessor
     frameProcessor = FrameProcessor(lang, disable_dialog,)
 
     global video_stream
     video_stream = VideoStreamWithAnnotations(background_task=process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
-                                                show_fps=True, crop_y_coordinate=72, frameProcessor=frameProcessor) #TODO crop should be set later by user
+                                                show_fps=True, crop_y_coordinate=72, frameProcessor=frameProcessor, textDetector=textDetector) #TODO crop should be set later by user
     #video_stream.stop()
 
 
@@ -134,5 +134,8 @@ def run_server():
 
 # Static file handling is automatically done by Flask for the 'static' folder
 if __name__ == '__main__':
-    init_web("en", False, False, False, translate="jp,en")
+    from text_detector_fast import TextDetectorFast
+    textDetector = TextDetectorFast("weeeee")    
+
+    init_web("en", False, False, False, translate="jp,en", textDetector=textDetector)
     app.run(host='localhost', port=8000, debug=True)

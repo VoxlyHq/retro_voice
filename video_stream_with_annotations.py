@@ -23,7 +23,7 @@ else:
 
 
 class VideoStreamWithAnnotations:
-    def __init__(self, background_task=None, background_task_args={}, show_fps=False, crop_y_coordinate=None, frameProcessor=None):
+    def __init__(self, background_task=None, background_task_args={}, show_fps=False, crop_y_coordinate=None, frameProcessor=None, textDetector=None):
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
@@ -33,6 +33,7 @@ class VideoStreamWithAnnotations:
         self.fps = 0
         self.fps_counter_start_time = time.time()
         self.frameProcessor = frameProcessor
+        self.textDetector = textDetector
 
         # Check the operating system, and language these two are for japanese
         if platform.system() == "Windows":
@@ -321,19 +322,19 @@ class VideoStreamWithAnnotations:
         if not self.textDetector.has_text(image):
             print("No text Found in this frame. Skipping run_image")
             if show_image_screen:
-                self.set_annotation_text([])
+                self.set_annotations([])
         else:
         
             closest_match, previous_image, highlighted_image, annotations, translation = self.frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
 
             if annotations != None:
                 if show_image_screen:
-                    self.set_annotation_text(annotations)
-                    self.set_translation_text(translation)
+                    self.set_annotations(annotations)
+                    self.set_translation(translation)
             if closest_match == None:
                 if show_image_screen:
-                    self.set_annotation_text(None)
-                    self.set_translation_text(None)
+                    self.set_annotations(None)
+                    self.set_translation(None)
  
             if closest_match != None:
                 return closest_match #TODO this is for playing audio, its still a bit messy, ss.py is playing audio, what if we want on web?

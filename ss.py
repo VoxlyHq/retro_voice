@@ -13,12 +13,11 @@ import numpy as np
 from enum import Enum
 
 from ocr_enum import OCREngine
-from image_window import VideoStreamWithAnnotations
+from video_stream_with_annotations import VideoStreamWithAnnotations
 from webserv import run_server, set_dialog_file, init_web
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
 from image_diff import image_crop_title_bar
-#from image_window import ImageWindow
 
 # Define the enumeration
 class TextDetectEngine(Enum):
@@ -258,7 +257,7 @@ def main():
     frameProcessor =  FrameProcessor(lang, disable_dialog=disable_dialog,save_outputs=args.save_outputs, method=args.method) 
     
     if args.webserver:
-        init_web(lang, disable_dialog, translate=args.translate, enable_cache=args.enable_cache)
+        init_web(lang, disable_dialog, translate=args.translate, enable_cache=args.enable_cache, textDetector=textDetector)
         server_thread = threading.Thread(target=run_server)
         server_thread.start()
 
