@@ -4,17 +4,20 @@ import logging
 from PIL import Image, ImageDraw
 import easyocr
 from openai_api import OpenAI_API
+from image_diff import image_crop_dialogue_box
+from ocr_enum import OCREngine
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
 class OCRProcessor:
-    def __init__(self, language='en', method=1):
+    def __init__(self, language='en', method=OCREngine.EASYOCR):
         """
         Initialize the OCRProcessor with the specified language and method.
 
         :param language: The language for OCR ('en' for English, 'jp' for Japanese)
-        :param method: The OCR method to use (1 for easyocr, future methods can be added)
+        :param method: The OCR method to use (easyocr, openai)
         """
         self.lang = language
         self.reader = easyocr.Reader(['en']) if language == 'en' else easyocr.Reader(['en', 'ja'])
@@ -74,6 +77,21 @@ class OCRProcessor:
         :return: OCR result containing bounding boxes and text
         """
         return self.reader.readtext(image_bytes, detail=detail)
+    
+    def det_easyocr(self, image_bytes):
+        """
+        Perform text detection using easyocr.
+
+        :param image_bytes: The image in byes
+        :return:OCR result containing bounding boxes
+        """
+        return self.reformat(self.reader.detect(image_bytes))
+    
+    def ocr_openai(self, image_bytes):
+        response = self.openai_api.call_vision_api(image_bytes)
+        content = response['choices'][0]['message']['content']
+        return content
+
 
     def ocr_and_highlight(self, image):
         """
@@ -83,12 +101,28 @@ class OCRProcessor:
         :return: Tuple containing the concatenated detected text, annotated image, and OCR result
         """
         image_bytes = self.process_image(image)
-        if self.method == 1:
+        if self.method == OCREngine.EASYOCR:
             result = self.ocr_easyocr(image_bytes, detail=1)
             filtered_result = self.filter_ocr_result(result)
             drawable_image = self.draw_highlight(image_bytes, filtered_result)
             filtered_text = ' '.join([text for _, text, _ in filtered_result])
             return filtered_text, drawable_image, filtered_result
+        elif self.method == OCREngine.OPENAI:
+            detection_result = self.det_easyocr(image_bytes)
+            if detection_result != []:
+                dialogue_box_img = image_crop_dialogue_box(image, detection_result)
+                dialogue_box_image_bytes = self.process_image(dialogue_box_img)
+                drawable_image = self.draw_highlight(image_bytes, detection_result)
+                ocr_result = self.ocr_openai(dialogue_box_image_bytes)
+                # TODO : experiment with prompts to get better results
+                if self.lang == 'en':
+                    filtered_text = ocr_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
+                else:
+                    filtered_text = [i for i in ocr_result.split("\n\n") if self.extract_non_english_text(i) != ""]
+                    if filtered_text != []:
+                        filtered_text = filtered_text[0].replace('\n', ' ').replace('"', '').replace('`', '')
+                return filtered_text, drawable_image, detection_result
+            return '', None, []
 
     def run_ocr(self, image):
         """
@@ -103,6 +137,33 @@ class OCRProcessor:
         logging.info(f"OCR found text: {output_text}")
         logging.info(f"Time taken: {end_time - start_time} seconds")
         return output_text, highlighted_image, annotations
+
+    def reformat(self,det_res):
+        '''
+        reformat detection result as the details 1 format of easyocr readtext output
+        :params: det_res a tuple containing (a list of detection bbox)
+        :returns: reformatted output 
+        '''
+        reformatted_output = []
+        for x1, x2, y1, y2 in det_res[0][0]:
+            reformatted_output.append(([[x1, y1], [x2, y1], [x2, y2], [x1, y2]], '', 0.0))
+
+        return reformatted_output
+
+    def extract_non_english_text(self, response):
+        """
+        Extracts non-English characters from the provided response.
+        
+        :param response: The response containing the text
+        :return: The extracted non-English text
+        """
+        # Use a regular expression to match non-English characters
+        match = re.findall(r'[^\x00-\x7F]+', response)
+        if match:
+            non_english_text = ' '.join(match)
+            return non_english_text.strip()
+        return ""
+
 
 if __name__ == "__main__":
     ocr_processor = OCRProcessor()
