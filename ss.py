@@ -251,8 +251,7 @@ def main():
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
     parser.add_argument('--text_detector', type=TextDetectEngine.from_str, help="Which textdetection engine, {east, fast}", default=TextDetectEngine.FAST)
     parser.add_argument('-m', '--method', type=OCREngine.from_str, choices=list(OCREngine), default=OCREngine.EASYOCR, help="option for text detection and recognition. {easyocr: easyocr detection + easyocr recognition, openai: easyocr detection + openai recognition}")
-
-    
+    parser.add_argument('-so', '--save_outputs', action='store_true', help="Enable saving input image, ocr and translation outputs and annotated image")
 
     args = parser.parse_args()
 
@@ -282,8 +281,7 @@ def main():
         print("Invalid text detection engine selected.")
         textDetector = None # probably should just exit?
     
-    
-    frameProcessor =  FrameProcessor(lang, disable_dialog, args.method) 
+    frameProcessor =  FrameProcessor(lang, disable_dialog=disable_dialog,save_outputs=args.save_outputs, method=args.method) 
     
     if args.webserver:
         init_web(lang, disable_dialog)

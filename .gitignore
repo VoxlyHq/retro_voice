@@ -10,3 +10,4 @@ exceptions.txt
 .env
 *.pkl
 *.sqlite3
+outputs
