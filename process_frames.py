@@ -22,10 +22,21 @@ from ocr_enum import OCREngine
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
-    def __init__(self, language='en', disable_dialog=False, method=OCREngine.EASYOCR):
+    def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR):
         self.counter = 0  # Convert the global variable to an instance attribute
         self.disable_dialog = disable_dialog
         self.method = method
+        self.save_outputs = save_outputs
+        if self.save_outputs:
+            # Create output directories if they do not exist
+            self.input_image_folder = Path("outputs/input_images")
+            self.annotated_image_folder = Path("outputs/annotated_images")
+            self.ocr_annotations_folder = Path("outputs/ocr_annotations")
+            self.translation_folder = Path("outputs/translations")
+            self.vision_model_output_folder = Path("outputs/ocr_openai_responses")
+
+            self.create_output_dirs()
+
         self.lang = language
         if language == 'en':
             self.dialog_file_path = "dialogues_en_v2.json"
@@ -188,16 +199,17 @@ class FrameProcessor:
     def run_ocr(self, image):
         start_time = time.time() # Record the start time
 
-        output_text, highlighted_image, annotations = self.ocr_processor.run_ocr(image)
+        output_text, highlighted_image, annotations, reg_result = self.ocr_processor.run_ocr(image)
         
         print("found text ocr----")
         print(output_text)
         print("----")
     
+    
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
         if self.disable_dialog:
-            return output_text, highlighted_image, annotations
+            return output_text, highlighted_image, annotations, reg_result
         
         #thefuzz_test(text)
         res = self.find_closest_entry(output_text)
@@ -212,7 +224,7 @@ class FrameProcessor:
                 self.last_played = res[0]
         else:
             print("No entry found")        
-        return res, highlighted_image, annotations
+        return res, highlighted_image, annotations, reg_result
 
     def translate_openai(self, content, target_lang):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -223,13 +235,13 @@ class FrameProcessor:
         
         cleaned_string = str(content)
         print(f"{cleaned_string=}")
-        return cleaned_string
+        return cleaned_string, result
     
     def run_translation(self, content, translate):
         start_time = time.time() # Record the start time
 
         target_lang = translate.split(',')[1]
-        str = self.translate_openai(content, target_lang)
+        str, result = self.translate_openai(content, target_lang)
         
         print("---- Translated Text ----")
         print(str)
@@ -238,7 +250,7 @@ class FrameProcessor:
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
                   
-        return str
+        return str, result
 
     def process_frame(self, frame_pil, frame_count, fps):
         """
@@ -283,7 +295,11 @@ class FrameProcessor:
                 highlighted_image = None
                 print(f'Time Taken {time.time() - then}')
             else:
-                last_played, highlighted_image, annotations = self.run_ocr(img)
+                last_played, highlighted_image, annotations, vision_model_output = self.run_ocr(img) # vision model response only returns a response if the method used here is OPENAI otherwise returns None.
+                
+                # save outputs to disk
+                if self.save_outputs and translate is None:
+                    self.save_outputs_to_disk(img, highlighted_image, annotations, None, vision_model_output)
                 self.ocr_cache.append({'string' : last_played, 'annotations' : annotations, 'hash' : imagehash.average_hash(img_crop, 16)})
                 self.update_cache('ocr')
 
@@ -306,7 +322,7 @@ class FrameProcessor:
                     
                 if closest_entry is None and last_played:
                     if self.disable_dialog:
-                        translation = self.run_translation(last_played, translate)
+                        translation, result = self.run_translation(last_played, translate)
                     else:
                         content_to_translate = []
                         for entry in last_played:
@@ -315,7 +331,11 @@ class FrameProcessor:
                             content_to_translate.append(content)
                         content_to_translate = " ".join(content_to_translate)
 
-                        translation = self.run_translation(content_to_translate, translate)
+                        translation, result = self.run_translation(content_to_translate, translate)
+
+                    # save outputs to disk
+                    if self.save_outputs:
+                        self.save_outputs_to_disk(img, highlighted_image, annotations, result, vision_model_output)
 
                     self.translation_cache.append({'translation' : translation,'hash' : imagehash.average_hash(img_crop, 16)})
                     self.update_cache('translation')
@@ -330,3 +350,59 @@ class FrameProcessor:
             print("Difference is less than 10%. No need to call OCR again.")
             
             return None, None, None, self.last_annotations, None
+        
+    def create_output_dirs(self):
+
+        self.input_image_folder.mkdir(parents=True, exist_ok=True)
+        self.annotated_image_folder.mkdir(parents=True, exist_ok=True)
+        self.ocr_annotations_folder.mkdir(parents=True, exist_ok=True)
+        self.translation_folder.mkdir(parents=True, exist_ok=True)
+        self.vision_model_output_folder.mkdir(parents=True, exist_ok=True)
+
+    def save_outputs_to_disk(self, input_image, annotated_image, ocr_annotations, translation_output, vision_model_output):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        # Save input image
+        input_image_path = self.input_image_folder.joinpath(f"input_image_{timestamp}.jpg")
+        input_image.save(input_image_path)
+        
+        # Save annotated image
+        if annotated_image:
+            annotated_image_path = self.annotated_image_folder.joinpath(f"annotated_image_{timestamp}.jpg")
+            annotated_image.save(annotated_image_path)
+        
+        # ocr output are different based on the OCR methods. 
+        if self.method == OCREngine.EASYOCR:
+            # Save OCR annotations as JSON
+            ocr_annotations_path = self.ocr_annotations_folder.joinpath(f"ocr_annotations_{timestamp}.json")
+            ocr_annotations = [
+                {
+                    "bbox": [[int(point[0]), int(point[1])] for point in bbox],
+                    "text": text,
+                    "prob": float(prob)
+                } for bbox, text, prob in ocr_annotations
+            ]
+            with open(ocr_annotations_path, 'w', encoding='utf-8') as f:
+                json.dump(ocr_annotations, f, ensure_ascii=False, indent=4)
+        
+        elif self.method == OCREngine.OPENAI:
+            ocr_annotations_path = self.ocr_annotations_folder.joinpath(f"ocr_annotations_{timestamp}.json")
+            ocr_annotations = [
+                {
+                    "bbox": [[int(point[0]), int(point[1])] for point in bbox],
+                    "text": text,
+                    "prob": float(prob)
+                } for bbox, text, prob in ocr_annotations
+            ]
+            with open(ocr_annotations_path, 'w', encoding='utf-8') as f:
+                json.dump(ocr_annotations, f, ensure_ascii=False, indent=4)
+
+            vision_model_output_path = self.vision_model_output_folder.joinpath(f"openai_ocr_{timestamp}.json")
+            with open(vision_model_output_path, 'w', encoding='utf-8') as f:
+                json.dump(vision_model_output, f, ensure_ascii=False, indent=4)
+        
+        # Save translation output as JSON
+        if translation_output:
+            translation_output_path = self.translation_folder.joinpath(f"translation_{timestamp}.json")
+            with open(translation_output_path, 'w', encoding='utf-8') as f:
+                json.dump(translation_output, f, ensure_ascii=False, indent=4)
