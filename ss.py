@@ -156,39 +156,19 @@ def process_video_threaded(video_path, max_workers=10):
     cap.release()  # Release the video capture object
 
 def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False):
-    global last_played
-    global frameProcessor
-    global dialogues
-    global textDetector
-
-    image = textDetector.preprocess_image(img)
-    if not textDetector.has_text(image):
-        print("No text Found in this frame. Skipping run_image")
-        if show_image_screen:
-            set_annotation_text([])
-    else:
+    global last_played, video_stream
     
-        closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
+    closest_match = video_stream.process_screenshot(img,translate=translate, show_image_screen=show_image_screen, enable_cache=enable_cache)
 
-        if closest_match != None and closest_match != last_played:
-            if not frameProcessor.disable_dialog:
-                start_time = time.time() # Record the start time
-                formated_filenames = [format_filename(i) for i in closest_match]
-                play_audio_threaded(formated_filenames)
-                end_time = time.time()
-                print(f"Audio Time taken: {end_time - start_time} seconds")
-            last_played = closest_match
-            if show_image_screen:
-                set_annotation_text(annotations)
-                set_translation_text(translation)
-        elif annotations != None:
-            if show_image_screen:
-                set_annotation_text(annotations)
-                set_translation_text(translation)
-        elif closest_match == None:
-            if show_image_screen:
-                set_annotation_text(None)
-                set_translation_text(None)
+    if closest_match != None and closest_match != last_played:
+        if not frameProcessor.disable_dialog:
+            start_time = time.time() # Record the start time
+            formated_filenames = [format_filename(i) for i in closest_match]
+            play_audio_threaded(formated_filenames)
+            end_time = time.time()
+            print(f"Audio Time taken: {end_time - start_time} seconds")
+        last_played = closest_match
+
 
 def timed_action_screencapture(translate=None, show_image_screen=False, crop_y_coordinate=None):
     print("Action triggered by timer")
@@ -204,12 +184,6 @@ def timed_action_screencapture(translate=None, show_image_screen=False, crop_y_c
     else:
         print(f"No window found with name containing '{window_name}'.")
         shared_data_put_data(f"No window found with name containing '{window_name}'.")
-
-def set_annotation_text(annotations):
-    video_stream.set_annotations(annotations)
-
-def set_translation_text(translation):
-    video_stream.set_translation(translation)
 
 def process_screenshots(translate=None, show_image_screen=False, crop_y_coordinate=None):
     while True:
@@ -284,7 +258,7 @@ def main():
     frameProcessor =  FrameProcessor(lang, disable_dialog=disable_dialog,save_outputs=args.save_outputs, method=args.method) 
     
     if args.webserver:
-        init_web(lang, disable_dialog)
+        init_web(lang, disable_dialog, translate=args.translate, enable_cache=args.enable_cache)
         server_thread = threading.Thread(target=run_server)
         server_thread.start()
 
@@ -301,7 +275,7 @@ def main():
     if args.show_image_screen:
         global video_stream
         video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},
-                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate)
+                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate, frameProcessor=frameProcessor, textDetector=textDetector)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()

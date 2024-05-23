@@ -6,15 +6,48 @@ import base64
 from process_frames import FrameProcessor
 from thread_safe import shared_data_get_data
 import time
+from video_stream_with_annotations import VideoStreamWithAnnotations
 
 app = Flask(__name__, static_folder='static', static_url_path='/')
 
 
 frameProcessor = None
 
-def init_web(lang="en", disable_dialog=False, disable_translation=False, disable_cache=False):
+#TODO all this global code more to a class, and make an instance of it per user
+
+def process_video_thread(translate, enable_cache=False):
+    time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
+    global video_stream, frameProcessor
+    print(video_stream)
+    while True:
+        frame = video_stream.get_latest_frame()
+        if frame is not None:
+            print("Background task accessing the latest frame...")
+            frameProcessor.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache)
+            time.sleep(1/24)  # Wait for 1 second
+
+
+last_frame_count = 0 
+
+def async_process_frame(frame):
+    #TODO put the frame onto a queue, in mean time lets only put 1/3 of the frames 
+    global last_frame_count
+    last_frame_count += 1
+    if last_frame_count % 3 == 0:
+        video_stream.set_latest_frame(frame)
+        if last_frame_count == 100:
+            last_frame_count = 0 # paranoia so it doesn't overflow
+
+
+def init_web(lang="en", disable_dialog=False, disable_translation=False, enable_cache=False, translate=""):
     global frameProcessor
-    frameProcessor = FrameProcessor(lang, disable_dialog)
+    frameProcessor = FrameProcessor(lang, disable_dialog,)
+
+    global video_stream
+    video_stream = VideoStreamWithAnnotations(background_task=process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
+                                                show_fps=True, crop_y_coordinate=72, frameProcessor=frameProcessor) #TODO crop should be set later by user
+    #video_stream.stop()
+
 
 previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
 previous_highlighted_image = Image.new('RGB', (100, 100), (255, 255, 255))
@@ -46,25 +79,18 @@ def generate_mjpeg():
 def video_feed():
     return Response(generate_mjpeg(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-
 @app.route('/upload_screenshot', methods=['POST'])
 def upload_screenshot():
-    global previous_image, previous_highlighted_image, image_changed
+    global previous_image, previous_highlighted_image, image_changed,video_stream
     image_file = request.files['image']
     if image_file:
+        image_changed = True
         image = Image.open(image_file.stream).convert('RGB')
-        image.save('static/saved_image.jpg')  # Save images in the static directory
-        last_played, tmp_previous_image, tmp_previous_highlighted_image, annontations, translation = frameProcessor.run_image(image, None, None) #TODO have translate and cache options
-        #closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
-
-
-        if last_played is not None:
-            image_changed = True
-            previous_image = tmp_previous_image
-            previous_highlighted_image = tmp_previous_highlighted_image
-            return f"Last played: {last_played}", 200
-        else:
-            return '', 200
+#        image.save('static/saved_image.jpg')  # Save images in the static directory
+#        last_played, tmp_previous_image, tmp_previous_highlighted_image, annontations, translation = frameProcessor.run_image(image, None, None) #TODO have translate and cache options
+        async_process_frame(image)
+         #TODO we should have a minimal preprocessing step
+        return '', 200
     else:
         return 'File is missing in the form', 400
 
@@ -75,7 +101,8 @@ def stream():
         while True:
             if image_changed:
                 img_byte_arr = io.BytesIO()
-                previous_highlighted_image.save(img_byte_arr, format='JPEG')
+                img = video_stream.get_latest_frame()
+                img.save(img_byte_arr, format='JPEG')
                 encoded_img = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
                 yield f'data: data:image/jpeg;base64,{encoded_img}\n\n'
                 image_changed = False
@@ -107,5 +134,5 @@ def run_server():
 
 # Static file handling is automatically done by Flask for the 'static' folder
 if __name__ == '__main__':
-    init_web("en", False, False, False)
+    init_web("en", False, False, False, translate="jp,en")
     app.run(host='localhost', port=8000, debug=True)
