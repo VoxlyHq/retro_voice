@@ -18,10 +18,11 @@ from pathlib import Path
 import pickle
 import imagehash
 from ocr import OCRProcessor
+from ocr_enum import OCREngine
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
-    def __init__(self, language='en', method=1, disable_dialog=False, save_outputs=False):
+    def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR):
         self.counter = 0  # Convert the global variable to an instance attribute
         self.disable_dialog = disable_dialog
         self.method = method
