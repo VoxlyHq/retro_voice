@@ -153,10 +153,10 @@ def process_video_threaded(video_path, max_workers=10):
 
     cap.release()  # Release the video capture object
 
-def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False):
+def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False, crop_y_coordinate=crop_y_coordinate):
     global last_played, video_stream
     
-    closest_match = video_stream.process_screenshot(img,translate=translate, show_image_screen=show_image_screen, enable_cache=enable_cache)
+    closest_match = video_stream.process_screenshot(img,translate=translate, show_image_screen=show_image_screen, enable_cache=enable_cache, crop_y_coordinate=crop_y_coordinate)
 
     if closest_match != None and closest_match != last_played:
         if not frameProcessor.disable_dialog:
@@ -176,8 +176,7 @@ def timed_action_screencapture(translate=None, show_image_screen=False, crop_y_c
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
-        img = image_crop_title_bar(img, crop_y_coordinate)
-        process_screenshot(img, translate, show_image_screen)
+        process_screenshot(img, translate, show_image_screen, crop_y_coordinate=crop_y_coordinate)
 
     else:
         print(f"No window found with name containing '{window_name}'.")

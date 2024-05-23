@@ -306,7 +306,16 @@ class VideoStreamWithAnnotations:
         if self.thread is not None and self.thread.is_alive():
             self.thread.join()
 
-    def process_screenshot(self, img,translate=None, show_image_screen=False, enable_cache=False):
+    #TODO all preprocessing goes here
+    def preprocess_image(self, img, crop_y_coordinate=None):
+        if crop_y_coordinate != None:
+            return image_crop_title_bar(img, crop_y_coordinate)
+        return img
+
+    def process_screenshot(self, img,translate=None, show_image_screen=False, enable_cache=False, crop_y_coordinate=None):
+        if crop_y_coordinate != None:
+            img = image_crop_title_bar(img, crop_y_coordinate)
+
         image = self.textDetector.preprocess_image(img)
         if not self.textDetector.has_text(image):
             print("No text Found in this frame. Skipping run_image")

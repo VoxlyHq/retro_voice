@@ -14,28 +14,29 @@ app = Flask(__name__, static_folder='static', static_url_path='/')
 frameProcessor = None
 last_inboard_frame = None
 last_frame_count = 0
+crop_height = 90
 
 #TODO all this global code more to a class, and make an instance of it per user
 
 def process_video_thread(translate, enable_cache=False):
     time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
-    global video_stream, frameProcessor
+    global video_stream, frameProcessor,crop_height
     print(video_stream)
     while True:
         frame = video_stream.get_latest_frame()
         if frame is not None:
             print("Background task accessing the latest frame...")
-            video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache)
+            video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
             time.sleep(1/24)  # Wait for 1 second
 
 
 def async_process_frame(frame):
     #TODO put the frame onto a queue, in mean time lets only put 1/3 of the frames 
-    global last_frame_count, last_inboard_frame
+    global last_frame_count, last_inboard_frame, video_stream
     last_frame_count += 1
-    last_inboard_frame = frame
+    last_inboard_frame =  video_stream.preprocess_image(frame, crop_y_coordinate=crop_height) #preprocess all images
     if last_frame_count % 3 == 0:
-        video_stream.set_latest_frame(frame)
+        video_stream.set_latest_frame(last_inboard_frame)
         if last_frame_count == 100:
             last_frame_count = 0 # paranoia so it doesn't overflow
 
