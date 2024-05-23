@@ -12,6 +12,8 @@ app = Flask(__name__, static_folder='static', static_url_path='/')
 
 
 frameProcessor = None
+last_inboard_frame = None
+last_frame_count = 0
 
 #TODO all this global code more to a class, and make an instance of it per user
 
@@ -23,23 +25,22 @@ def process_video_thread(translate, enable_cache=False):
         frame = video_stream.get_latest_frame()
         if frame is not None:
             print("Background task accessing the latest frame...")
-            frameProcessor.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache)
+            video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache)
             time.sleep(1/24)  # Wait for 1 second
 
 
-last_frame_count = 0 
-
 def async_process_frame(frame):
     #TODO put the frame onto a queue, in mean time lets only put 1/3 of the frames 
-    global last_frame_count
+    global last_frame_count, last_inboard_frame
     last_frame_count += 1
+    last_inboard_frame = frame
     if last_frame_count % 3 == 0:
         video_stream.set_latest_frame(frame)
         if last_frame_count == 100:
             last_frame_count = 0 # paranoia so it doesn't overflow
 
 
-def init_web(lang="en", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None):
+def init_web(lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None):
     global frameProcessor
     frameProcessor = FrameProcessor(lang, disable_dialog,)
 
@@ -49,8 +50,7 @@ def init_web(lang="en", disable_dialog=False, disable_translation=False, enable_
     #video_stream.stop()
 
 
-previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
-previous_highlighted_image = Image.new('RGB', (100, 100), (255, 255, 255))
+dummy_image = Image.new('RGB', (100, 100), (255, 255, 255))
 image_changed = False
 
 def set_dialog_file(file):
@@ -61,18 +61,25 @@ frame_rate = 24 / 3 # 6 fps hack for now
 frame_delay = 1 / frame_rate  # Delay to achieve ~24 FPS
 
 def generate_mjpeg():
-    global previous_image, previous_highlighted_image, image_changed
+    global image_changed,last_inboard_frame, video_stream
 
+    print("generate_mjpeg1")
     while True:  # Loop to make it continuous
+        print("generate_mjpeg2")
         image_changed = False
 
         img_byte_arr = io.BytesIO()
-        previous_highlighted_image.save(img_byte_arr, format='JPEG')
-        #encoded_img = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
+
+        if last_inboard_frame is not None:
+            processed_latest_inboard_frame = video_stream.print_annotations_pil(last_inboard_frame) #TODO have translate and cache options
+        else:
+            processed_latest_inboard_frame = dummy_image
+
+        processed_latest_inboard_frame.save(img_byte_arr, format='JPEG')
             
-        frame = img_byte_arr.getvalue()
+        print(img_byte_arr)
         yield (b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                b'Content-Type: image/jpeg\r\n\r\n' + img_byte_arr.getvalue() + b'\r\n')
         time.sleep(frame_delay)  # Wait to control the frame rate
 
 @app.route('/video_mjpeg')
@@ -81,7 +88,7 @@ def video_feed():
 
 @app.route('/upload_screenshot', methods=['POST'])
 def upload_screenshot():
-    global previous_image, previous_highlighted_image, image_changed,video_stream
+    global previous_image, image_changed,video_stream
     image_file = request.files['image']
     if image_file:
         image_changed = True
@@ -97,11 +104,11 @@ def upload_screenshot():
 @app.route('/stream')
 def stream():
     def generate():
-        global previous_image, previous_highlighted_image, image_changed
+        global image_changed
         while True:
             if image_changed:
                 img_byte_arr = io.BytesIO()
-                img = video_stream.get_latest_frame()
+                img = video_stream.get_latest_processed_frame()
                 img.save(img_byte_arr, format='JPEG')
                 encoded_img = base64.b64encode(img_byte_arr.getvalue()).decode('utf-8')
                 yield f'data: data:image/jpeg;base64,{encoded_img}\n\n'
@@ -137,5 +144,5 @@ if __name__ == '__main__':
     from text_detector_fast import TextDetectorFast
     textDetector = TextDetectorFast("weeeee")    
 
-    init_web("en", False, False, False, translate="jp,en", textDetector=textDetector)
+    init_web("jp", False, False, False, translate="jp,en", textDetector=textDetector)
     app.run(host='localhost', port=8000, debug=True)

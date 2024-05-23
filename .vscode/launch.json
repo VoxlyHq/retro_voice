@@ -10,13 +10,22 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "venv Python: ss.py",
+            "name": "venv_r5 Python: ss.py",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/ss.py",
-            "args": ["-w", "-is", "--translate=jp,en", "-fps"],
+            "args": ["-is", "--translate=jp,en", "-fps"],
             "console": "integratedTerminal",
-            "python": "venv/bin/python"
+            "python": "venv_r5/bin/python"
+        },
+        {
+            "name": "webserv (old)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/webserv.py",
+            "args": [""],
+            "console": "integratedTerminal",
+            "python": "venv_r5/bin/python"
         },
         {
             "name": "stream video",

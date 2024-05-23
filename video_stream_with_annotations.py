@@ -226,12 +226,10 @@ class VideoStreamWithAnnotations:
                         text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
                         draw.text(text_position, text, fill="yellow")
 
-        pil_image.save('output_image2.jpg')
         return pil_image
 
     def print_annotations(self, frame):
         pil_image = self.print_annotations_pil(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
-        pil_image.save('output_image3.jpg')
         return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
 
@@ -322,10 +320,10 @@ class VideoStreamWithAnnotations:
                 if show_image_screen:
                     self.set_annotations(annotations)
                     self.set_translation(translation)
-            if closest_match == None:
-                if show_image_screen:
-                    self.set_annotations(None)
-                    self.set_translation(None)
+#            if closest_match == None: #TODO remember why this code exists? i think for dialogues
+#                if show_image_screen:
+#                    self.set_annotations(None)
+#                    self.set_translation(None)
  
             if closest_match != None:
                 return closest_match #TODO this is for playing audio, its still a bit messy, ss.py is playing audio, what if we want on web?

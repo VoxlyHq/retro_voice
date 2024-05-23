@@ -33,7 +33,6 @@ class TextDetectEngine(Enum):
 
 # Detect the operating system
 os_name = platform.system()
-#reader = easyocr.Reader(['en']) #(['ja', 'en']) 
 
 dialogues = {}
 
