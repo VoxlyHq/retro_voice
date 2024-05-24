@@ -9,6 +9,7 @@ from PIL import Image, ImageFont, ImageDraw
 from image_diff import image_crop_title_bar
 
 os_name = platform.system()
+#TODO we should remove this from this file 
 if os_name == 'Windows':
     # Import Windows-specific module
     from windows_screenshot import find_window_id, capture_window_to_pil 
@@ -17,7 +18,7 @@ elif os_name == 'Darwin':
     from osx_screenshot import find_window_id, capture_window_to_pil
 elif os_name == 'Linux':
     # Import Linux-specific module
-    from wsl_screenshot import find_window_id, capture_window_to_pil
+    #from wsl_screenshot import find_window_id, capture_window_to_pil
 else:
     raise Exception(f"Unsupported OS: {os_name}")
 
