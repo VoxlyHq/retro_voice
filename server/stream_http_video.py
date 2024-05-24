@@ -195,7 +195,7 @@ class VideoTransformTrack(MediaStreamTrack):
         disable_translation = False
         enable_cache = False
         translate = "jp,en" 
-        textDetector = TextDetectorFast("")    
+        textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
         self.user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector)
         print("making frame processor3")
         

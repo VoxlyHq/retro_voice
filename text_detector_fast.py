@@ -8,7 +8,7 @@ from PIL import Image
 import fast
 
 class TextDetectorFast:
-    def __init__(self, model_path, min_confidence=0.5, width=320, height=320, padding=0.0):
+    def __init__(self, model_path, min_confidence=0.5, width=320, height=320, padding=0.0, checkpoint=None):
         self.model_path = model_path
         self.min_confidence = min_confidence
         self.width = width
@@ -16,7 +16,7 @@ class TextDetectorFast:
         self.padding = padding
 
         self.graph = self.load_model()
-        self.fast = fast.FAST(config="test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py", checkpoint=None,)
+        self.fast = fast.FAST(config="test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py", checkpoint=checkpoint,ema=True)
 
     def load_image(self, image_path):
         image = Image.open(image_path).convert('RGB')

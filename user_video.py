@@ -11,12 +11,12 @@ class UserVideo:
     def __init__(self, lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None):
         self.last_inboard_frame = None
         self.last_frame_count = 0
-        self.crop_height = 90
+        self.crop_height = 35
 
         self.frameProcessor = FrameProcessor(lang, disable_dialog,)
 
         self.video_stream = VideoStreamWithAnnotations(background_task=self.process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
-                                                    show_fps=True, crop_y_coordinate=72, frameProcessor=self.frameProcessor, textDetector=textDetector) #TODO crop should be set later by user
+                                                    show_fps=True, crop_y_coordinate=None, frameProcessor=self.frameProcessor, textDetector=textDetector) #TODO crop should be set later by user
         #video_stream.stop()
 
 
