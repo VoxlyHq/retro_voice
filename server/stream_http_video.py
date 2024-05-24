@@ -192,7 +192,7 @@ class VideoTransformTrack(MediaStreamTrack):
         self.watermark_data = watermark_data
         self.alpha = watermark_data[:,:,3] / 255.0 # normalize the alpha channel
         self.inverse_alpha = 1 - self.alpha
-        print("making frame processor----")
+        print("making user_video----")
         #TODO do one per user
         lang = "jp" #hard code all options for now
         disable_dialog = True
@@ -200,7 +200,7 @@ class VideoTransformTrack(MediaStreamTrack):
         enable_cache = False
         translate = "jp,en" 
         self.user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector)
-        print("making frame processor3")
+        print("making user_video done----")
         
 
     async def recv(self):
@@ -218,9 +218,12 @@ class VideoTransformTrack(MediaStreamTrack):
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
 
+        print("before process frame")
         self.user_video.async_process_frame(frame_img)
 
+        print("before process frame1")
         new_frame = av.VideoFrame.from_image(self.user_video.get_immediate_frame())
+        print("before process frame2")
         new_frame.pts = frame.pts
         new_frame.time_base = frame.time_base
 
