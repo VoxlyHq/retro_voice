@@ -47,6 +47,8 @@ class VideoStreamWithAnnotations:
         else: #linux?
 #            self.crop_y_coordinate = 72
             self.font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc" #sudo apt-get install fonts-noto-cjk
+        self.font = ImageFont.truetype(self.font_path, 35)
+
         if crop_y_coordinate is not None:
             self.crop_y_coordinate = crop_y_coordinate
         self.cap = None
@@ -202,7 +204,6 @@ class VideoStreamWithAnnotations:
                     self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
                     self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
 
-                    font = ImageFont.truetype(self.font_path, 35)
                     draw = ImageDraw.Draw(pil_image)
 
                     dialogue_bbox = [tuple(top_left), tuple(bottom_right)]
@@ -210,10 +211,10 @@ class VideoStreamWithAnnotations:
 
                     dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
                     translation_adjusted = self.adjust_translation_text(self.current_translations, draw,
-                                                                        font, dialogue_bbox_width)
+                                                                        self.font, dialogue_bbox_width)
 
                     text_position = (top_left[0], top_left[1])
-                    draw.text(text_position, translation_adjusted, font=font, fill=self.dialogue_text_color)
+                    draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
 
                 else:
                     for (bbox, text, prob) in self.current_annotations:
@@ -295,7 +296,7 @@ class VideoStreamWithAnnotations:
         if annotations == None:
             return
         with self.frame_lock:
-            print(f"set_annotations- {annotations}")
+            #print(f"set_annotations- {annotations}")
             self.current_annotations = annotations
 
     def set_translation(self, translation):

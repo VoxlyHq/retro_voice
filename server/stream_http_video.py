@@ -206,9 +206,7 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
         try:
-            print("recv1")
             frame = await self.track.recv()
-            print("recv2")
             #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
             return self.process_frame(frame)
         except Exception as e:
@@ -220,12 +218,9 @@ class VideoTransformTrack(MediaStreamTrack):
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
 
-        print("before process frame")
         self.user_video.async_process_frame(frame_img)
 
-        print("before process frame1")
         new_frame = av.VideoFrame.from_image(self.user_video.get_immediate_frame())
-        print("before process frame2")
         new_frame.pts = frame.pts
         new_frame.time_base = frame.time_base
 
