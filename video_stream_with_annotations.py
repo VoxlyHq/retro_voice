@@ -17,6 +17,7 @@ elif os_name == 'Darwin':
     # Import macOS-specific module
     from osx_screenshot import find_window_id, capture_window_to_pil
 elif os_name == 'Linux':
+    print("disabled on linux")
     # Import Linux-specific module
     #from wsl_screenshot import find_window_id, capture_window_to_pil
 else:
