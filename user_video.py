@@ -27,7 +27,7 @@ class UserVideo:
             if frame is not None:
                 #print("Background task accessing the latest frame...")
                 self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
-                time.sleep(1/6)  # Wait for 1 second
+                time.sleep(1/24)  # Wait for 1 second
 
 
     def async_process_frame(self, frame):
