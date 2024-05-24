@@ -43,7 +43,7 @@ class TestFrameProcessor(unittest.TestCase):
         last_played, previous_image, highlighted_image, annotations, translation = self.processor.run_image(self.input_image)
         
         # Save the outputs to disk
-        self.processor.save_outputs_to_disk(self.input_image, highlighted_image, annotations, translation)
+        self.processor.save_outputs_to_disk(self.input_image, highlighted_image, annotations, translation, None)
         
         # Check that the files were created
         output_dir = Path("outputs")

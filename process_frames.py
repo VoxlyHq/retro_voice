@@ -3,9 +3,9 @@ from datetime import datetime
 import io
 import os
 import requests
-from cloudvision import detect_text_google_pil, detect_text_google, detect_text_and_draw_boxes
+# from cloudvision import detect_text_google_pil, detect_text_google, detect_text_and_draw_boxes
 from thefuzz import fuzz
-import pytesseract
+# import pytesseract
 import base64
 import json
 from PIL import Image

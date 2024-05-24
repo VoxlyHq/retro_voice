@@ -9,6 +9,8 @@ if os_name == 'Windows':
     font_path = "C:/Windows/Fonts/YuGothB.ttc"
 elif os_name == 'Darwin':
     font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"
+elif os_name == "Linux":
+    font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 else:
     raise Exception(f"Unsupported OS: {os_name}")
 

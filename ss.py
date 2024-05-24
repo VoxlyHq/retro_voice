@@ -74,7 +74,7 @@ elif os_name == 'Darwin':
     from osx_screenshot import find_window_id, capture_window_to_pil
 elif os_name == 'Linux':
     # Import Linux-specific module
-    from wsl_screenshot import find_window_id, capture_window_to_pil
+    from ubuntu_screenshot import find_window_id, capture_window_to_file
 else:
     raise Exception(f"Unsupported OS: {os_name}")
 
