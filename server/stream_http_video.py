@@ -17,6 +17,9 @@ from flask import Flask, render_template, send_from_directory, request, jsonify,
 from flask_login import LoginManager, logout_user, login_required, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+from text_detector_fast import TextDetectorFast
+from user_video import UserVideo
+
 from .models import db, User
 from .oauth import google_oauth_blueprint
 from .commands import create_db
@@ -186,13 +189,16 @@ class VideoTransformTrack(MediaStreamTrack):
         self.alpha = watermark_data[:,:,3] / 255.0 # normalize the alpha channel
         self.inverse_alpha = 1 - self.alpha
         print("making frame processor----")
-        self.frameProcessor = FrameProcessor(language='jp', disable_dialog=True)
+        #TODO do one per user
+        lang = "jp" #hard code all options for now
+        disable_dialog = True
+        disable_translation = False
+        enable_cache = False
+        translate = "jp,en" 
+        textDetector = TextDetectorFast("")    
+        self.user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector)
         print("making frame processor3")
-
-        self.previous_image = av.VideoFrame.from_image(Image.new('RGB', (100, 100), (255, 255, 255)))
-#        self.previous_highlighted_image = Image.new('RGB', (100, 100), (255, 255, 255))
-        self.image_changed = False # wont need this in future
-
+        
 
     async def recv(self):
         try:
@@ -209,16 +215,13 @@ class VideoTransformTrack(MediaStreamTrack):
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
 
-        last_played, tmp_previous_image, tmp_previous_highlighted_image, annotations, translation = self.frameProcessor.run_image(frame_img, translate="jp,en", enable_cache=False)
+        self.user_video.async_process_frame(frame_img)
 
-        if last_played is not None:
-            self.image_changed = True
-            new_frame = av.VideoFrame.from_image(tmp_previous_highlighted_image)
-            new_frame.pts = frame.pts
-            new_frame.time_base = frame.time_base
-            self.last_frame = new_frame
+        new_frame = av.VideoFrame.from_image(self.user_video.get_immediate_frame())
+        new_frame.pts = frame.pts
+        new_frame.time_base = frame.time_base
 
-        return self.last_frame  #TODO we are returning the frame data, but we should return the processed frame data
+        return new_frame
 
     def overlay_watermark(self, frame, watermark_data, alpha, inverse_alpha):
         frame_data = frame.to_ndarray(format='rgba')

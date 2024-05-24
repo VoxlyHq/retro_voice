@@ -52,4 +52,4 @@ class UserVideo:
 
         processed_latest_inboard_frame.save(img_byte_arr, format='JPEG')
             
-        return img_byte_arr
+        return processed_latest_inboard_frame
