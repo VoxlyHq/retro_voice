@@ -74,7 +74,7 @@ elif os_name == 'Darwin':
     from osx_screenshot import find_window_id, capture_window_to_pil
 elif os_name == 'Linux':
     # Import Linux-specific module
-    from wsl_screenshot import find_window_id, capture_window_to_pil
+    from ubuntu_screenshot import find_window_id, capture_window_to_file
 else:
     raise Exception(f"Unsupported OS: {os_name}")
 
@@ -186,7 +186,8 @@ def timed_action_screencapture(translate=None, show_image_screen=False, crop_y_c
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
-        img = image_crop_title_bar(img, crop_y_coordinate)
+        if crop_y_coordinate is not None:
+            img = image_crop_title_bar(img, crop_y_coordinate)
         process_screenshot(img, translate, show_image_screen)
 
     else:
@@ -247,6 +248,8 @@ def main():
         crop_y_coordinate = 72
     if os_name == 'Windows':
         crop_y_coordinate = 50
+    if os_name == "Linux":
+        crop_y_coordinate = None
 
     disable_dialog = args.disable_dialog
     lang = 'en'

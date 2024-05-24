@@ -17,7 +17,7 @@ elif os_name == 'Darwin':
     from osx_screenshot import find_window_id, capture_window_to_pil
 elif os_name == 'Linux':
     # Import Linux-specific module
-    from wsl_screenshot import find_window_id, capture_window_to_pil
+    from ubuntu_screenshot import find_window_id, capture_window_to_pil
 else:
     raise Exception(f"Unsupported OS: {os_name}")
 
@@ -41,6 +41,9 @@ class VideoStreamWithAnnotations:
         elif platform.system() == "Darwin":  # Darwin is the system name for macOS
             self.font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"  # Path to Hiragino Maru Gothic Pro
             self.crop_y_coordinate = 72
+        elif os_name == "Linux":
+            self.font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            self.crop_y_coordinate = None
         if crop_y_coordinate is not None:
             self.crop_y_coordinate = crop_y_coordinate
         self.cap = None
@@ -170,7 +173,7 @@ class VideoStreamWithAnnotations:
         return translation_adjusted
 
     def print_annotations(self, frame):
-        translate = self.background_task_args["translate"]
+        translate = self.background_task_args.get("translate", None)
         with self.frame_lock:
             if self.current_annotations != None and self.current_annotations != []:
                 if translate:
@@ -324,7 +327,7 @@ def example_background_task(video_stream):
 def main():
     video_stream = VideoStreamWithAnnotations(background_task=example_background_task)
     try:
-        video_stream.run()
+        video_stream.run_ss()
     finally:
         video_stream.stop()
 
