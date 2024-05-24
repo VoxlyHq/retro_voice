@@ -173,7 +173,7 @@ class VideoStreamWithAnnotations:
         return translation_adjusted
 
     def print_annotations(self, frame):
-        translate = self.background_task_args["translate"]
+        translate = self.background_task_args.get("translate", None)
         with self.frame_lock:
             if self.current_annotations != None and self.current_annotations != []:
                 if translate:
@@ -327,7 +327,7 @@ def example_background_task(video_stream):
 def main():
     video_stream = VideoStreamWithAnnotations(background_task=example_background_task)
     try:
-        video_stream.run()
+        video_stream.run_ss()
     finally:
         video_stream.stop()
 

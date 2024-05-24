@@ -1,7 +1,6 @@
 from Xlib import display
 import numpy as np
-from PIL import Image
-from mss import mss
+from PIL import Image, ImageGrab
 import subprocess
 
 def find_window_id(window_name):
@@ -23,13 +22,12 @@ def find_window_id(window_name):
     _find_window(root, window_name)
     return window_id
 
-def capture_window_to_pil(window_id, file_path):
+def get_window_geometry(window_id):
     cmd = f"xwininfo -id {window_id}"
     proc = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
     out, _ = proc.communicate()
     out = out.decode()
 
-    # Improved parsing logic to handle the xwininfo output
     geom = {}
     for line in out.split("\n"):
         if "Absolute upper-left X:" in line:
@@ -44,17 +42,14 @@ def capture_window_to_pil(window_id, file_path):
     if not all(key in geom for key in ["x", "y", "width", "height"]):
         raise ValueError("Failed to get window geometry from xwininfo output")
 
-    monitor = {
-        "top": geom["y"],
-        "left": geom["x"],
-        "width": geom["width"],
-        "height": geom["height"]
-    }
+    return geom
 
-    with mss() as sct:
-        screenshot = sct.grab(monitor)
-        img = np.array(screenshot)
-        pil_image = Image.frombytes("RGB", screenshot.size, screenshot.bgra, "raw", "BGRX")
+def capture_window_to_pil(window_id, file_path):
+    geom = get_window_geometry(window_id)
+    
+    # Use Pillow's ImageGrab to capture the screen area
+    bbox = (geom["x"], geom["y"], geom["x"] + geom["width"], geom["y"] + geom["height"])
+    pil_image = ImageGrab.grab(bbox=bbox)
     
     return pil_image
 
