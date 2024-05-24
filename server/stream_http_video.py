@@ -178,6 +178,13 @@ def video():
 
 #TODO do a better then this, i just want this loaded at boot, but it will slow down if you dont need it lol
 textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
+#TODO do one per user
+lang = "jp" #hard code all options for now
+disable_dialog = True
+disable_translation = False
+enable_cache = False
+translate = "jp,en" 
+user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector)
 
 class VideoTransformTrack(MediaStreamTrack):
     """
@@ -186,20 +193,14 @@ class VideoTransformTrack(MediaStreamTrack):
     kind = "video"
 
     def __init__(self, track, watermark_data):
-        global textDetector 
+        global textDetector, user_video
         super().__init__()
         self.track = track
         self.watermark_data = watermark_data
         self.alpha = watermark_data[:,:,3] / 255.0 # normalize the alpha channel
         self.inverse_alpha = 1 - self.alpha
         print("making user_video----")
-        #TODO do one per user
-        lang = "jp" #hard code all options for now
-        disable_dialog = True
-        disable_translation = False
-        enable_cache = False
-        translate = "jp,en" 
-        self.user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector)
+        self.user_video = user_video
         print("making user_video done----")
         
 
@@ -207,6 +208,7 @@ class VideoTransformTrack(MediaStreamTrack):
         try:
             print("recv1")
             frame = await self.track.recv()
+            print("recv2")
             #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
             return self.process_frame(frame)
         except Exception as e:
