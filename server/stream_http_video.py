@@ -176,6 +176,9 @@ def video():
     return generate_encoded(), 200, { 'mimetype': 'video/mp2t' }
 
 
+#TODO do a better then this, i just want this loaded at boot, but it will slow down if you dont need it lol
+textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
+
 class VideoTransformTrack(MediaStreamTrack):
     """
     Custom WebRTC MediaStreamTrack that overlays a watermark onto each video frame.
@@ -183,6 +186,7 @@ class VideoTransformTrack(MediaStreamTrack):
     kind = "video"
 
     def __init__(self, track, watermark_data):
+        global textDetector 
         super().__init__()
         self.track = track
         self.watermark_data = watermark_data
@@ -195,7 +199,6 @@ class VideoTransformTrack(MediaStreamTrack):
         disable_translation = False
         enable_cache = False
         translate = "jp,en" 
-        textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
         self.user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector)
         print("making frame processor3")
         
