@@ -205,7 +205,7 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
         try:
-#            print("before exception")
+            print("recv1")
             frame = await self.track.recv()
             #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
             return self.process_frame(frame)
