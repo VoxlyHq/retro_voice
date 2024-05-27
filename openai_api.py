@@ -10,7 +10,7 @@ OpenAI_API_KEY = os.environ.get("OPENAI_ACCESS_TOKEN")
 class OpenAI_API:
     
     def __init__(self, translation_model="gpt-3.5-turbo", 
-                       vision_model="gpt-4-vision-preview"):
+                       vision_model="gpt-4o"):
         self.translation_model = translation_model
         self.vision_model = vision_model
         self.openai_url = "https://api.openai.com/v1/chat/completions"

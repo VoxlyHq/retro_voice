@@ -11,8 +11,8 @@ openai = OpenAI_API(vision_model="gpt-4o")
 
 # Specify the directories for input images and outputs
 images_folder = Path('../data/data_en/')
-output_file = Path('../data/ocr_responses_en.json')
-dialogue_box_folder = Path('../data/dialogue_boxes_en/')
+output_file = Path('../data/ocr_responses_en_gpt4o.json')
+dialogue_box_folder = Path('../data/dialogue_boxes_en_gpt4o/')
 
 # Create the dialogue box folder if it doesn't exist
 dialogue_box_folder.mkdir(parents=True, exist_ok=True)
