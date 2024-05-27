@@ -153,7 +153,7 @@ def process_video_threaded(video_path, max_workers=10):
 
     cap.release()  # Release the video capture object
 
-def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False, crop_y_coordinate=crop_y_coordinate):
+def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False, crop_y_coordinate=None):
     global last_played, video_stream
     
     closest_match = video_stream.process_screenshot(img,translate=translate, show_image_screen=show_image_screen, enable_cache=enable_cache, crop_y_coordinate=crop_y_coordinate)
