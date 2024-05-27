@@ -103,8 +103,10 @@ def run_server():
 
 # Static file handling is automatically done by Flask for the 'static' folder
 if __name__ == '__main__':
-    from text_detector_fast import TextDetectorFast
-    textDetector = TextDetectorFast("weeeee", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
+    # from text_detector_fast import TextDetectorFast
+    # textDetector = TextDetectorFast("weeeee", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
+    from text_detector import TextDetector
+    textDetector = TextDetector('frozen_east_text_detection.pb')
 
-    init_web("jp", False, False, False, translate="jp,en", textDetector=textDetector)
+    init_web("en", False, False, False, translate="en,jp", textDetector=textDetector)
     app.run(host='localhost', port=8000, debug=True)
