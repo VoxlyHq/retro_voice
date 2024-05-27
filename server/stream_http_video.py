@@ -17,7 +17,8 @@ from flask import Flask, render_template, send_from_directory, request, jsonify,
 from flask_login import LoginManager, logout_user, login_required, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from text_detector_fast import TextDetectorFast
+# from text_detector_fast import TextDetectorFast
+from text_detector import TextDetector
 from user_video import UserVideo
 
 from .models import db, User
@@ -177,7 +178,8 @@ def video():
 
 
 #TODO do a better then this, i just want this loaded at boot, but it will slow down if you dont need it lol
-textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
+textDetector = TextDetector('frozen_east_text_detection.pb')
+# textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
 #TODO do one per user
 lang = "jp" #hard code all options for now
 disable_dialog = True
