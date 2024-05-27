@@ -90,7 +90,7 @@ class OpenAI_API:
         self.vision_message = [
                                 {
                                 "role": "system",
-                                "content": "You are trained to identify or make assumption about multilinugal text within images. You are a helpful and great assistant designed to output JSON successfully. {'text' : text}"
+                                "content": "You are trained to identify or make assumption about multilinugal text within images. You are a helpful and great assistant designed to output text in this format. ``` ```. You are NOT to output any other unnecessary texts. ONLY ``` ```.If there is not text in the photo, you MUST ONLY OUTPUT ``` ```"
                                 },
                                 {
                                 "role": "user",

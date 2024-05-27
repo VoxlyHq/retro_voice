@@ -132,12 +132,13 @@ def extract_string_between(text, start, end):
         return None
 
 def clean_vision_model_output(response):
-    text = response['choices'][0]['message']['content']
-    if '{' not in text:
-        ocr_text = extract_string_between(text, "```", "```")
+    if type(response) is str:
+        text = response
+    else:
+        text = response['choices'][0]['message']['content']
+    if '```' not in text:
+        ocr_text = ""
     else:
         ocr_text = extract_string_between(text, "```", "```")
-        ocr_text = extract_string_between(ocr_text, "{", "}")
-        ocr_text = ' '.join(ocr_text.split(":")[1:])
-    cleaned_ocr_text = ocr_text.strip('\n')
+    cleaned_ocr_text = ocr_text.replace('\n', ' ')
     return cleaned_ocr_text

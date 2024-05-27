@@ -7,6 +7,7 @@ from openai_api import OpenAI_API
 from image_diff import image_crop_dialogue_box
 from ocr_enum import OCREngine
 import re
+from utils import clean_vision_model_output
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -115,14 +116,9 @@ class OCRProcessor:
                 response = self.ocr_openai(dialogue_box_image_bytes)
                 reg_result = response['choices'][0]['message']['content']
                 # TODO : experiment with prompts to get better results
-                if self.lang == 'en':
-                    filtered_text = reg_result.removeprefix('The text in the photo reads:').removeprefix('The text in the photo says:').replace('`', '').replace('\n', ' ').replace('"', '').strip()
-                else:
-                    filtered_text = [i for i in reg_result.split("\n\n") if self.extract_non_english_text(i) != ""]
-                    if filtered_text != []:
-                        filtered_text = filtered_text[0].replace('\n', ' ').replace('"', '').replace('`', '')
+                filtered_text = clean_vision_model_output(reg_result)
                 return filtered_text, drawable_image, detection_result, response
-            return '', None, []
+            return '', None, [], {}
 
     def run_ocr(self, image):
         """
