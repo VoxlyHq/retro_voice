@@ -70,20 +70,41 @@ class OpenAI_API:
             ]
     
     def set_vision_payload(self, base64_image):
+        # self.vision_message = [
+        #     {
+        #     "role": "user",
+        #     "content": [
+        #         {
+        #         "type": "text",
+        #         "text": "What is the text in the photo?"
+        #         },
+        #         {
+        #         "type": "image_url",
+        #         "image_url": {
+        #             "url": f"data:image/jpeg;base64,{base64_image}"
+        #         }
+        #         }
+        #     ]
+        #     }
+        # ]
         self.vision_message = [
-            {
-            "role": "user",
-            "content": [
-                {
-                "type": "text",
-                "text": "What is the text in the photo?"
-                },
-                {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
-                }
-                }
-            ]
-            }
-        ]
+                                {
+                                "role": "system",
+                                "content": "You are a helpful and great assistant  designed to output JSON successfully. {'text' : text}"
+                                },
+                                {
+                                "role": "user",
+                                "content": [
+                                                {
+                                                "type": "text",
+                                                "text": "What is the text in the photo?"
+                                                },
+                                                {
+                                                "type": "image_url",
+                                                "image_url": {
+                                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                                }
+                                                }
+                                            ]
+                                }
+                            ]
