@@ -263,9 +263,7 @@ class FrameProcessor:
         return x,y
 
     def run_image(self, img, translate=None, enable_cache=False):
-        print("previous_image--{previous_image}")
         print(self.previous_image)
-        print("-0--")
         # percent_diff = calculate_image_difference(img, self.previous_image)
         hash_diff = calculate_image_hash_different(img, self.previous_image)
         # print(f'Images differ by {percent_diff:.2f}%')

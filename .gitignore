@@ -11,3 +11,4 @@ exceptions.txt
 *.pkl
 *.sqlite3
 outputs
+venv*/

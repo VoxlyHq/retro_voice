@@ -10,19 +10,29 @@ import cv2
 from PIL import Image
 import concurrent.futures
 import numpy as np
-from ocr_enum import OCREngine
+from enum import Enum
 
-from image_window import VideoStreamWithAnnotations
-from webserv import run_server, set_dialog_file
+from ocr_enum import OCREngine
+from video_stream_with_annotations import VideoStreamWithAnnotations
+from webserv import run_server, set_dialog_file, init_web
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
 from image_diff import image_crop_title_bar
-#from image_window import ImageWindow
-from text_detector import TextDetector
+
+# Define the enumeration
+class TextDetectEngine(Enum):
+    EAST = 1
+    FAST = 2
+
+    @staticmethod
+    def from_str(label):
+        if label.lower() in ('east', 'fast'):
+            return TextDetectEngine[label.upper()]
+        else:
+            raise argparse.ArgumentTypeError(f"Invalid value for text_detector: {label}")
 
 # Detect the operating system
 os_name = platform.system()
-#reader = easyocr.Reader(['en']) #(['ja', 'en']) 
 
 dialogues = {}
 
@@ -143,40 +153,20 @@ def process_video_threaded(video_path, max_workers=10):
 
     cap.release()  # Release the video capture object
 
-def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False):
-    global last_played
-    global frameProcessor
-    global dialogues
-    global textDetector
-
-    image = textDetector.preprocess_image(img)
-    if not textDetector.has_text(image):
-        print("No text Found in this frame. Skipping run_image")
-        if show_image_screen:
-            set_annotation_text([])
-    else:
+def process_screenshot(img,translate=None, show_image_screen=False, enable_cache=False, crop_y_coordinate=None):
+    global last_played, video_stream
     
-        closest_match, previous_image, highlighted_image, annotations, translation = frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
+    closest_match = video_stream.process_screenshot(img,translate=translate, show_image_screen=show_image_screen, enable_cache=enable_cache, crop_y_coordinate=crop_y_coordinate)
 
-        if closest_match != None and closest_match != last_played:
-            if not frameProcessor.disable_dialog:
-                start_time = time.time() # Record the start time
-                formated_filenames = [format_filename(i) for i in closest_match]
-                play_audio_threaded(formated_filenames)
-                end_time = time.time()
-                print(f"Audio Time taken: {end_time - start_time} seconds")
-            last_played = closest_match
-            if show_image_screen:
-                set_annotation_text(annotations)
-                set_translation_text(translation)
-        elif annotations != None:
-            if show_image_screen:
-                set_annotation_text(annotations)
-                set_translation_text(translation)
-        elif closest_match == None:
-            if show_image_screen:
-                set_annotation_text(None)
-                set_translation_text(None)
+    if closest_match != None and closest_match != last_played:
+        if not frameProcessor.disable_dialog:
+            start_time = time.time() # Record the start time
+            formated_filenames = [format_filename(i) for i in closest_match]
+            play_audio_threaded(formated_filenames)
+            end_time = time.time()
+            print(f"Audio Time taken: {end_time - start_time} seconds")
+        last_played = closest_match
+
 
 def timed_action_screencapture(translate=None, show_image_screen=False, crop_y_coordinate=None):
     print("Action triggered by timer")
@@ -186,18 +176,11 @@ def timed_action_screencapture(translate=None, show_image_screen=False, crop_y_c
     window_id = find_window_id(window_name)
     if window_id:
         img = capture_window_to_file(window_id, file_path)
-        img = image_crop_title_bar(img, crop_y_coordinate)
-        process_screenshot(img, translate, show_image_screen)
+        process_screenshot(img, translate, show_image_screen, crop_y_coordinate=crop_y_coordinate)
 
     else:
         print(f"No window found with name containing '{window_name}'.")
         shared_data_put_data(f"No window found with name containing '{window_name}'.")
-
-def set_annotation_text(annotations):
-    video_stream.set_annotations(annotations)
-
-def set_translation_text(translation):
-    video_stream.set_translation(translation)
 
 def process_screenshots(translate=None, show_image_screen=False, crop_y_coordinate=None):
     while True:
@@ -237,6 +220,7 @@ def main():
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
+    parser.add_argument('--text_detector', type=TextDetectEngine.from_str, help="Which textdetection engine, {east, fast}", default=TextDetectEngine.FAST)
     parser.add_argument('-m', '--method', type=OCREngine.from_str, choices=list(OCREngine), default=OCREngine.EASYOCR, help="option for text detection and recognition. {easyocr: easyocr detection + easyocr recognition, openai: easyocr detection + openai recognition}")
     parser.add_argument('-so', '--save_outputs', action='store_true', help="Enable saving input image, ocr and translation outputs and annotated image")
 
@@ -255,12 +239,23 @@ def main():
         set_dialog_file("static/dialogues_jp_web.json")
     
     
-    textDetector = TextDetector('frozen_east_text_detection.pb')
+    # Use the enumeration to determine the selected engine
+    if args.text_detector == TextDetectEngine.EAST:
+        print("Using EAST text detection engine.")
+        from text_detector import TextDetector
+        textDetector = TextDetector('frozen_east_text_detection.pb')
+    elif args.text_detector == TextDetectEngine.FAST:
+        print("Using FAST text detection engine.")
+        from text_detector_fast import TextDetectorFast
+        textDetector = TextDetectorFast("weeeee")
+    else:
+        print("Invalid text detection engine selected.")
+        textDetector = None # probably should just exit?
     
-    method = args.method
-    frameProcessor =  FrameProcessor(lang, disable_dialog=disable_dialog,save_outputs=args.save_outputs, method=method) 
+    frameProcessor =  FrameProcessor(lang, disable_dialog=disable_dialog,save_outputs=args.save_outputs, method=args.method) 
     
     if args.webserver:
+        init_web(lang, disable_dialog, translate=args.translate, enable_cache=args.enable_cache, textDetector=textDetector)
         server_thread = threading.Thread(target=run_server)
         server_thread.start()
 
@@ -277,7 +272,7 @@ def main():
     if args.show_image_screen:
         global video_stream
         video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},
-                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate)
+                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate, frameProcessor=frameProcessor, textDetector=textDetector)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()
