@@ -35,11 +35,14 @@ def generate_mjpeg():
         image_changed = False
 
         if user_video.has_frame():
-            img_byte_arr = user_video.get_immediate_frame()
+            img = user_video.get_immediate_frame()
+            img_byte_arr = io.BytesIO()
+            img.save(img_byte_arr, format='JPEG')
+
 
             yield (b'--frame\r\n'
                     b'Content-Type: image/jpeg\r\n\r\n' + img_byte_arr.getvalue() + b'\r\n')
-            time.sleep(frame_delay)  # Wait to control the frame rate
+        time.sleep(1)  # Wait to control the frame rate
 
 @app.route('/video_mjpeg')
 def video_feed():
@@ -50,11 +53,11 @@ def upload_screenshot():
     global previous_image, image_changed,video_stream
     image_file = request.files['image']
     if image_file:
-        image_changed = True
         image = Image.open(image_file.stream).convert('RGB')
 #        image.save('static/saved_image.jpg')  # Save images in the static directory
 #        last_played, tmp_previous_image, tmp_previous_highlighted_image, annontations, translation = frameProcessor.run_image(image, None, None) #TODO have translate and cache options
         user_video.async_process_frame(image)
+        image_changed = True
          #TODO we should have a minimal preprocessing step
         return '', 200
     else:
@@ -101,7 +104,7 @@ def run_server():
 # Static file handling is automatically done by Flask for the 'static' folder
 if __name__ == '__main__':
     from text_detector_fast import TextDetectorFast
-    textDetector = TextDetectorFast("weeeee", checkpoint="pretrained/fast_tiny_msra_512_finetune_ic17mlt.pth")    
+    textDetector = TextDetectorFast("weeeee", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
 
     init_web("jp", False, False, False, translate="jp,en", textDetector=textDetector)
     app.run(host='localhost', port=8000, debug=True)
