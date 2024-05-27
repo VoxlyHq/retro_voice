@@ -11,7 +11,7 @@ class UserVideo:
     def __init__(self, lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None):
         self.last_inboard_frame = None
         self.last_frame_count = 0
-        self.crop_height = 35
+        self.crop_height = 71
 
         self.frameProcessor = FrameProcessor(lang, disable_dialog,)
 
