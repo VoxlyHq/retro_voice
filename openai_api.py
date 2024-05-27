@@ -90,14 +90,14 @@ class OpenAI_API:
         self.vision_message = [
                                 {
                                 "role": "system",
-                                "content": "You are a helpful and great assistant  designed to output JSON successfully. {'text' : text}"
+                                "content": "You are trained to identify or make assumption about multilinugal text within images. You are a helpful and great assistant designed to output JSON successfully. {'text' : text}"
                                 },
                                 {
                                 "role": "user",
                                 "content": [
                                                 {
                                                 "type": "text",
-                                                "text": "What is the text in the photo?"
+                                                "text": "What is the text in the photo? The text are "
                                                 },
                                                 {
                                                 "type": "image_url",
