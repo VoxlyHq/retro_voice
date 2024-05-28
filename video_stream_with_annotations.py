@@ -25,7 +25,7 @@ else:
 
 
 class VideoStreamWithAnnotations:
-    def __init__(self, background_task=None, background_task_args={}, show_fps=False, crop_y_coordinate=None, frameProcessor=None, textDetector=None):
+    def __init__(self, background_task=None, background_task_args={}, show_fps=False, crop_y_coordinate=None, frameProcessor=None, textDetector=None, debug_bbox=False):
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
@@ -36,11 +36,12 @@ class VideoStreamWithAnnotations:
         self.fps_counter_start_time = time.time()
         self.frameProcessor = frameProcessor
         self.textDetector = textDetector
+        self.debug_bbox = debug_bbox
 
         # Check the operating system, and language these two are for japanese
         if platform.system() == "Windows":
             self.font_path = "C:/Windows/Fonts/YuGothB.ttc"  # Path to MS Gothic on Windows
-            self.crop_y_coordinate = 50
+            self.crop_y_coordinate = 72
         elif platform.system() == "Darwin":  # Darwin is the system name for macOS
             self.font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"  # Path to Hiragino Maru Gothic Pro
             self.crop_y_coordinate = 72
@@ -216,7 +217,23 @@ class VideoStreamWithAnnotations:
                     text_position = (top_left[0], top_left[1])
                     draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
 
-                else:
+                if self.debug_bbox is True:
+                    for (bbox, text, prob) in self.current_annotations:
+                        # Extracting min and max coordinates for the rectangle
+                        top_left = bbox[0]
+                        bottom_right = bbox[2]
+
+                        # Ensure the coordinates are in the correct format (floats or integers)
+                        top_left = tuple(map(int, top_left))
+                        bottom_right = tuple(map(int, bottom_right))
+
+                        # Annotate text. Adjust the position if necessary.
+                        draw = ImageDraw.Draw(pil_image)
+                        draw.rectangle([top_left, bottom_right], outline="red", width=2)
+                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
+                        draw.text(text_position, text, fill="yellow")
+                
+                if self.debug_bbox is False and translate is None:
                     for (bbox, text, prob) in self.current_annotations:
                         # Extracting min and max coordinates for the rectangle
                         top_left = bbox[0]
