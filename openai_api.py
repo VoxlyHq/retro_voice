@@ -14,6 +14,7 @@ class OpenAI_API:
         self.translation_model = translation_model
         self.vision_model = vision_model
         self.openai_url = "https://api.openai.com/v1/chat/completions"
+        self.lang_list = {'en' : 'English', 'jp' : 'Japanese'}
 
     def call_api(self, payload):
         headers = {
@@ -28,7 +29,7 @@ class OpenAI_API:
     def call_translation_api(self, content, target_lang):
 
         content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
-
+        target_lang = self.lang_list.get(target_lang, target_lang)
         self.set_translation_payload(content, target_lang)
 
         payload = {
@@ -58,13 +59,18 @@ class OpenAI_API:
     
     def set_translation_payload(self, content, target_lang):
         self.translation_message = [
+                
                 {
-                "role": "user",
-                "content": [
-                    {
-                    "type": "text",
-                    "text": f"Translate this sentence into {target_lang}.\n{content}"
-                    },
+                                "role": "system",
+                                "content": "You are trained to translate or make assumption about text.Correct typos in the text. You are a helpful and great assistant designed to output text in this format. ``` ```. You are NOT to output any other unnecessary texts. ONLY ``` ```.If there is no translation, you MUST ONLY OUTPUT ``` ```"
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": f"Translate this sentence into {target_lang}.\n{content}"
+                        },
                 ]
                 }
             ]
