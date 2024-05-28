@@ -9,6 +9,7 @@ from PIL import Image, ImageFont, ImageDraw
 from image_diff import image_crop_title_bar
 
 os_name = platform.system()
+#TODO we should remove this from this file 
 if os_name == 'Windows':
     # Import Windows-specific module
     from windows_screenshot import find_window_id, capture_window_to_pil 
@@ -16,14 +17,15 @@ elif os_name == 'Darwin':
     # Import macOS-specific module
     from osx_screenshot import find_window_id, capture_window_to_pil
 elif os_name == 'Linux':
+    print("disabled on linux")
     # Import Linux-specific module
-    from wsl_screenshot import find_window_id, capture_window_to_pil
+    #from wsl_screenshot import find_window_id, capture_window_to_pil
 else:
     raise Exception(f"Unsupported OS: {os_name}")
 
 
 class VideoStreamWithAnnotations:
-    def __init__(self, background_task=None, background_task_args={}, show_fps=False, crop_y_coordinate=None):
+    def __init__(self, background_task=None, background_task_args={}, show_fps=False, crop_y_coordinate=None, frameProcessor=None, textDetector=None):
         self.latest_frame = None
         self.frame_lock = threading.Lock()
         self.current_annotations = None
@@ -32,7 +34,8 @@ class VideoStreamWithAnnotations:
         self.frame_count = 0
         self.fps = 0
         self.fps_counter_start_time = time.time()
-
+        self.frameProcessor = frameProcessor
+        self.textDetector = textDetector
 
         # Check the operating system, and language these two are for japanese
         if platform.system() == "Windows":
@@ -41,6 +44,11 @@ class VideoStreamWithAnnotations:
         elif platform.system() == "Darwin":  # Darwin is the system name for macOS
             self.font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"  # Path to Hiragino Maru Gothic Pro
             self.crop_y_coordinate = 72
+        else: #linux?
+#            self.crop_y_coordinate = 72
+            self.font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc" #sudo apt-get install fonts-noto-cjk
+        self.font = ImageFont.truetype(self.font_path, 35)
+
         if crop_y_coordinate is not None:
             self.crop_y_coordinate = crop_y_coordinate
         self.cap = None
@@ -100,7 +108,8 @@ class VideoStreamWithAnnotations:
                         self.latest_frame = img
                     last_time = time.time()
 
-                self.print_annotations(frame)
+                frame = self.print_annotations(frame)
+                cv2.imshow("Image with Annotations", frame)
 
 
                 if self.show_fps:
@@ -169,7 +178,8 @@ class VideoStreamWithAnnotations:
                 translation_adjusted += char
         return translation_adjusted
 
-    def print_annotations(self, frame):
+
+    def print_annotations_pil(self, pil_image):
         translate = self.background_task_args["translate"]
         with self.frame_lock:
             if self.current_annotations != None and self.current_annotations != []:
@@ -185,62 +195,48 @@ class VideoStreamWithAnnotations:
                         if ann[1] >= largest_y:
                             largest_y = ann[1]
                     bottom_right = [largest_x, largest_y]
-                        
+
                     # Ensure the coordinates are in the correct format (floats or integers)
                     top_left = tuple(map(int, top_left))
                     bottom_right = tuple(map(int, bottom_right))
-                    
-                    # # Draw the bounding box
-                    # try:
-                    #     cv2.rectangle(frame, top_left, bottom_right, self.dialogue_box_bg_color, cv2.FILLED)  # BGR color format, red box
-                    # except Exception as e:
-                    #     print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
 
                     # Annotate text. Adjust the position if necessary.
-                    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    pil_image = Image.fromarray(image)
-
                     self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
                     self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
 
-                    font = ImageFont.truetype(self.font_path, 35)
                     draw = ImageDraw.Draw(pil_image)
 
                     dialogue_bbox = [tuple(top_left), tuple(bottom_right)]
                     draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
 
                     dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
-                    translation_adjusted = self.adjust_translation_text(self.current_translations, draw, 
-                                                                        font, dialogue_bbox_width)
+                    translation_adjusted = self.adjust_translation_text(self.current_translations, draw,
+                                                                        self.font, dialogue_bbox_width)
 
                     text_position = (top_left[0], top_left[1])
-                    draw.text(text_position, translation_adjusted, font=font, fill=self.dialogue_text_color)
+                    draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
 
-                    image = np.asarray(pil_image)
-                    frame = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                
                 else:
-    #               print(f"print_annotations- {self.current_annotations}")
                     for (bbox, text, prob) in self.current_annotations:
                         # Extracting min and max coordinates for the rectangle
                         top_left = bbox[0]
                         bottom_right = bbox[2]
-                        
+
                         # Ensure the coordinates are in the correct format (floats or integers)
                         top_left = tuple(map(int, top_left))
                         bottom_right = tuple(map(int, bottom_right))
-                        
-                        # Draw the bounding box
-                        try:
-                            cv2.rectangle(frame, top_left, bottom_right, (0, 0, 255), 2)  # BGR color format, red box
-                        except Exception as e:
-                            print(f"Weird: y1 must be greater than or equal to y0, but got {top_left} and {bottom_right} respectively. Swapping...")
 
                         # Annotate text. Adjust the position if necessary.
+                        draw = ImageDraw.Draw(pil_image)
+                        draw.rectangle([top_left, bottom_right], outline="red", width=2)
                         text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                        cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 
-                                    0.5, (0, 255, 255), 2, cv2.LINE_AA)  # BGR color format, yellow text  
-        cv2.imshow("Image with Annotations", frame)
+                        draw.text(text_position, text, fill="yellow")
+
+        return pil_image
+
+    def print_annotations(self, frame):
+        pil_image = self.print_annotations_pil(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
+        return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
 
     def run_video(self, path):
@@ -275,10 +271,10 @@ class VideoStreamWithAnnotations:
             if self.show_fps:
                 self.display_fps(frame)
 
-            self.print_annotations(frame)
+            frame = self.print_annotations(frame)
             
             # Display the resulting frame
-            # cv2.imshow('Video Stream with Annotations', frame)
+            cv2.imshow('Video Stream with Annotations', frame)
 
             # Break the loop on pressing 'q'
             if cv2.waitKey(1) == ord('q'):
@@ -291,10 +287,16 @@ class VideoStreamWithAnnotations:
         with self.frame_lock:
             return self.latest_frame
         
+    #TODO do we need a queue?
+    def set_latest_frame(self, img):
+        with self.frame_lock:
+            self.latest_frame = img
+
     def set_annotations(self, annotations):
         if annotations == None:
             return
         with self.frame_lock:
+            #print(f"set_annotations- {annotations}")
             self.current_annotations = annotations
 
     def set_translation(self, translation):
@@ -310,6 +312,39 @@ class VideoStreamWithAnnotations:
         cv2.destroyAllWindows()
         if self.thread is not None and self.thread.is_alive():
             self.thread.join()
+
+    #TODO all preprocessing goes here
+    def preprocess_image(self, img, crop_y_coordinate=None):
+        if crop_y_coordinate != None:
+            return image_crop_title_bar(img, crop_y_coordinate)
+        return img
+
+    def process_screenshot(self, img,translate=None, show_image_screen=False, enable_cache=False, crop_y_coordinate=None):
+        if crop_y_coordinate != None:
+            img = image_crop_title_bar(img, crop_y_coordinate)
+
+        image = self.textDetector.preprocess_image(img)
+        if not self.textDetector.has_text(image):
+            print("No text Found in this frame. Skipping run_image")
+            if show_image_screen:
+                self.set_annotations([])
+        else:
+        
+            closest_match, previous_image, highlighted_image, annotations, translation = self.frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
+
+            if annotations != None:
+                if show_image_screen:
+                    self.set_annotations(annotations)
+                    self.set_translation(translation)
+#            if closest_match == None: #TODO remember why this code exists? i think for dialogues
+#                if show_image_screen:
+#                    self.set_annotations(None)
+#                    self.set_translation(None)
+ 
+            if closest_match != None:
+                return closest_match #TODO this is for playing audio, its still a bit messy, ss.py is playing audio, what if we want on web?
+ 
+        return None
 
 # Example background task function
 def example_background_task(video_stream):

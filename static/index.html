@@ -27,21 +27,7 @@
 </td>
 <td>
     <h2>Live Image Update</h2>
-    <img id="liveImage" src="" alt="Live image feed" />
-    <script>
-        const evtSource = new EventSource("/stream");
-        evtSource.onmessage = function(event) {
-            console.log("first!")
-            if(event.data == "none") {
-                console.log('No image available');
-            }else {
-                // Assume event.data is base64 encoded PNG image data
-                //const base64Image = `data:image/png;base64,${event.data}`;
-                document.getElementById('liveImage').src = event.data;
-                console.log('Image updated');
-            }
-        };
-    </script>
+    <img src="/video_mjpeg" alt="Video Stream">
 </td>    
     </tr>
 
@@ -53,6 +39,8 @@
     <script>
         // Display script lines
         function displayScriptLines(scriptLines) {
+            return // TODO reenable this
+
             const container = document.getElementById('script-container');
             scriptLines.forEach(line => {
                 const lineElement = document.createElement('div');
@@ -64,6 +52,8 @@
 
         // Highlight a line
         function highlightLine(lineId) {
+            return // TODO reenable this
+
             document.querySelectorAll('.highlighted').forEach(element => {
                 element.classList.remove('highlighted');
             });
@@ -83,6 +73,8 @@
 
 
         function pollHighlight() {
+            return // TODO reenable this
+
             fetch('/highlight')
                 .then(response => response.json())
                 .then(data => {
@@ -99,6 +91,7 @@
 
 
         function pollLog() {
+            return // TODO reenable this
             fetch('/log')
                 .then(response => response.text())
                 .then(text => {
