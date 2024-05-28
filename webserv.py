@@ -7,7 +7,13 @@ from process_frames import FrameProcessor
 from thread_safe import shared_data_get_data
 
 app = Flask(__name__, static_folder='static', static_url_path='/')
-frameProcessor = FrameProcessor()
+
+
+frameProcessor = None
+
+def init_web(lang="en", disable_dialog=False, disable_translation=False, disable_cache=False):
+    global frameProcessor
+    frameProcessor = FrameProcessor(lang, disable_dialog)
 
 previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
 previous_highlighted_image = Image.new('RGB', (100, 100), (255, 255, 255))
@@ -42,7 +48,7 @@ def upload_screenshot():
 @app.route('/stream')
 def stream():
     def generate():
-        global image_changed
+        global previous_image, previous_highlighted_image, image_changed
         while True:
             if image_changed:
                 img_byte_arr = io.BytesIO()
@@ -61,7 +67,7 @@ def script_json():
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory('static', 'index.html')
 
 @app.route('/log')
 def log():
@@ -78,4 +84,5 @@ def run_server():
 
 # Static file handling is automatically done by Flask for the 'static' folder
 if __name__ == '__main__':
+    init_web("en", False, False, False)
     app.run(host='localhost', port=8000, debug=True)

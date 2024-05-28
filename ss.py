@@ -10,15 +10,27 @@ import cv2
 from PIL import Image
 import concurrent.futures
 import numpy as np
-from ocr_enum import OCREngine
+from enum import Enum
 
+from ocr_enum import OCREngine
 from image_window import VideoStreamWithAnnotations
-from webserv import run_server, set_dialog_file
+from webserv import run_server, set_dialog_file, init_web
 from thread_safe import shared_data_put_data, shared_data_put_line
 from process_frames import FrameProcessor
 from image_diff import image_crop_title_bar
 #from image_window import ImageWindow
-from text_detector import TextDetector
+
+# Define the enumeration
+class TextDetectEngine(Enum):
+    EAST = 1
+    FAST = 2
+
+    @staticmethod
+    def from_str(label):
+        if label.lower() in ('east', 'fast'):
+            return TextDetectEngine[label.upper()]
+        else:
+            raise argparse.ArgumentTypeError(f"Invalid value for text_detector: {label}")
 
 # Detect the operating system
 os_name = platform.system()
@@ -237,6 +249,7 @@ def main():
     parser.add_argument('-trans', '--translate', type=str, help="Translate from source language to target language eg. en,jp")
     parser.add_argument('-c', '--enable_cache', action='store_true', help="Enable cache")
     parser.add_argument('-dd', '--disable_dialog', action='store_true', help="disable dialog")
+    parser.add_argument('--text_detector', type=TextDetectEngine.from_str, help="Which textdetection engine, {east, fast}", default=TextDetectEngine.FAST)
     parser.add_argument('-m', '--method', type=OCREngine.from_str, choices=list(OCREngine), default=OCREngine.EASYOCR, help="option for text detection and recognition. {easyocr: easyocr detection + easyocr recognition, openai: easyocr detection + openai recognition}")
     parser.add_argument('-so', '--save_outputs', action='store_true', help="Enable saving input image, ocr and translation outputs and annotated image")
 
@@ -255,12 +268,23 @@ def main():
         set_dialog_file("static/dialogues_jp_web.json")
     
     
-    textDetector = TextDetector('frozen_east_text_detection.pb')
+    # Use the enumeration to determine the selected engine
+    if args.text_detector == TextDetectEngine.EAST:
+        print("Using EAST text detection engine.")
+        from text_detector import TextDetector
+        textDetector = TextDetector('frozen_east_text_detection.pb')
+    elif args.text_detector == TextDetectEngine.FAST:
+        print("Using FAST text detection engine.")
+        from text_detector_fast import TextDetectorFast
+        textDetector = TextDetectorFast("weeeee")
+    else:
+        print("Invalid text detection engine selected.")
+        textDetector = None # probably should just exit?
     
-    method = args.method
-    frameProcessor =  FrameProcessor(lang, disable_dialog=disable_dialog,save_outputs=args.save_outputs, method=method) 
+    frameProcessor =  FrameProcessor(lang, disable_dialog=disable_dialog,save_outputs=args.save_outputs, method=args.method) 
     
     if args.webserver:
+        init_web(lang, disable_dialog)
         server_thread = threading.Thread(target=run_server)
         server_thread.start()
 

@@ -18,12 +18,13 @@ cryptography==42.0.7
 dnspython==2.6.1
 easyocr==1.7.1
 filelock==3.14.0
+git+https://github.com/VoxlyHq/FAST@pip-rename-module
 Flask==3.0.3
 Flask-Dance==7.1.0
 Flask-Login==0.6.3
 Flask-SQLAlchemy==3.1.1
 frozenlist==1.4.1
-fsspec==2024.3.1
+fsspec==2024.5.0
 google==3.0.0
 google-api-core==2.19.0
 google-auth==2.29.0
