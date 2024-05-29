@@ -10,7 +10,7 @@ OpenAI_API_KEY = os.environ.get("OPENAI_ACCESS_TOKEN")
 class OpenAI_API:
     
     def __init__(self, translation_model="gpt-3.5-turbo", 
-                       vision_model="gpt-4-vision-preview"):
+                       vision_model="gpt-4o"):
         self.translation_model = translation_model
         self.vision_model = vision_model
         self.openai_url = "https://api.openai.com/v1/chat/completions"
@@ -70,20 +70,41 @@ class OpenAI_API:
             ]
     
     def set_vision_payload(self, base64_image):
+        # self.vision_message = [
+        #     {
+        #     "role": "user",
+        #     "content": [
+        #         {
+        #         "type": "text",
+        #         "text": "What is the text in the photo?"
+        #         },
+        #         {
+        #         "type": "image_url",
+        #         "image_url": {
+        #             "url": f"data:image/jpeg;base64,{base64_image}"
+        #         }
+        #         }
+        #     ]
+        #     }
+        # ]
         self.vision_message = [
-            {
-            "role": "user",
-            "content": [
-                {
-                "type": "text",
-                "text": "What is the text in the photo?"
-                },
-                {
-                "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/jpeg;base64,{base64_image}"
-                }
-                }
-            ]
-            }
-        ]
+                                {
+                                "role": "system",
+                                "content": "You are trained to identify or make assumption about multilinugal text within images. You are a helpful and great assistant designed to output text in this format. ``` ```. You are NOT to output any other unnecessary texts. ONLY ``` ```.If there is not text in the photo, you MUST ONLY OUTPUT ``` ```"
+                                },
+                                {
+                                "role": "user",
+                                "content": [
+                                                {
+                                                "type": "text",
+                                                "text": "What is the text in the photo? The text are "
+                                                },
+                                                {
+                                                "type": "image_url",
+                                                "image_url": {
+                                                    "url": f"data:image/jpeg;base64,{base64_image}"
+                                                }
+                                                }
+                                            ]
+                                }
+                            ]

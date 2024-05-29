@@ -123,4 +123,22 @@ def draw_translation(image, translation_json, annotation):
 
     return image
 
+def extract_string_between(text, start, end):
+    try:
+        start_index = text.index(start) + len(start)
+        end_index = text.index(end, start_index)
+        return text[start_index:end_index]
+    except ValueError:
+        return None
 
+def clean_vision_model_output(response):
+    if type(response) is str:
+        text = response
+    else:
+        text = response['choices'][0]['message']['content']
+    if '```' not in text:
+        ocr_text = ""
+    else:
+        ocr_text = extract_string_between(text, "```", "```")
+    cleaned_ocr_text = ocr_text.replace('\n', ' ')
+    return cleaned_ocr_text
