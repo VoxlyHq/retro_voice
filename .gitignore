@@ -12,3 +12,4 @@ exceptions.txt
 *.sqlite3
 outputs
 venv*/
+*.pth

@@ -103,10 +103,10 @@ def run_server():
 
 # Static file handling is automatically done by Flask for the 'static' folder
 if __name__ == '__main__':
-    # from text_detector_fast import TextDetectorFast
-    # textDetector = TextDetectorFast("weeeee", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
-    from text_detector import TextDetector
-    textDetector = TextDetector('frozen_east_text_detection.pb')
+    from text_detector_fast import TextDetectorFast
+    textDetector = TextDetectorFast("weeeee", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
+    # from text_detector import TextDetector
+    # textDetector = TextDetector('frozen_east_text_detection.pb')
 
     # Print bounding box annotations for debugging dialogue box
     debug_bbox = True
