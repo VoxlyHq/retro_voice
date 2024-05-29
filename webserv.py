@@ -109,4 +109,4 @@ if __name__ == '__main__':
     # textDetector = TextDetector('frozen_east_text_detection.pb')
 
     init_web("jp", False, False, False, translate="jp,en", textDetector=textDetector)
-    app.run(host='localhost', port=8080, debug=True)
+    app.run(host='localhost', port=8000, debug=True)
