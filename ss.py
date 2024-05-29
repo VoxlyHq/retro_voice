@@ -223,6 +223,7 @@ def main():
     parser.add_argument('--text_detector', type=TextDetectEngine.from_str, help="Which textdetection engine, {east, fast}", default=TextDetectEngine.FAST)
     parser.add_argument('-m', '--method', type=OCREngine.from_str, choices=list(OCREngine), default=OCREngine.EASYOCR, help="option for text detection and recognition. {easyocr: easyocr detection + easyocr recognition, openai: easyocr detection + openai recognition}")
     parser.add_argument('-so', '--save_outputs', action='store_true', help="Enable saving input image, ocr and translation outputs and annotated image")
+    parser.add_argument('--debug_bbox', action='store_true', help="Print Detection Bounding Box annotation for debugging purpose")
 
     args = parser.parse_args()
 
@@ -230,7 +231,7 @@ def main():
     if os_name == 'Darwin': 
         crop_y_coordinate = 72
     if os_name == 'Windows':
-        crop_y_coordinate = 50
+        crop_y_coordinate = 72
 
     disable_dialog = args.disable_dialog
     lang = 'en'
@@ -272,7 +273,7 @@ def main():
     if args.show_image_screen:
         global video_stream
         video_stream = VideoStreamWithAnnotations(background_task=process_cv2_screenshots, background_task_args={"translate" : args.translate, 'enable_cache' : args.enable_cache},
-                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate, frameProcessor=frameProcessor, textDetector=textDetector)
+                                                  show_fps=args.show_fps, crop_y_coordinate=crop_y_coordinate, frameProcessor=frameProcessor, textDetector=textDetector, debug_bbox=args.debug_bbox)
         try:
             if args.video == "" or args.video == None:
                 video_stream.run_ss()

@@ -186,7 +186,8 @@ disable_dialog = True
 disable_translation = False
 enable_cache = False
 translate = "jp,en" 
-user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector)
+debug_bbox = True
+user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox)
 
 class VideoTransformTrack(MediaStreamTrack):
     """

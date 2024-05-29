@@ -13,9 +13,9 @@ app = Flask(__name__, static_folder='static', static_url_path='/')
 
 user_video = None
 
-def init_web(lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None):
+def init_web(lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None, debug_bbox=False):
     global user_video #TODO do one per user
-    user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector)
+    user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox)
 
 image_changed = False
 
@@ -108,5 +108,8 @@ if __name__ == '__main__':
     # from text_detector import TextDetector
     # textDetector = TextDetector('frozen_east_text_detection.pb')
 
-    init_web("jp", False, False, False, translate="jp,en", textDetector=textDetector)
+    # Print bounding box annotations for debugging dialogue box
+    debug_bbox = True
+
+    init_web("jp", False, False, False, translate="jp,en", textDetector=textDetector, debug_bbox=debug_bbox)
     app.run(host='localhost', port=8000, debug=True)
