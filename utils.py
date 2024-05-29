@@ -140,5 +140,7 @@ def clean_vision_model_output(response):
         ocr_text = ""
     else:
         ocr_text = extract_string_between(text, "```", "```")
+    if ocr_text is None:
+        return ""
     cleaned_ocr_text = ocr_text.replace('\n', ' ')
     return cleaned_ocr_text

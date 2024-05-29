@@ -19,6 +19,7 @@ import pickle
 import imagehash
 from ocr import OCRProcessor
 from ocr_enum import OCREngine
+from utils import clean_vision_model_output
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
@@ -233,7 +234,7 @@ class FrameProcessor:
 
         content =  result['choices'][0]['message']['content'] 
         
-        cleaned_string = str(content)
+        cleaned_string = clean_vision_model_output(content)
         print(f"{cleaned_string=}")
         return cleaned_string, result
     
