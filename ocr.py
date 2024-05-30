@@ -114,7 +114,10 @@ class OCRProcessor:
                 dialogue_box_image_bytes = self.process_image(dialogue_box_img)
                 drawable_image = self.draw_highlight(image_bytes, detection_result)
                 response = self.ocr_openai(dialogue_box_image_bytes)
-                reg_result = response['choices'][0]['message']['content']
+                if response.get('choices', None) is None:
+                    reg_result = ''
+                else:
+                    reg_result = response['choices'][0]['message']['content']
                 # TODO : experiment with prompts to get better results
                 filtered_text = clean_vision_model_output(reg_result)
                 return filtered_text, drawable_image, detection_result, response

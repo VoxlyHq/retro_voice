@@ -21,7 +21,7 @@ class RecognitionInference:
 
     def process_dataset(self, dataset, output_json, log_file):
         results = []
-        with open(log_file, 'w') as log:
+        with open(log_file, 'w', encoding='utf-8') as log:
             for idx in range(len(dataset)):
                 image, name_of_game, lang, number = dataset[idx]
                 # Initialize OCRProcessor with the appropriate language for each image
@@ -34,7 +34,6 @@ class RecognitionInference:
                     "filename": dataset.image_files[idx].name,
                     "time_taken": time_taken,
                     "text": output_text,
-                    "annotations": annotations
                 }
                 results.append(result)
                 
@@ -42,10 +41,9 @@ class RecognitionInference:
                 log.write(f"Processed {result['filename']}\n")
                 log.write(f"Time taken: {result['time_taken']} seconds\n")
                 log.write(f"Detected text: {result['text']}\n")
-                log.write(f"Annotations: {result['annotations']}\n")
                 log.write("\n")
 
-        with open(output_json, 'w') as json_file:
+        with open(output_json, 'w', encoding='utf-8') as json_file:
             json.dump(results, json_file, indent=4)
 
 
@@ -81,7 +79,7 @@ if __name__ == "__main__":
     dataset = Dataset(folder_path)
     inference = RecognitionInference(ocr_method=ocr_method)
 
-    inference.process_dataset(dataset, output_json, log_file)
+    # inference.process_dataset(dataset, output_json, log_file)
 
     # sanity check, visualize one image
     if args.visualize:

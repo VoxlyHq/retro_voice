@@ -159,18 +159,19 @@ This scripts run EASYOCR recognition model on the dataset and saves the output i
 
 ##### GPT4o
 ```shell
-python evaluation/recognition_inference.py  -m easyocr -v 
+python evaluation/recognition_inference.py  -m openai -v 
 ```
-This scripts run EASYOCR recognition model on the dataset and saves the output in the eval_data/recognition_easyocr.json file.
+This scripts run OPENAI GPT4o recognition model on the dataset and saves the output in the eval_data/recognition_openai.json file.
 
 ```json
 [
     {
         "filename": "FF2_EN_23.jpg",
-        "time_taken": 0.13318705558776855,
-        "text": "White Hizord: No! Don\" +! Crew: Dore t0 defy Us?"
-    },
+        "time_taken": 8.582889080047607,
+        "text": " White Wizard:No!  Don't! Crew:Dare to defy us? "
+    },,
     ...
 ]
 ```
-![EASYOCR](../assets/Figure_9.png)
+![OPENAI](../assets/Figure_10.png)
+The annotated image is wrong here. needs to fix that. 
