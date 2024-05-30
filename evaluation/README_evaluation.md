@@ -105,3 +105,34 @@ if visualize,
 Note: need to experiment with different fast models. 
 
 #### CRAFT
+
+```shell
+python evaluation/detection_inference.py -m craft -v
+```
+
+```json
+[
+    {
+        "filename": "FF2_EN_136.jpg",
+        "time_taken": 0.05401873588562012,
+        "predictions": [
+            [
+                [
+                    83,
+                    407,
+                    74,
+                    114
+                ],
+                [
+                    438,
+                    568,
+                    76,
+                    108
+                ]
+            ]
+        ]
+    },
+    ...
+]
+```
+![CRAFT](../assets/Figure_8.png)
