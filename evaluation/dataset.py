@@ -126,7 +126,7 @@ if __name__ == "__main__":
     from text_detector_fast import TextDetectorFast
     textDetector = TextDetectorFast("weeeee", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")
 
-    folder_path = 'eval_data/'
+    folder_path = 'eval_data/images/'
     dataset = Dataset(folder_path, textDetector)
 
     image, name_of_game, lang, number = dataset[3]
