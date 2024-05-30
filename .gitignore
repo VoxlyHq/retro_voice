@@ -13,3 +13,4 @@ exceptions.txt
 outputs
 venv*/
 *.pth
+eval_data
