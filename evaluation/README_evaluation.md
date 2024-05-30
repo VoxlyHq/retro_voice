@@ -13,6 +13,14 @@
     - visualization of stats for dataset.
 
 ```shell
+# go back to retro_voice directory
+cd ../
+
+python evaluation/download_dataset.py
+
+```
+
+```shell
 python evaluation/dataset.py
 
 output:
