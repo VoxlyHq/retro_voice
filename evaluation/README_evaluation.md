@@ -50,7 +50,7 @@ Pretrained Models are used to generate annotations.
 ##### EAST
 
 ```shell
-python evaluation/detection_inference.py
+python evaluation/detection_inference.py -m east -v
 ```
 This scripts run EAST detection model on the dataset and saves the output in the eval_data/detection_east.json file.
 ```json
@@ -69,5 +69,39 @@ This scripts run EAST detection model on the dataset and saves the output in the
     ...
     ]
 ```
+if visualize:
+![EAST](../assets/Figure_7.png)
 
 ##### FAST
+
+```shell
+python evaluation/detection_inference.py -m fast -v
+```
+This scripts run FAST detection model on the dataset and saves the output in the eval_data/detection_fast.json file.
+```json
+[
+    {
+        "filename": "FF4_JP_97.jpg",
+        "time_taken": 0.020201683044433594,
+        "predictions": [
+            [
+                0,
+                0,
+                0,
+                670,
+                877,
+                670,
+                877,
+                0
+            ]
+        ]
+    },
+    ...
+]
+```
+if visualize,
+![FAST](../assets/Figure_6.png)
+
+Note: need to experiment with different fast models. 
+
+#### CRAFT
