@@ -1,8 +1,9 @@
 import os
 import sys
+import cv2
 import json
 import time
-import cv2
+import random
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,15 +11,20 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
 
 from text_detector import TextDetector
+from text_detector_fast import TextDetectorFast
 from dataset import Dataset
 
 class DetectionInference:
     def __init__(self, model_type):
-        if model_type.lower() == 'east':
+        self.model_type = model_type.lower()
+        if self.model_type.lower() == 'east':
             self.model_path = 'frozen_east_text_detection.pb'
             self.text_detector = TextDetector(self.model_path)
+        elif self.model_type.lower() == 'fast':
+            self.model_path = 'pretrained/fast_base_tt_640_finetune_ic17mlt.pth'
+            self.text_detector = TextDetectorFast(self.model_path)
         else:
-            raise ValueError("Unsupported model type. Currently, only 'EAST' is supported.")
+            raise ValueError("Unsupported model type. Supported types are 'EAST' and 'FAST'.")
 
     def process_dataset(self, dataset, output_json):
         results = []
@@ -39,27 +45,31 @@ class DetectionInference:
 
         self.text_detector.close_session()
 
-    def visualize_single_image(self, image, detections):
-        orig = np.array(image)
-        for detection in detections:
-            box = detection["box"]
-            (startX, startY, endX, endY) = box
-            cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
-        
-        plt.figure(figsize=(10, 10))
-        plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB))
-        plt.title('Text Detections')
-        plt.axis('off')
-        plt.show()
+    def visualize_single_image(self, image, rects):
+        if self.model_type == 'east':
+            detections = [{"box": rect} for rect in rects]
+            orig = np.array(image)
+            for detection in detections:
+                box = detection["box"]
+                (startX, startY, endX, endY) = box
+                cv2.rectangle(orig, (startX, startY), (endX, endY), (0, 255, 0), 2)
+            
+            plt.figure(figsize=(10, 10))
+            plt.imshow(cv2.cvtColor(orig, cv2.COLOR_BGR2RGB))
+            plt.title('Text Detections : EAST')
+            plt.axis('off')
+            plt.show()
+        elif self.model_type == 'fast':
+            plt.imshow(self.text_detector.fast.add_annotations(np.array(image), rects))
+            plt.title('Text Detection : FAST')
+            plt.show()
 
-
-# Example usage
 if __name__ == "__main__":
 
-    model_type = 'east'
+    model_type = 'fast'
     output_json = f'eval_data/detection_{model_type}.json'
     folder_path = 'eval_data/images'
-    visualize = False
+    visualize = True
 
     dataset = Dataset(folder_path)
 
@@ -67,16 +77,14 @@ if __name__ == "__main__":
 
     inference.process_dataset(dataset, output_json)
 
-
-
     # sanity check, visualize one image
     if visualize:
         inference = DetectionInference(model_type=model_type)
 
-        image, name_of_game, lang, number = dataset[0]  
-        
+        image, name_of_game, lang, number = dataset[3]  
+    
         rects = inference.text_detector.process_single_image(image)
         
-        detections = [{"box": [int(coord) for coord in rect]} for rect in rects]
+        print(rects)
 
-        inference.visualize_single_image(image, detections)
+        inference.visualize_single_image(image, rects)
