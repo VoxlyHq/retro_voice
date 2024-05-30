@@ -6,6 +6,7 @@ import time
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
 
 parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.append(parent_dir)
@@ -65,24 +66,25 @@ class DetectionInference:
             plt.show()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Run text detection on a dataset.')
+    parser.add_argument('-m', '--model_type', type=str, required=True, choices=['east', 'fast'], help='The type of text detection model to use (east or fast).')
+    parser.add_argument('-v','--visualize', action='store_true', help='Visualize the results on a single image.')
+    args = parser.parse_args()
 
-    model_type = 'fast'
+    model_type = args.model_type
     output_json = f'eval_data/detection_{model_type}.json'
     folder_path = 'eval_data/images'
-    visualize = True
 
     dataset = Dataset(folder_path)
-
     inference = DetectionInference(model_type=model_type)
 
     inference.process_dataset(dataset, output_json)
 
     # sanity check, visualize one image
-    if visualize:
+    if args.visualize:
         inference = DetectionInference(model_type=model_type)
 
         image, name_of_game, lang, number = dataset[3]  
-    
         rects = inference.text_detector.process_single_image(image)
         
         print(rects)
