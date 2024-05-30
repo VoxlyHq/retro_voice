@@ -38,11 +38,12 @@ class TextDetectorFast:
     def load_model(self):
         return None
 
-    def process_single_image(self, image, orig, rW, rH, origW, origH):
+    def process_single_image(self, image):
         
-        results = None
-
-        return results
+        results = self.fast.run_model(image)
+        if len(results['results']) == 0:
+            return []
+        return results['results'][0]['bboxes']
     
     def has_text(self, image):
         return self.fast.has_text(image)
