@@ -175,3 +175,48 @@ This scripts run OPENAI GPT4o recognition model on the dataset and saves the out
 ```
 ![OPENAI](../assets/Figure_10.png)
 The annotated image is wrong here. needs to fix that. 
+
+#### Translation
+
+```shell
+python evaluation/translation_inference.py -h
+usage: translation_inference.py [-h] -m {easyocr,openai} -o OUTPUT_JSON -l LOG_FILE [-r REUSE_OCR_JSON]
+
+Run OCR and translation on a dataset.
+
+options:
+  -h, --help            show this help message and exit
+  -m {easyocr,openai}, --ocr_method {easyocr,openai}
+                        The OCR method to use (easyocr or openai).
+  -o OUTPUT_JSON, --output_json OUTPUT_JSON
+                        The output JSON file to save the translation results.
+  -l LOG_FILE, --log_file LOG_FILE
+                        The log file to save the processing details.
+  -r REUSE_OCR_JSON, --reuse_ocr_json REUSE_OCR_JSON
+                        Reuse a previous OCR JSON file instead of running OCR again.
+```
+
+```shell
+python evaluation/translation_inference.py -m openai -o eval_data/translation_openai.json  -l eval_data/translation_openai_log.txt -r eval_data/recognition_openai.json 
+```
+
+
+```json
+[
+    {
+        'filename': 'FF2_EN_88.jpg', 
+        'original_text': ' Baigan:Please wait here. ', 
+        'translated_text': ' バイガン：ここでお待ちく ださい。 '
+    }, 
+    {
+        'filename': 'FF2_EN_91.jpg', 
+        'original_text': " Baigan: Your Majesty! I'm afraid Cecil has developed quite a rebellious air. ", 
+        'translated_text': '  バイガン: 陛下! セシルがかなり反抗的な態度を取るようになったのではないかと心配です。  '
+    }, 
+    {
+        'filename': 'FF2_EN_92.jpg', 
+        'original_text': ' dy!? re, Baigan! do something. in! ', 
+        'translated_text': ' えっ！？ これ、バイガン！何かしなさい。中に！ '
+    }
+]
+```
