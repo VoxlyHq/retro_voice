@@ -2,7 +2,7 @@ import gdown
 import zipfile
 import os
 
-file_id = '1xuSS3A4-ykQAHLBXVRi43fTzKZSBDp7u'
+file_id = '1BMW8J8PcYqqEy7n-6JPUIix6ObZMk5H2'
 destination = 'eval_data.zip'  
 
 download_url = f'https://drive.google.com/uc?id={file_id}'
