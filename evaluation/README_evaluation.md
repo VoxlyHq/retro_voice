@@ -41,3 +41,33 @@ output:
 -
 
 ## 2. Ground Truth Labelling Framework
+
+Pretrained Models are used to generate annotations.
+### Inference Scripts
+
+#### Detection 
+
+##### EAST
+
+```shell
+python evaluation/detection_inference.py
+```
+This scripts run EAST detection model on the dataset and saves the output in the eval_data/detection_east.json file.
+```json
+[   {
+        "filename": "FF2_EN_10.jpg",
+        "time_taken": 0.038869619369506836,
+        "predictions": [
+            [
+                329,
+                39,
+                392,
+                71
+            ]
+        ]
+    },
+    ...
+    ]
+```
+
+##### FAST
