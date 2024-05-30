@@ -136,3 +136,41 @@ python evaluation/detection_inference.py -m craft -v
 ]
 ```
 ![CRAFT](../assets/Figure_8.png)
+
+#### Recognition
+
+##### EASYOCR
+```shell
+python evaluation/recognition_inference.py  -m easyocr -v 
+```
+This scripts run EASYOCR recognition model on the dataset and saves the output in the eval_data/recognition_easyocr.json file.
+
+```json
+[
+    {
+        "filename": "FF2_EN_23.jpg",
+        "time_taken": 0.13318705558776855,
+        "text": "White Hizord: No! Don\" +! Crew: Dore t0 defy Us?"
+    },
+    ...
+]
+```
+![EASYOCR](../assets/Figure_9.png)
+
+##### GPT4o
+```shell
+python evaluation/recognition_inference.py  -m easyocr -v 
+```
+This scripts run EASYOCR recognition model on the dataset and saves the output in the eval_data/recognition_easyocr.json file.
+
+```json
+[
+    {
+        "filename": "FF2_EN_23.jpg",
+        "time_taken": 0.13318705558776855,
+        "text": "White Hizord: No! Don\" +! Crew: Dore t0 defy Us?"
+    },
+    ...
+]
+```
+![EASYOCR](../assets/Figure_9.png)
