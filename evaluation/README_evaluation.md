@@ -2,6 +2,9 @@
 
 ## 1. Data Collection
 
+### Status
+![Data Collection](../assets/Data_Collection.png)
+
 - The screenshots from the games are grabbed and save in a folder. 
 - Screenshots are renamed in the format of `{Name of Game}_{lang}_{id}.jpg`. eg. FF4_EN_3.jpg.
 - Evaluation images are stored in the folder `retro_voice/eval_data`
@@ -43,6 +46,10 @@ output:
 ## 2. Ground Truth Labelling Framework
 
 Pretrained Models are used to generate annotations.
+
+### Status
+![Labelling](../assets/labelling.png)
+
 ### Inference Scripts
 
 #### Detection 
@@ -104,7 +111,7 @@ if visualize,
 
 Note: need to experiment with different fast models. 
 
-#### CRAFT
+##### CRAFT
 
 ```shell
 python evaluation/detection_inference.py -m craft -v
@@ -222,12 +229,15 @@ python evaluation/translation_inference.py -m openai -o eval_data/translation_op
 ```
 
 
-# 3. Evaluation
+## 3. Evaluation
 
-## Detection
+### Status
+![Evaluation](../assets/evaluation.png)
+
+### Detection
 
 
-## Recognition
+### Recognition
 ```shell
 python evaluation/evaluate_recognition.py
 ```
@@ -248,7 +258,7 @@ Filename: FF2_EN_101.jpg, Predicted: da, Ground Truth:
 ```
 This script returns CER and WER as well as prints out the incorrect filenames and errors.
 
-## Translation
+### Translation
 ```shell
 python evaluation/evaluate_translation.py
 ```
