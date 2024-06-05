@@ -119,12 +119,22 @@ class TextDetector:
 
         return boxes[pick].astype("int")
 
-    def process_single_image(self, image, orig, rW, rH, origW, origH):
+    def process_single_image(self, image):
+
+        image = image.convert('RGB')
+        orig = np.array(image)
+        origH, origW = orig.shape[:2]
+
+        rW, rH = origW / float(self.width), origH / float(self.height)
+        image = image.resize((self.width, self.height))
+        image = np.array(image)
         
         blob = np.expand_dims(image, axis=0)
         scores, geometry = self.sess.run([self.scores_tensor, self.geometry_tensor], feed_dict={self.image_tensor: blob})
-
+        
         rects, confidences = self.decode_predictions(scores, geometry, self.min_confidence)
+        if confidences == []:
+            return []
         flattened_confidences = np.concatenate(confidences).ravel()
         boxes = self.non_max_suppression(rects, flattened_confidences)
 
@@ -136,14 +146,9 @@ class TextDetector:
             startX, startY = max(0, startX - dX), max(0, startY - dY)
             endX, endY = min(origW, endX + (dX * 2)), min(origH, endY + (dY * 2))
 
-            roi = orig[startY:endY, startX:endX]
+            results.append((startX, startY, endX, endY))
 
-            # Placeholder for OCR
-            text = "dummy_text"
-
-            results.append(((startX, startY, endX, endY), text))
-
-        results = sorted(results, key=lambda r: r[0][1])
+        results = sorted(results, key=lambda r: r[0])
 
         # Swapping logic
         def swap_positions(lst, pos1, pos2):
@@ -157,8 +162,8 @@ class TextDetector:
                 temp = result
                 first = False
             else:
-                if temp[0][1] + 10 >= result[0][1]:
-                    if temp[0][0] > result[0][0]:
+                if temp[1] + 10 >= result[1]:
+                    if temp[0] > result[0]:
                         swap.append((pos - 1, pos))
                 temp = result
 
@@ -167,7 +172,8 @@ class TextDetector:
                 swap_positions(results, p1, p2)
 
         return results
-    
+        
+        
     def has_text(self, image):
         
         blob = np.expand_dims(image, axis=0)
@@ -198,7 +204,7 @@ if __name__ == "__main__":
     abs_start_time = time.time()
 
     detector = TextDetector(args["east"], args["min_confidence"], args["width"], args["height"], args["padding"])
-    image, orig, rW, rH, origW, origH = detector.get_image_attrs(Image.open(image_path))
+    image = detector.preprocess_image(Image.open(image_path))
     for i in range(100):
         start_time = time.time()
         results = detector.has_text(image)
@@ -207,7 +213,6 @@ if __name__ == "__main__":
         # print(results)
         end_time = time.time()
         total_duration += end_time - start_time
-
     detector.close_session()
     average_duration = total_duration / 100
     print(f"Average duration: {average_duration:.4f} seconds")
