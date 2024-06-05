@@ -27,6 +27,7 @@ from .commands import create_db
 from process_frames import FrameProcessor
 
 from PIL import Image
+import torch
 
 from dotenv import load_dotenv
 load_dotenv()
