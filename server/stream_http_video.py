@@ -262,7 +262,7 @@ class VideoTransformTrack(MediaStreamTrack):
             hwc_torch_tensor = torch.as_tensor(
                 self.rgb24_nvcv_tensor.reshape(self.rgb24_nvcv_tensor.shape[1:], "HWC").cuda()
             )
-            return VideoFrame.from_ndarray(hwc_torch_tensor.cpu().numpy(), "rgb24")
+            return av.VideoFrame.from_ndarray(hwc_torch_tensor.cpu().numpy(), "rgb24")
 
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
