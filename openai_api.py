@@ -55,6 +55,8 @@ class OpenAI_API:
         }
 
         response_json = self.call_api(payload)
+        if response_json.get('choices', None) is None:
+            response_json = self.call_api(payload)
         return response_json
     
     def set_translation_payload(self, content, target_lang):
