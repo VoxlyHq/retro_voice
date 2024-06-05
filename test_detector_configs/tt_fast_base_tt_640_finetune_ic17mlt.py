@@ -60,6 +60,6 @@ train_cfg = dict(
 test_cfg = dict(
     min_score=0.85,
     min_area=250,
-    bbox_type='poly',
+    bbox_type='rect',
     result_path='outputs/submit_tt/'
 )
