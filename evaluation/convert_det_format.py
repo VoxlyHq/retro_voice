@@ -34,7 +34,7 @@ if __name__ == "__main__":
                     if j:
                         #(Xmin, Xmax, Ymin, Ymax)
                         j = [j[0], j[2], j[1], j[3], '*']
-            if model_type == 'east':
+            else:
                 for j in i['predictions']:
                     if j:
                         j = j + ['*']
