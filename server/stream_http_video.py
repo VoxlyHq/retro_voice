@@ -212,6 +212,12 @@ class VideoTransformTrack(MediaStreamTrack):
     async def recv(self):
         try:
             frame = await self.track.recv()
+
+            # Consume all available frames.
+            # If we don't do this, we'll bloat indefinitely.
+            while not self.track._queue.empty():
+                frame = await self.track.recv()
+
             if Config.ENABLE_CUDA_H264:
                 # rebuild a VideoFrame, preserving timing information
                 new_frame = self.cuda_frame_to_rgb(frame)
