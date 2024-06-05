@@ -235,7 +235,26 @@ python evaluation/translation_inference.py -m openai -o eval_data/translation_op
 ![Evaluation](../assets/evaluation.png)
 
 ### Detection
+The code for detection evaluation is a modified version of [TedEval](https://github.com/clovaai/TedEval).
 
+#### annotation format conversion
+```shell
+python evaluation/convert_det_format.py -m craft
+```
+```
+output:
+    eval_data/detection_craft.zip
+```
+
+#### evaluation
+Just reusing the same dataset as ground truth and predictions. 
+```shell
+python evaluation/evaluate_detection.py -g=eval_data/detection_craft.zip -s=eval_data/detection_craft.zip
+```
+```shell
+output:
+    Calculated!{"recall": 1.0, "precision": 1.0, "hmean": 1.0, "IoU": 1.0, "AP": 0}
+```
 
 ### Recognition
 ```shell
