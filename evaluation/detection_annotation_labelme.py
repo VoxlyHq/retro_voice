@@ -44,9 +44,9 @@ def find_text_regions(image_path):
         points = [(x1, y1), (x2, y2)]
         height = abs(y2 - y1)
         width = abs(x2 - x1)
-        if height >= min_height and width >= min_width:  # threshold to ignore tiny text fields
-            text = result[1]  # Get the recognized text
-            text_regions.append((points, text))
+        # if height >= min_height and width >= min_width:  # threshold to ignore tiny text fields
+        text = result[1]  # Get the recognized text
+        text_regions.append((points, text))
 
     # Combine overlapping rectangles into a single rectangle
     combined_regions = combine_overlapping_rectangles([region[0] for region in text_regions])
