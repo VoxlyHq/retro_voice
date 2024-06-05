@@ -129,3 +129,10 @@ python ss.py -w -is -v ~/Desktop/ff2-screenrecord-first4min.mov
 ## prod
 
 gunicorn -k aiohttp.worker.GunicornWebWorker --bind unix:/tmp/voxly_app.sock server.stream_http_video:aioapp
+
+
+## CUDA wheels
+
+https://catalog.ngc.nvidia.com/orgs/nvidia/resources/deepstream
+
+wget --content-disposition 'https://api.ngc.nvidia.com/v2/resources/org/nvidia/deepstream/7.0/files?redirect=true&path=deepstream_libraries-1.0-cp310-cp310-linux_x86_64.whl' -O deepstream_libraries-1.0-cp310-cp310-linux_x86_64.whl

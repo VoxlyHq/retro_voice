@@ -205,6 +205,7 @@ class VideoTransformTrack(MediaStreamTrack):
         print("making user_video----")
         self.user_video = user_video
         print("making user_video done----")
+        self.rgb24_nvcv_tensor = None
         
 
     async def recv(self):
