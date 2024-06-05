@@ -45,7 +45,7 @@ class Config(object):
     # OAuth2 client secret from Google Console
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") #or 'http'
-
+    ENABLE_CUDA_H264 = os.getenv('ENABLE_AIORTC_CUDA_H264') == '1'
 
 ROOT = os.path.dirname(__file__)
 
@@ -210,13 +210,57 @@ class VideoTransformTrack(MediaStreamTrack):
     async def recv(self):
         try:
             frame = await self.track.recv()
+            if Config.ENABLE_CUDA_H264:
+                # rebuild a VideoFrame, preserving timing information
+                new_frame = self.cuda_frame_to_rgb(frame)
+                new_frame.pts = frame.pts
+                new_frame.time_base = frame.time_base
+            else:
+                new_frame =  frame
+
             #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
-            return self.process_frame(frame)
+            return self.process_frame(new_frame)
         except Exception as e:
             print(f"exception - {e}")
             logging.error("An error occurred: %s", e)
             raise
 
+    def cuda_frame_to_rgb(self, cuda_frame):
+            import nvcv
+            import cvcuda
+
+            # example of creating a zero-copy pytorch tensor from the frame in GPU
+            #nv12_torch_tensor = torch.from_dlpack(cuda_frame.decoded_frame)
+
+            yuv_nvcv_tensor = cuda_frame.to_nvcv_tensor()
+            if yuv_nvcv_tensor.layout == "NCHW":
+                yuv_nvcv_tensor = cvcuda.reformat(yuv_nvcv_tensor, "NHWC")
+
+            assert yuv_nvcv_tensor.layout == "NHWC", "unexpected tensor layout"
+
+            # TODO: should reallocate this tensor if the width/height changes
+            if self.rgb24_nvcv_tensor is None:
+                self.rgb24_nvcv_tensor = nvcv.Tensor(
+                    (1, cuda_frame.height, cuda_frame.width, 3),
+                    nvcv.Type.U8,
+                    nvcv.TensorLayout.NHWC,
+                )
+
+            # convert YUV->RGB on GPU
+            # NOTE: probably don't really need to do this conversion,
+            # but VideoFrame.from_ndarray expects an nv12 tensor to have a different
+            # shape than yuv_nvcv_tensor has at this point,
+            # so it's just easier to create an rgb24 tensor!
+            cvcuda.cvtcolor_into(self.rgb24_nvcv_tensor, yuv_nvcv_tensor, cvcuda.ColorConversion.YUV2RGB_NV12)
+            # convert NHWC -> HWC
+            # this blows up with:
+            # Fatal Python error: PyThreadState_Get: the function must be called with the GIL held, but the GIL is released (the current Python thread state is NULL)
+            # hwc_torch_tensor = torch.from_dlpack(self.rgb24_nvcv_tensor.reshape(self.rgb24_nvcv_tensor.shape[1:], "HWC").cuda())
+            # but this works...
+            hwc_torch_tensor = torch.as_tensor(
+                self.rgb24_nvcv_tensor.reshape(self.rgb24_nvcv_tensor.shape[1:], "HWC").cuda()
+            )
+            return VideoFrame.from_ndarray(hwc_torch_tensor.cpu().numpy(), "rgb24")
 
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
