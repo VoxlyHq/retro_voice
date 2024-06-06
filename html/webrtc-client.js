@@ -18,7 +18,32 @@ function createPeerConnection() {
     };
 
     if (document.getElementById('use-stun').checked) {
-        config.iceServers = [{ urls: ['stun:stun.l.google.com:19302'] }];
+        config.iceServers =  [
+            {
+              urls: "stun:stun.relay.metered.ca:80",
+            },
+            {
+              urls: "turn:global.relay.metered.ca:80",
+              username: "e694deef9cf98a4f7097f0fd",
+              credential: "etekWzEfFh5i+G72",
+            },
+            {
+              urls: "turn:global.relay.metered.ca:80?transport=tcp",
+              username: "e694deef9cf98a4f7097f0fd",
+              credential: "etekWzEfFh5i+G72",
+            },
+            {
+              urls: "turn:global.relay.metered.ca:443",
+              username: "e694deef9cf98a4f7097f0fd",
+              credential: "etekWzEfFh5i+G72",
+            },
+            {
+              urls: "turns:global.relay.metered.ca:443?transport=tcp",
+              username: "e694deef9cf98a4f7097f0fd",
+              credential: "etekWzEfFh5i+G72",
+            },
+            { urls: ['stun:stun.l.google.com:19302'] }
+        ]
     }
 
     pc = new RTCPeerConnection(config);
