@@ -5,7 +5,7 @@
 # echo =========== Generation Predictions for English images using UserVideo ==========
 # python generate_predictions.py
 
-echo =========== Evaluating has text detector ==========
+echo =========== Evaluating "has text" detector ==========
 python eval_has_text.py
 
 echo ==================== Evaluating Detection Performance ======================

@@ -1,6 +1,7 @@
 import json
 from difflib import SequenceMatcher
 from pathlib import Path
+import string
 
 class OCR_Evaluator:
     def __init__(self, predictions=None, ground_truths=None):
@@ -104,6 +105,18 @@ class OCR_Evaluator:
             for item in wrong_words:
                 print(f"Filename: {item['filename']}, Predicted: {item['predicted']}, Ground Truth: {item['ground_truth']}")
 
+def clean_text(text):
+    # Convert to lower case
+    text = text.lower()
+    
+    # Remove punctuation
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    
+    # Remove double spaces
+    text = ' '.join(text.split())
+    
+    return text
+
 if __name__ == "__main__":
     gt_file = Path('eval_data/gt.json')
     pred_file = Path('eval_data/preds.json')
@@ -117,6 +130,12 @@ if __name__ == "__main__":
     with open(pred_file, encoding='utf-8') as f:
         predictions = json.load(f)
 
+    for i in ground_truths:
+        i['text'] = clean_text(i['text'])
+
+    for i in predictions:
+        i['text'] = clean_text(i['text'])
+        
     evaluator = OCR_Evaluator(predictions, ground_truths)
     evaluator.print_evaluation()
 
