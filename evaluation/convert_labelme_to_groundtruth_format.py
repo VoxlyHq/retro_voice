@@ -5,7 +5,7 @@ def convert_bbox_from_points(points):
     """
     Convert a list of bounding box corner points to (xmin, xmax, ymin, ymax).
 
-    :param points: List of points [[x1, y1], [x2, y2], [x3, y3], [x4, y4]].
+    :param points: List of points [[x1, y1], [x2, y2]].
     :return: A tuple (xmin, xmax, ymin, ymax).
     """
     x_coordinates = [point[0] for point in points]
@@ -34,6 +34,8 @@ if __name__ == '__main__':
         results.append({'filename' : file.stem,
                          'bbox' : bbox,
                          'text' : text})
-        
-    with open(output_file, 'w') as f:
-        json.dump(results, f, indent=4)
+        print([i['points'] for i in data['shapes']])
+        print(results)
+        break
+    # with open(output_file, 'w') as f:
+    #     json.dump(results, f, indent=4)
