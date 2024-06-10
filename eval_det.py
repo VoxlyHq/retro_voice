@@ -134,13 +134,13 @@ def overall_bbox(points):
         return []
 
 if __name__ == '__main__':
-    gt_file = Path('eval_data/gt_10.json')
-    pred_file = Path('eval_data/preds_10.json')
+    gt_file = Path('eval_data/gt.json')
+    pred_file = Path('eval_data/preds.json')
 
-    with open(gt_file) as f:
+    with open(gt_file, encoding='utf-8') as f:
         groundtruth = json.load(f)
     
-    with open(pred_file) as f:
+    with open(pred_file, encoding='utf-8') as f:
         predictions = json.load(f)
 
     for pred in predictions:

@@ -37,8 +37,7 @@ class OCR_Evaluator:
 
         for gt in self.ground_truths:
             filename = gt['filename']
-            
-            pred = next((item for item in self.predictions if item['filename'] == filename), None)
+            pred = next((item for item in self.predictions if item['filename'] == filename), '')
             cer = self.calculate_cer(pred['text'], gt['text'])
             wer = self.calculate_wer(pred['text'], gt['text'])
             total_cer += cer
@@ -88,7 +87,7 @@ class OCR_Evaluator:
                         })
         return wrong_words
 
-    def print_evaluation(self):
+    def print_evaluation(self, verbose=False):
         average_cer, average_wer = self.evaluate()
         print(f"Average Character Error Rate (CER): {average_cer * 100:.2f}%")
         print(f"Average Word Error Rate (WER): {average_wer * 100:.2f}%")
@@ -96,22 +95,26 @@ class OCR_Evaluator:
         wrong_chars = self.get_wrong_characters()
         wrong_words = self.get_wrong_words()
 
-        print("\nWrong Characters:")
-        for item in wrong_chars:
-            print(f"Filename: {item['filename']}, Predicted: {item['predicted']}, Ground Truth: {item['ground_truth']}")
+        if verbose:
+            print("\nWrong Characters:")
+            for item in wrong_chars:
+                print(f"Filename: {item['filename']}, Predicted: {item['predicted']}, Ground Truth: {item['ground_truth']}")
 
-        print("\nWrong Words:")
-        for item in wrong_words:
-            print(f"Filename: {item['filename']}, Predicted: {item['predicted']}, Ground Truth: {item['ground_truth']}")
+            print("\nWrong Words:")
+            for item in wrong_words:
+                print(f"Filename: {item['filename']}, Predicted: {item['predicted']}, Ground Truth: {item['ground_truth']}")
 
 if __name__ == "__main__":
-    gt_file = Path('eval_data/gt_10.json')
-    pred_file = Path('eval_data/preds_10.json')
+    gt_file = Path('eval_data/gt.json')
+    pred_file = Path('eval_data/preds.json')
 
-    with open(gt_file) as f:
+    with open(gt_file, encoding='utf-8') as f:
         ground_truths = json.load(f)
+
+    # only english for now
+    ground_truths = [i for i in ground_truths if 'EN' in i["filename"]]
     
-    with open(pred_file) as f:
+    with open(pred_file, encoding='utf-8') as f:
         predictions = json.load(f)
 
     evaluator = OCR_Evaluator(predictions, ground_truths)

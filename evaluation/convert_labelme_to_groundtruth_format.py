@@ -21,12 +21,13 @@ def convert_bbox_from_points(points):
 
 
 if __name__ == '__main__':
-    folder = Path('eval_data/gt_10')
-    output_file = Path('eval_data/gt_10.json')
+    folder = Path('eval_data/images')
+    output_file = Path('eval_data/gt.json')
     results = []
-    for file in folder.iterdir():
+    files = [i for i in folder.glob('*.json')]
+    for file in files:
         data = []
-        with open(file, 'r') as f:
+        with open(file, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
         bbox = [convert_bbox_from_points(i['points']) for i in data['shapes']]
@@ -34,8 +35,5 @@ if __name__ == '__main__':
         results.append({'filename' : file.stem,
                          'bbox' : bbox,
                          'text' : text})
-        print([i['points'] for i in data['shapes']])
-        print(results)
-        break
-    # with open(output_file, 'w') as f:
-    #     json.dump(results, f, indent=4)
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(results, f, ensure_ascii=False,indent=4)

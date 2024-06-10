@@ -22,8 +22,8 @@ def evaluate(groundtruth, predictions):
 
 
 if __name__ == "__main__":
-    gt_file = Path('eval_data/gt_10.json')
-    pred_file = Path('eval_data/preds_10.json')
+    gt_file = Path('eval_data/gt.json')
+    pred_file = Path('eval_data/preds.json')
 
     with open(gt_file) as f:
         ground_truths = json.load(f)

@@ -39,9 +39,8 @@ if __name__ == "__main__":
     folder_path = Path("eval_data/images")
 
     results = []
-    for i in range(1,11):
-        image_path = folder_path.joinpath(f'FF2_EN_{i}.jpg')
-
+    files = [i for i in folder_path.glob('*EN*.jpg')]
+    for image_path in files:
 
         preds = user_video.get_predictions(image_path)
 
@@ -54,6 +53,6 @@ if __name__ == "__main__":
                         'bbox' : bbox, 
                         'text' : preds['recognized_text'] if preds['recognized_text'] is not None else ''})
 
-    with open('eval_data/preds_10.json', 'w') as f:
+    with open('eval_data/preds.json', 'w') as f:
         json.dump(results, f, indent=4)
 

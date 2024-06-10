@@ -2,8 +2,8 @@
 
 
 
-echo =========== Generation Predictions for 10 images using UserVideo ==========
-python generate_predictions.py
+# echo =========== Generation Predictions for English images using UserVideo ==========
+# python generate_predictions.py
 
 echo =========== Evaluating has text detector ==========
 python eval_has_text.py
