@@ -1,0 +1,12 @@
+dist/
+node_modules/
+public/
+src/assets/
+src/components/ui/
+package-lock.json
+package.json
+*.html
+README.md
+
+demo.css
+webrtc-client.js
