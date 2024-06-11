@@ -43,6 +43,9 @@ class DetectionInference:
                 bbox, _ = self.text_detector.detect(image_bytes)
                 # bbox = bbox[0] if bbox else []
                 bbox = [box.astype(int).tolist() for box in [np.array(point) for point in bbox]]
+            if self.model_type == 'fast':
+                bbox = self.text_detector.process_single_image(image)
+                bbox = [polygon_to_rect(b) for b in bbox]
             else:
                 bbox = self.text_detector.process_single_image(image)
             end_time = time.time()
@@ -85,7 +88,14 @@ class DetectionInference:
         plt.axis('off')
         plt.show()
 
-        
+def polygon_to_rect(polygon):
+    x_coords = polygon[0::2]
+    y_coords = polygon[1::2]
+    xmin = min(x_coords)
+    ymin = min(y_coords)
+    xmax = max(x_coords)
+    ymax = max(y_coords)
+    return [xmin, ymin, xmax, ymax] 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run text detection on a dataset.')
