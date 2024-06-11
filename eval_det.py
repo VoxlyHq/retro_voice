@@ -135,7 +135,7 @@ def overall_bbox(points):
 
 if __name__ == '__main__':
     gt_file = Path('eval_data/gt.json')
-    pred_file = Path('eval_data/preds.json')
+    pred_file = Path('eval_data/preds_openai1.json')
 
     with open(gt_file, encoding='utf-8') as f:
         groundtruth = json.load(f)
@@ -149,4 +149,8 @@ if __name__ == '__main__':
         gt['bbox'] = overall_bbox(gt['bbox'])
 
     metrics = evaluate_bboxes(groundtruth, predictions)
-    pprint.pp(metrics['overall'])
+    precision = metrics['overall']['precision']
+    recall = metrics['overall']['recall']
+    hmean = metrics['overall']['hmean']
+    iou = metrics['overall']['IoU']
+    print(f"Precision : {precision}, Recall : {recall}, hmean : {hmean}, IoU : {iou}")
