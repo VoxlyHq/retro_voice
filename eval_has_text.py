@@ -23,7 +23,7 @@ def evaluate(groundtruth, predictions):
 
 if __name__ == "__main__":
     gt_file = Path('eval_data/gt.json')
-    pred_file = Path('eval_data/preds1.json')
+    pred_file = Path('eval_data/preds_openai1.json')
 
     with open(gt_file, encoding='utf-8') as f:
         ground_truths = json.load(f)
