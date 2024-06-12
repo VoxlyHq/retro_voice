@@ -20,24 +20,21 @@ interface Game {
 }
 
 async function enumerateInputDevices(): Promise<InputDevice[]> {
-  let mediaDevices: MediaDeviceInfo[] = []
+  let mediaDevices: MediaDeviceInfo[] = [];
 
-  try {
-    mediaDevices = await navigator.mediaDevices.enumerateDevices()
-  } catch (e) {
-    alert(e)
-  }
+  mediaDevices = await navigator.mediaDevices.enumerateDevices();
+  console.log("mediaDevices", mediaDevices)
 
-  let counter = 0
+  let counter = 0;
   return mediaDevices
-    .filter((device) => device.kind == 'videoinput')
+    .filter((device) => device.kind === 'videoinput' && device.deviceId)
     .map((device) => {
-      counter += 1
+      counter += 1;
       return {
         id: device.deviceId,
         label: device.label || 'Device #' + counter,
-      }
-    })
+      };
+    });
 }
 
 function sdpFilterCodec(kind: string, codec: string, realSdp: string) {
