@@ -12,7 +12,7 @@ sys.path.append(parent_dir)
 class Dataset:
     def __init__(self, folder_path, text_detector=None):
         self.folder_path = Path(folder_path)
-        self.image_files = [i for i in self.folder_path.iterdir() if i.is_file()]
+        self.image_files = [i for i in self.folder_path.iterdir() if i.is_file() and i.suffix != '.json']
         self.metadata = self._extract_metadata()
         self.text_detector = text_detector 
     

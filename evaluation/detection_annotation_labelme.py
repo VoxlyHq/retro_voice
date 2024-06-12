@@ -8,32 +8,12 @@ import easyocr
 
 PIL.Image.ANTIALIAS = PIL.Image.LANCZOS
 
-#  this is a workaround for outdated EasyOCR library
-# https://github.com/JaidedAI/EasyOCR/issues/1077
-
-# Language of the text on your images
-source_language = 'en'
-
-# Thresholds to ignore tiny text fields, input the smallest height and width in pixels
-min_height = 12
-min_width = 70
-
-# Specify the folder path containing PNG files
-folder_path = 'eval_data/images'
-
-
-def find_text_regions(image_path):
+def find_text_regions(reader, image_path):
     # Read the image using OpenCV
     image = cv2.imread(image_path)
 
-    # Convert the image to grayscale
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Initialize the EasyOCR reader
-    reader = easyocr.Reader([source_language])  # Adjust the languages as per your requirements
-
     # Perform text detection using EasyOCR
-    results = reader.readtext(gray)
+    results = reader.readtext(image_path)
 
     # Extract the bounding boxes and recognized text of the detected text regions
     text_regions = []
@@ -116,58 +96,70 @@ def save_definitions_as_txt(regions, output_file):
             description = escape_description(region[1])
             file.write(f"{description}\n")
 
+if __name__ == "__main__":
 
-# Get a list of PNG files in the folder
-file_list = [file for file in os.listdir(folder_path) if file.endswith('.jpg')]
+    reader_en = easyocr.Reader(['en'])
+    reader_jp = easyocr.Reader(['ja'])
 
-# Process each file in the folder
-for file in file_list:
-    # Construct the input and output file paths
-    image_path = os.path.join(folder_path, file)
-    json_output_file = os.path.join(folder_path, file.replace('.jpg', '_JSON.json'))
-    txt_output_file = os.path.join(folder_path, file.replace('.jpg', '_OCR_content.txt'))
+    # Thresholds to ignore tiny text fields, input the smallest height and width in pixels
+    min_height = 12
+    min_width = 70
 
-    print(f"Processing image: {file}...")
+    # Specify the folder path containing PNG files
+    folder_path = 'eval_data/images'
 
-    # Find text regions and get the image
-    regions, image = find_text_regions(image_path)
-    print("Text regions found:", len(regions))
 
-    # Prepare the JSON output
-    output = {
-        "version": "4.5.6",
-        "flags": {},
-        "shapes": [],
-        "imagePath": file,
-        "imageData": "",
-        "imageHeight": image.shape[0],
-        "imageWidth": image.shape[1]
-    }
+    # Get a list of PNG files in the folder
+    file_list = [file for file in os.listdir(folder_path) if file.endswith('.jpg')]
 
-    # Convert the regions to JSON format
-    for i, region in enumerate(regions):
-        shape = {
-            "label": str(i + 1),  # Unique label starting from 1
-            "points": region[0],
-            "group_id": None,
-            "description": escape_description(region[1]),  # Escape potentially dangerous characters
-            "shape_type": "rectangle",
-            "flags": {}
+    # Process each file in the folder
+    for file in file_list:
+        # Construct the input and output file paths
+        image_path = os.path.join(folder_path, file)
+        json_output_file = os.path.join(folder_path, file.replace('.jpg', '.json'))
+
+        print(f"Processing image: {file}...")
+        _, lang, _ = file.split('.')[0].split('_')
+
+        # Find text regions and get the image
+        if lang == 'EN':
+            regions, image = find_text_regions(reader_en, image_path)
+        if lang == 'JP':
+            regions, image = find_text_regions(reader_jp, image_path)
+        print("Text regions found:", len(regions))
+
+        # Prepare the JSON output
+        output = {
+            "version": "4.5.6",
+            "flags": {},
+            "shapes": [],
+            "imagePath": file,
+            "imageData": "",
+            "imageHeight": image.shape[0],
+            "imageWidth": image.shape[1]
         }
-        output["shapes"].append(shape)
 
-    # Convert the image to base64 and update the imageData field
-    retval, buffer = cv2.imencode('.png', image)
-    image_data = base64.b64encode(buffer).decode()
-    output["imageData"] = image_data
+        # Convert the regions to JSON format
+        for i, region in enumerate(regions):
+            shape = {
+                "label": str(i + 1),  # Unique label starting from 1
+                "points": region[0],
+                "group_id": None,
+                "description": escape_description(region[1]),  # Escape potentially dangerous characters
+                "shape_type": "rectangle",
+                "flags": {}
+            }
+            output["shapes"].append(shape)
 
-    # Save the JSON to a file with UTF-8 encoding
-    with open(json_output_file, 'w', encoding='utf-8') as file:
-        json.dump(output, file, ensure_ascii=False, indent=2, sort_keys=False)
+        # Convert the image to base64 and update the imageData field
+        retval, buffer = cv2.imencode('.png', image)
+        image_data = base64.b64encode(buffer).decode()
+        output["imageData"] = image_data
 
-    # Save the definitions as a TXT file
-    save_definitions_as_txt(regions, txt_output_file)
+        # Save the JSON to a file with UTF-8 encoding
+        with open(json_output_file, 'w', encoding='utf-8') as file:
+            json.dump(output, file, ensure_ascii=False, indent=2, sort_keys=False)
 
-    print(f"Output saved to {json_output_file} and {txt_output_file}")
+        print(f"Output saved to {json_output_file}")
 
 

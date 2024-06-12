@@ -221,9 +221,10 @@ class VideoTransformTrack(MediaStreamTrack):
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
 
-        self.user_video.async_process_frame(frame_img)
+        frame_cropped = self.user_video.preprocess_frame(frame_img)
+        self.user_video.async_process_frame(frame_cropped.copy())
 
-        new_frame = av.VideoFrame.from_image(self.user_video.get_immediate_frame())
+        new_frame = av.VideoFrame.from_image(self.user_video.print_annotations(frame_cropped))
         new_frame.pts = frame.pts
         new_frame.time_base = frame.time_base
 

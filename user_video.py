@@ -29,11 +29,13 @@ class UserVideo:
                 self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
                 time.sleep(1/24)  # Wait for 1 second
 
+    def preprocess_frame(self, frame):
+        return self.video_stream.preprocess_image(frame, crop_y_coordinate= self.crop_height) #preprocess all images
 
     def async_process_frame(self, frame):
         #TODO put the frame onto a queue, in mean time lets only put 1/3 of the frames 
         self.last_frame_count += 1
-        self.last_inboard_frame =  self.video_stream.preprocess_image(frame, crop_y_coordinate= self.crop_height) #preprocess all images
+        self.last_inboard_frame =  frame
         if self.last_frame_count % 3 == 0:
             self.video_stream.set_latest_frame(self.last_inboard_frame)
             if self.last_frame_count == 100:
@@ -42,17 +44,9 @@ class UserVideo:
     def has_frame(self):
         return  self.last_inboard_frame is not None
     
-    def get_immediate_frame(self):
 #        img_byte_arr = io.BytesIO()
-
-        if  self.last_inboard_frame is not None:
-            processed_latest_inboard_frame = self.video_stream.print_annotations_pil(self.last_inboard_frame) #TODO have translate and cache options
-        else:
-            processed_latest_inboard_frame = dummy_image
-
 #        processed_latest_inboard_frame.save(img_byte_arr, format='JPEG')
-            
-        print(f"processed_latest_inboard_frame {processed_latest_inboard_frame}")
-        return processed_latest_inboard_frame
-    
+
+    def print_annotations(self, frame):
+        return self.video_stream.print_annotations_pil(frame) #TODO have translate and cache options
     
