@@ -27,7 +27,10 @@ class UserVideo:
             frame = self.video_stream.get_latest_frame()
             if frame is not None:
                 #print("Background task accessing the latest frame...")
-                self.closest_match = self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
+                closest_match = self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
+                if closest_match != None:
+                    print("Closest match(uservideo): ", closest_match[0])
+                    self.closest_match = closest_match[0]
                 time.sleep(1/24)  # Wait for 1 second
 
     def preprocess_frame(self, frame):

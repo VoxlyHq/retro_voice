@@ -236,7 +236,7 @@ def video():
 textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
 #TODO do one per user
 lang = "jp" #hard code all options for now
-disable_dialog = True
+disable_dialog = False #True
 disable_translation = False
 enable_cache = False
 translate = "jp,en" 
@@ -259,8 +259,9 @@ class VideoTransformTrack(MediaStreamTrack):
         print("making user_video----")
         self.user_video = user_video
         print("making user_video done----")
-        self.last_closest_match = 0
-        
+
+    def last_closest_match(self):
+        return self.user_video.closest_match        
 
     async def recv(self):
         try:
@@ -322,7 +323,6 @@ async def handle_offer(params):
 
     global data_channel #TODO this is probably not the best way to do this, cause its global
     global vc
-    vc = None
 
 
     async def send_data():
@@ -331,14 +331,18 @@ async def handle_offer(params):
         print("starting send_data")
         while True:
             message = "selectedLineID 5"
-            if vc is not None and vc is not None and vc.last_closest_match is not None:
-                print("send_data2")
+            if vc is not None:
+                print(f"2vc.last_closest_match: {vc.last_closest_match()} last_closest_match: {last_closest_match}")
+
+            if vc is not None and vc.last_closest_match() is not None:
+                print(f"vc.last_closest_match: {vc.last_closest_match()} last_closest_match: {last_closest_match}")
                 if vc.last_closest_match != last_closest_match:
-                    message = f"selectedLineID {vc.last_closest_match}"
+                    last_closest_match = vc.last_closest_match()
+                    message = f"selectedLineID {vc.last_closest_match()}"
                 else:
-                    message = f"selectedLineID 2"
-#                    await asyncio.sleep(1)
-#                    continue
+#                    message = f"selectedLineID 2"
+                    await asyncio.sleep(1)
+                    continue
         
             if data_channel == None:
                 print("datachannel is none")
