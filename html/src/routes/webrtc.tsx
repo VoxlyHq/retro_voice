@@ -6,8 +6,15 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import DialogueComponent from './Dialogue'; // Adjust the import path as needed
+
 
 interface InputDevice {
+  id: string
+  label: string
+}
+
+interface Game {
   id: string
   label: string
 }
@@ -97,7 +104,10 @@ function escapeRegExp(str: string) {
 
 export function WebRTCPage() {
   const [videoInputs, setVideoInputs] = useState<InputDevice[]>([])
+  const [availableGames, setAvailableGames] = useState<Game[]>([]) // Add the available games here
+  const [newGameLabel, setNewGameLabel] = useState<string>('');
   const [videoDevice, setVideoDevice] = useState('default')
+  const [selectedGame, setSelectedGame] = useState('Final Fanstasy IV (Japan)')
   const [videoRes, setVideoRes] = useState('default')
   const [videoTransform, setVideoTransform] = useState('none')
   const [videoCodec, setVideoCodec] = useState('H264/90000')
@@ -105,6 +115,7 @@ export function WebRTCPage() {
   const [isLogSTUNEnabled, setIsLogSTUNEnabled] = useState(false)
   const [isLogEnabled, setIsLogEnabled] = useState(false)
   const [isFpsEnabled, setIsFpsEnabled] = useState(true)
+  const [isDialogueEnabled, setIsDialogueEnabled] = useState(true)  
   const [canStartWebcam, setCanStartWebcam] = useState(true)
   const [canStartScreenshare, setCanStartScreenshare] = useState(true)
   const [canStop, setCanStop] = useState(false)
@@ -125,6 +136,23 @@ export function WebRTCPage() {
   const [inboundHeight, setInboundHeight] = useState(0)
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const statsTimerRef = useRef<number | null>(null)
+  const handleNewGameLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewGameLabel(event.target.value);
+  };
+  
+  useEffect(() => {
+    const sampleGames: Game[] = [
+      { id: '1', label: 'Final Fantasy IV (Japan)' },
+      { id: '2', label: 'Final Fantasy II - SNES USA' },
+      { id: '3', label: 'Chrono Trigger' },
+      { id: '4', label: 'Secret of Mana' },
+      { id: '5', label: 'EarthBound' },
+      { id: '6', label: 'Super Mario RPG' },
+      { id: '999', label: 'New Game' },
+    ];
+    setAvailableGames(sampleGames);
+  }, []);
+
 
   function createPeerConnection() {
     const config: any = {
@@ -377,6 +405,64 @@ export function WebRTCPage() {
     <div className="space-y-4 my-4">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
+          <CardTitle className="text-xl">Game</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+        <div className="flex items-center space-x-2">
+
+            <label
+              htmlFor="use-stun"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Game Name
+            </label>
+
+
+            <Select onValueChange={setSelectedGame}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Final Fintasy IV (Japan)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {availableGames.map((game) => (
+                    <SelectItem key={game.id} value={game.id}>
+                      {game.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            <Checkbox id="use-dialogue" checked={isDialogueEnabled} onCheckedChange={(value) => setIsDialogueEnabled(!!value)} />
+              <label
+                htmlFor="use-dialogue"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Dialogue
+              </label>
+
+              {selectedGame === '999' && (
+                <div>
+                  <input
+                    type="text"
+                    value={newGameLabel}
+                    onChange={handleNewGameLabelChange}
+                    placeholder="Enter new game label"
+                  />
+                <label
+                  htmlFor="use-game-name"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Game Name
+                </label>
+
+                </div>
+              )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="max-w-4xl mx-auto">
+        <CardHeader>
           <CardTitle className="text-xl">Options</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -435,7 +521,6 @@ export function WebRTCPage() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex items-center space-x-2">
             <Checkbox id="use-stun" checked={isSTUNEnabled} onCheckedChange={(value) => setIsSTUNEnabled(!!value)} />
             <label
@@ -547,6 +632,16 @@ export function WebRTCPage() {
             <pre>{answerSDP}</pre>
           </CardContent>
         </Card>
+      )}
+      { isDialogueEnabled && (
+        <Card className="max-w-fit mx-auto">
+          <CardHeader>
+            <CardTitle className="text-xl">Dialogue</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <DialogueComponent />
+          </CardContent>
+          </Card> 
       )}
     </div>
   )
