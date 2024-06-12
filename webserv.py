@@ -56,7 +56,7 @@ def upload_screenshot():
         image = Image.open(image_file.stream).convert('RGB')
 #        image.save('static/saved_image.jpg')  # Save images in the static directory
 #        last_played, tmp_previous_image, tmp_previous_highlighted_image, annontations, translation = frameProcessor.run_image(image, None, None) #TODO have translate and cache options
-        user_video.async_process_frame(image)
+        user_video.async_process_frame(user_video.preprocess_frame(image))
         image_changed = True
          #TODO we should have a minimal preprocessing step
         return '', 200
