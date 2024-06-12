@@ -107,10 +107,10 @@ export function WebRTCPage() {
   const [availableGames, setAvailableGames] = useState<Game[]>([]) // Add the available games here
   const [newGameLabel, setNewGameLabel] = useState<string>('');
   const [videoDevice, setVideoDevice] = useState('default')
-  const [selectedGame, setSelectedGame] = useState('Final Fanstasy IV (Japan)')
+  const [selectedGame, setSelectedGame] = useState("1")
   const [videoRes, setVideoRes] = useState('default')
   const [videoTransform, setVideoTransform] = useState('none')
-  const [videoCodec, setVideoCodec] = useState('H264/90000')
+  const [videoCodec, setVideoCodec] = useState('VP8/90000')
   const [isSTUNEnabled, setIsSTUNEnabled] = useState(false)
   const [isLogSTUNEnabled, setIsLogSTUNEnabled] = useState(false)
   const [isLogEnabled, setIsLogEnabled] = useState(false)
@@ -131,6 +131,7 @@ export function WebRTCPage() {
   const [outboundWidth, setOutboundWidth] = useState(0)
   const [outboundHeight, setOutboundHeight] = useState(0)
   const [inboundCodec, setInboundCodec] = useState('')
+  const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const [inboundFps, setInboundFps] = useState('')
   const [inboundWidth, setInboundWidth] = useState(0)
   const [inboundHeight, setInboundHeight] = useState(0)
@@ -139,6 +140,9 @@ export function WebRTCPage() {
   const handleNewGameLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setNewGameLabel(event.target.value);
   };
+  const [receivedMessages, setReceivedMessages] = useState<string[]>([]);
+  const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
+
 
   useEffect(() => {
     const sampleGames: Game[] = [
@@ -199,6 +203,25 @@ export function WebRTCPage() {
         videoRef.current.srcObject = evt.streams[0]
       }
     })
+
+    // Create data channel
+    const dataChannel = pc.createDataChannel('chat');
+    dataChannelRef.current = dataChannel;
+
+    dataChannel.addEventListener('open', () => {
+      console.log('Data channel is open');
+      dataChannel.send('ping Hello from the client!');
+    });
+
+    dataChannel.addEventListener('message', (event) => {
+      console.log(`Received message: ${event.data}`);
+      setReceivedMessages((prevMessages) => [...prevMessages, event.data]);
+
+      if (event.data.startsWith('selectedLineID')) {
+        const lineId = parseInt(event.data.split(' ')[1], 10);
+        setSelectedLineId(lineId);
+      }
+    });
 
     return pc
   }
@@ -514,8 +537,8 @@ export function WebRTCPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="default">Default codecs</SelectItem>
-                  <SelectItem value="VP8/90000">VP8</SelectItem>
+                <SelectItem value="default">Default codecs</SelectItem>
+                <SelectItem value="VP8/90000">VP8</SelectItem>
                   <SelectItem value="H264/90000">H264</SelectItem>
                 </SelectGroup>
               </SelectContent>
@@ -639,10 +662,22 @@ export function WebRTCPage() {
             <CardTitle className="text-xl">Dialogue</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-             <DialogueComponent selectedGame={selectedGame} />
+             <DialogueComponent selectedGame={selectedGame} selectedLineId={selectedLineId} setSelectedLineId={setSelectedLineId}   />
           </CardContent>
           </Card> 
       )}
+      <Card className="max-w-fit mx-auto">
+        <CardHeader>
+          <CardTitle className="text-xl">Received Messages</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ul>
+            {receivedMessages.map((msg, index) => (
+              <li key={index}>{msg}</li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
-  )
+)
 }

@@ -10,10 +10,11 @@ interface DialogueLine {
 
 interface DialogueComponentProps {
   selectedGame: string;
+  selectedLineId: number | null;
+  setSelectedLineId: (id: number | null) => void;
 }
 
-const DialogueComponent: React.FC<DialogueComponentProps> = ({ selectedGame }) => {
-  const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
+const DialogueComponent: React.FC<DialogueComponentProps> = ({ selectedGame, selectedLineId, setSelectedLineId }) => {
   const [showTranslation, setShowTranslation] = useState(true);
   const [dialogues, setDialogues] = useState<DialogueLine[]>([]);
 

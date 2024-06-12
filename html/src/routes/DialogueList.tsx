@@ -24,7 +24,7 @@ const DialogueList: React.FC<DialogueListProps> = ({ dialogues, selectedLineId, 
         playAudio(selectedDialogue.audioUrl);
       }
     }
-  }, [selectedLineId]);
+  }, [selectedLineId, dialogues]);
 
   const playAudio = (audioUrl: string) => {
     if (currentAudio) {

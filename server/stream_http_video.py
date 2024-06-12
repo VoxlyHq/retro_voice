@@ -304,8 +304,7 @@ class VideoTransformTrack(MediaStreamTrack):
 logger = logging.getLogger("pc")
 pcs = set() # current WebRTC  peer connections
 relay = MediaRelay()
-
-
+        
 async def handle_offer(params):
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
@@ -318,9 +317,29 @@ async def handle_offer(params):
 
     recorder = MediaBlackhole()
 
+    global data_channel
+
+    async def send_data():
+        global data_channel
+        print("starting send_data")
+        while True:
+            print("send_data1")
+#            message = "ping " + str(time.time())
+            message = "selectedLineID 5"
+            if data_channel == None:
+                print("datachannel is none")
+            else:
+                data_channel.send(message)
+            await asyncio.sleep(1)
+
     # shouldn't need this
     @pc.on("datachannel")
     def on_datachannel(channel):
+        log_info("Data channel is open")
+        global data_channel
+        data_channel = channel
+        asyncio.ensure_future(send_data())
+
         @channel.on("message")
         def on_message(message):
             if isinstance(message, str) and message.startswith("ping"):
@@ -474,6 +493,23 @@ def mpegts():
 @app.route('/app/webrtc')
 def frontend():
     return flask.send_from_directory('../static/app', 'index.html')
+
+
+def format_filename(number):
+    # Format the number with leading zeros to ensure it's four digits
+    number_padded = f"{number:04d}"
+
+    # Create the file name using the padded number
+    file_name = f"ff4_v1_prologue_{number_padded}.mp3"
+
+    return file_name
+
+@app.route('/audio/<id>.mp3')
+def serve_audio(id):
+    lang = 'jp'
+    return flask.send_from_directory(f"../output_v2_{lang}_elevenlabs/", format_filename(int(id)))
+
+
 
 
 @app.route('/')
