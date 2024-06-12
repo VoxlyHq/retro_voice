@@ -139,7 +139,7 @@ export function WebRTCPage() {
   const handleNewGameLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setNewGameLabel(event.target.value);
   };
-  
+
   useEffect(() => {
     const sampleGames: Game[] = [
       { id: '1', label: 'Final Fantasy IV (Japan)' },
@@ -639,7 +639,7 @@ export function WebRTCPage() {
             <CardTitle className="text-xl">Dialogue</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-             <DialogueComponent />
+             <DialogueComponent selectedGame={selectedGame} />
           </CardContent>
           </Card> 
       )}

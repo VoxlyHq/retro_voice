@@ -1,15 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DialogueList from './DialogueList';
 
-const DialogueComponent: React.FC = () => {
+interface DialogueLine {
+  id: number;
+  text: string;
+  translation: string;
+  audioUrl: string;
+}
+
+interface DialogueComponentProps {
+  selectedGame: string;
+}
+
+const DialogueComponent: React.FC<DialogueComponentProps> = ({ selectedGame }) => {
   const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
   const [showTranslation, setShowTranslation] = useState(true);
+  const [dialogues, setDialogues] = useState<DialogueLine[]>([]);
 
-  const dialogues = [
-    { id: 1, text: 'Hello', translation: 'Hola', audioUrl: '/audio/hello.mp3' },
-    { id: 2, text: 'How are you?', translation: '¿Cómo estás?', audioUrl: '/audio/how_are_you.mp3' },
-    // Add more dialogue lines here
-  ];
+
+  useEffect(() => {
+    const fetchDialogues = async () => {
+      try {
+        const response = await fetch(`/app/api/script.json?game=${selectedGame}`);
+        const data = await response.json();
+        const formattedData = data.map((item: any) => ({
+          id: item.id,
+          text: `${item.name}: ${item.dialogue}`,
+          translation: item.translation, 
+          audioUrl: `/audio/${item.id}.mp3` // Assuming audio files are named by ID
+        }));
+        setDialogues(formattedData);
+      } catch (error) {
+        console.error('Error fetching dialogues:', error);
+      }
+    };
+
+    fetchDialogues();
+  }, [selectedGame]);
 
   return (
     <div>

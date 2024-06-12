@@ -154,6 +154,11 @@ def protected():
     return f'Hello, {current_user.id}! You are logged in.'
 
 
+@app.route('/script.json')
+def script_json():
+    return flask.send_from_directory('../static', 'dialogues_jp_web.json')
+
+
 def generate_encoded():
     # Parameters for the video
     width, height = 640, 480
