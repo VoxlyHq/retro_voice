@@ -466,6 +466,7 @@ def mpegts():
 
 
 @app.route('/app')
+@app.route('/app/webrtc')
 def frontend():
     return flask.send_from_directory('../static/app', 'index.html')
 
