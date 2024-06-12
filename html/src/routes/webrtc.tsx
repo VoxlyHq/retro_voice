@@ -102,6 +102,9 @@ export function WebRTCPage() {
   const [videoTransform, setVideoTransform] = useState('none')
   const [videoCodec, setVideoCodec] = useState('H264/90000')
   const [isSTUNEnabled, setIsSTUNEnabled] = useState(false)
+  const [isLogSTUNEnabled, setIsLogSTUNEnabled] = useState(false)
+  const [isLogEnabled, setIsLogEnabled] = useState(false)
+  const [isFpsEnabled, setIsFpsEnabled] = useState(true)
   const [canStartWebcam, setCanStartWebcam] = useState(true)
   const [canStartScreenshare, setCanStartScreenshare] = useState(true)
   const [canStop, setCanStop] = useState(false)
@@ -407,7 +410,7 @@ export function WebRTCPage() {
               </SelectContent>
             </Select>
             <Select onValueChange={setVideoTransform}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] hidden">
                 <SelectValue placeholder="No transform" />
               </SelectTrigger>
               <SelectContent>
@@ -441,10 +444,33 @@ export function WebRTCPage() {
             >
               Use STUN/TURN server
             </label>
+            <Checkbox id="use-log-stun" checked={isLogSTUNEnabled} onCheckedChange={(value) => setIsLogSTUNEnabled(!!value)} />
+            <label
+              htmlFor="use-log-stun"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Log STUN Info
+            </label>
+            <Checkbox id="use-log" checked={isLogEnabled} onCheckedChange={(value) => setIsLogEnabled(!!value)} />
+            <label
+              htmlFor="use-log"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Log Debug
+            </label>
+            <Checkbox id="use-fps" checked={isFpsEnabled} onCheckedChange={(value) => setIsFpsEnabled(!!value)} />
+            <label
+              htmlFor="use-fps"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              FPS
+            </label>
+
           </div>
         </CardContent>
       </Card>
       <Card className="max-w-fit mx-auto">
+      {isLogEnabled && (
         <CardHeader>
           <CardTitle className="text-xl">State</CardTitle>
           <CardDescription>
@@ -459,29 +485,9 @@ export function WebRTCPage() {
             </p>
           </CardDescription>
         </CardHeader>
+      )}
         <CardContent>
-          {isMediaVisible && (
-            <div className="flex space-x-8">
-              <div>
-                <h3 className="text-lg">Outbound Stats</h3>
-                <pre>
-                  {outboundCodec}@{outboundWidth}x{outboundHeight}
-                </pre>
-                <pre>{outboundFps} fps</pre>
-              </div>
-              <div>
-                <h3 className="text-lg">Inbound Stats</h3>
-                <pre>
-                  {inboundCodec}@{inboundWidth}x{inboundHeight}
-                </pre>
-                <pre>{inboundFps} fps</pre>
-              </div>
-            </div>
-          )}
-          <div id="media" style={{ display: isMediaVisible ? 'block' : 'none' }}>
-            <video id="video" ref={videoRef} autoPlay playsInline></video>
-          </div>
-          <CardFooter className="space-x-2 my-2 p-0">
+           <CardFooter className="space-x-2 my-2 p-0">
             <Button onClick={onStartWebcam} disabled={!canStartWebcam}>
               Start Webcam
             </Button>
@@ -492,9 +498,43 @@ export function WebRTCPage() {
               Stop
             </Button>
           </CardFooter>
+
+          {isMediaVisible && (
+            <div className="flex space-x-8">
+              <div>
+                {isLogEnabled && (
+                  <div>
+                  <h3 className="text-lg">Outbound Stats</h3>
+                  <pre>
+                    {outboundCodec}@{outboundWidth}x{outboundHeight}
+                  </pre>
+                </div>
+                )}
+                {isFpsEnabled && (
+                  <pre>{outboundFps} fps</pre>
+                )}
+              </div>
+              <div>
+              {isLogEnabled && (
+                  <div>
+                <h3 className="text-lg">Inbound Stats</h3>
+                <pre>
+                  {inboundCodec}@{inboundWidth}x{inboundHeight}
+                </pre>
+                </div>
+              )}
+                {isFpsEnabled && (
+                <pre>{inboundFps} fps</pre>
+                )}
+              </div>
+            </div>
+          )}
+          <div id="media" style={{ display: isMediaVisible ? 'block' : 'none' }}>
+            <video id="video" ref={videoRef} autoPlay playsInline></video>
+          </div>
         </CardContent>
       </Card>
-      {(offerSDP || answerSDP) && (
+      {(offerSDP || answerSDP) && isLogSTUNEnabled && (
         <Card className="max-w-fit mx-auto">
           <CardHeader>
             <CardTitle className="text-xl">SDP</CardTitle>
