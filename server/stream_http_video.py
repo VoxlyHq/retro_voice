@@ -249,7 +249,7 @@ class VideoTransformTrack(MediaStreamTrack):
     """
     kind = "video"
 
-    def __init__(self, track, watermark_data):
+    def __init__(self, track, watermark_data, send_data=None):
         global textDetector, user_video
         super().__init__()
         self.track = track
@@ -259,6 +259,7 @@ class VideoTransformTrack(MediaStreamTrack):
         print("making user_video----")
         self.user_video = user_video
         print("making user_video done----")
+        self.last_closest_match = 0
         
 
     async def recv(self):
@@ -281,6 +282,8 @@ class VideoTransformTrack(MediaStreamTrack):
         new_frame = av.VideoFrame.from_image(self.user_video.print_annotations(frame_cropped))
         new_frame.pts = frame.pts
         new_frame.time_base = frame.time_base
+
+        self.closest_match = self.user_video.closest_match
 
         return new_frame
 
@@ -317,15 +320,26 @@ async def handle_offer(params):
 
     recorder = MediaBlackhole()
 
-    global data_channel
+    global data_channel #TODO this is probably not the best way to do this, cause its global
+    global vc
+    vc = None
+
 
     async def send_data():
         global data_channel
+        last_closest_match = 0
         print("starting send_data")
         while True:
-            print("send_data1")
-#            message = "ping " + str(time.time())
             message = "selectedLineID 5"
+            if vc is not None and vc is not None and vc.last_closest_match is not None:
+                print("send_data2")
+                if vc.last_closest_match != last_closest_match:
+                    message = f"selectedLineID {vc.last_closest_match}"
+                else:
+                    message = f"selectedLineID 2"
+#                    await asyncio.sleep(1)
+#                    continue
+        
             if data_channel == None:
                 print("datachannel is none")
             else:
@@ -355,11 +369,13 @@ async def handle_offer(params):
     @pc.on("track")
     def on_track(track):
         log_info('Track received: %s', track.kind)
+        global vc
 
         if track.kind == 'video':
             log_info('Creating video transform track')
             watermark_data = load_watermark()
-            pc.addTrack(VideoTransformTrack(relay.subscribe(track), watermark_data))
+            vc = VideoTransformTrack(relay.subscribe(track), watermark_data)
+            pc.addTrack(vc)
             recorder.addTrack(relay.subscribe(track))
 
         @track.on("ended")

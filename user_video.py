@@ -12,6 +12,7 @@ class UserVideo:
         self.last_inboard_frame = None
         self.last_frame_count = 0
         self.crop_height = 71
+        self.closest_match = 0
 
         self.frameProcessor = FrameProcessor(lang, disable_dialog,)
 
@@ -26,7 +27,7 @@ class UserVideo:
             frame = self.video_stream.get_latest_frame()
             if frame is not None:
                 #print("Background task accessing the latest frame...")
-                self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
+                self.closest_match = self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
                 time.sleep(1/24)  # Wait for 1 second
 
     def preprocess_frame(self, frame):
