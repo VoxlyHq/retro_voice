@@ -134,309 +134,38 @@ gunicorn -k aiohttp.worker.GunicornWebWorker --bind unix:/tmp/voxly_app.sock ser
 
 # Evaluation
 
+## Download dataset
 ```
-$ ./eval.sh 
-=========== Generation Predictions for 10 images using UserVideo ==========
-self.cfg --#Config (path: test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py): {'model': {'type': 'FAST', 'backbone': {'type': 'fast_backbone', 'config': 'test_detector_configs/nas_fast_base.config'}, 'neck': {'type': 'fast_neck', 'config': 'test_detector_configs/nas_fast_base.config'}, 'detection_head': {'type': 'fast_head', 'config': 'test_detector_configs/nas_fast_base.config', 'pooling_size': 9, 'dropout_ratio': 0.1, 'loss_text': {'type': 'DiceLoss', 'loss_weight': 0.5}, 'loss_kernel': {'type': 'DiceLoss', 'loss_weight': 1.0}, 'loss_emb': {'type': 'EmbLoss_v1', 'feature_dim': 4, 'loss_weight': 0.25}}}, 'repeat_times': 10, 'data': {'batch_size': 16, 'train': {'type': 'FAST_TT', 'split': 'train', 'is_transform': True, 'img_size': 640, 'short_size': 640, 'pooling_size': 9, 'read_type': 'cv2', 'repeat_times': 10}, 'test': {'type': 'FAST_TT', 'split': 'test', 'short_size': 640, 'read_type': 'pil'}}, 'train_cfg': {'lr': 0.001, 'schedule': 'polylr', 'epoch': 30, 'optimizer': 'Adam', 'pretrain': 'pretrained/fast_base_ic17mlt_640.pth', 'save_interval': 1}, 'test_cfg': {'min_score': 0.85, 'min_area': 250, 'bbox_type': 'rect', 'result_path': 'outputs/submit_tt/'}}
-Loading model and optimizer from checkpoint 'pretrained/fast_base_tt_640_finetune_ic17mlt.pth'
-INFO:root:Loading model and optimizer from checkpoint 'pretrained/fast_base_tt_640_finetune_ic17mlt.pth'
-eval_data\images\FF2_EN_1.jpg
-<PIL.Image.Image image mode=RGB size=100x100 at 0x20110AA29F0>
-Images differ by 125
-Images are more than 7 hamming distance. Proceed with OCR
-INFO:root:OCR found text: Crew: Coptoin Ceci We ore obout t0 orrive! cecil:Good. 1 ,
-INFO:root:Time taken: 0.26425909996032715 seconds
-found text ocr----
-Crew: Coptoin Ceci We ore obout t0 orrive! cecil:Good. 1 ,
-----
-Time taken: 0.26425909996032715 seconds
-finished ocr - Crew: Coptoin Ceci We ore obout t0 orrive! cecil:Good. 1 , 
-eval_data\images\FF2_EN_2.jpg
-eval_data\images\FF2_EN_3.jpg
-eval_data\images\FF2_EN_4.jpg
-eval_data\images\FF2_EN_5.jpg
-<PIL.Image.Image image mode=RGB size=879x601 at 0x200FF501580>
-Images differ by 20
-Images are more than 7 hamming distance. Proceed with OCR
-INFO:root:OCR found text: Crew: Why are We robbing crystols from nnocent People? Crew: Thot' s our duty.
-INFO:root:Time taken: 0.15877485275268555 seconds
-found text ocr----
-Crew: Why are We robbing crystols from nnocent People? Crew: Thot' s our duty.
-----
-Time taken: 0.15877485275268555 seconds
-finished ocr - Crew: Why are We robbing crystols from nnocent People? Crew: Thot' s our duty. 
-eval_data\images\FF2_EN_6.jpg
-<PIL.Image.Image image mode=RGB size=879x601 at 0x200FF28E120>
-Images differ by 33
-Images are more than 7 hamming distance. Proceed with OCR
-INFO:root:OCR found text: Crew:do We red Iy have t0 keep doing this?
-INFO:root:Time taken: 5.086591005325317 seconds
-found text ocr----
-Crew:do We red Iy have t0 keep doing this?
-----
-Time taken: 5.136143445968628 seconds
-finished ocr - Crew:do We red Iy have t0 keep doing this? 
-eval_data\images\FF2_EN_7.jpg
-<PIL.Image.Image image mode=RGB size=879x601 at 0x200FF8010A0>
-Images differ by 0
-Difference is less than 10%. No need to call OCR again.
-eval_data\images\FF2_EN_8.jpg
-eval_data\images\FF2_EN_9.jpg
-eval_data\images\FF2_EN_10.jpg
-=========== Evaluating has text detector ==========
-Precision : 1.0, Recall : 0.4, F1 : 0.5714285714285715, Accuracy : 0.4
-Incorrect filenames ['FF2_EN_10', 'FF2_EN_2', 'FF2_EN_3', 'FF2_EN_4', 'FF2_EN_8', 'FF2_EN_9']
-==================== Evaluating Detection Performance ======================
-{'recall': 0.3612068965517242,
- 'precision': 0.35204059324045833,
- 'hmean': 0.35656484450205095,
- 'IoU': 0.2342075581100041}
-==================== Evaluating Recognition Performance ======================
-Average Character Error Rate (CER): 13.09%
-Average Word Error Rate (WER): 23.53%
+python evaluation/download_dataset.py 
+```
 
-Wrong Characters:
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth: 
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: , Ground Truth: l,
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_1, Predicted: o, Ground Truth: a
-Filename: FF2_EN_1, Predicted: c, Ground Truth: C
-Filename: FF2_EN_1, Predicted: . 1 , Ground Truth:
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted: , Ground Truth: i
-Filename: FF2_EN_5, Predicted: o, Ground Truth: a
-Filename: FF2_EN_5, Predicted:  , Ground Truth:
-Filename: FF2_EN_6, Predicted: d I, Ground Truth: all
-Filename: FF2_EN_6, Predicted: 0, Ground Truth: o
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-
-Wrong Words:
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-Filename: FF2_EN_1, Predicted: Coptoin Ceci, Ground Truth: Captain Cecil,
-Filename: FF2_EN_1, Predicted: ore obout t0 orrive! cecil:Good. 1 ,, Ground Truth: are about to arrive! Cecil:Good,
-Filename: FF2_EN_5, Predicted: crystols, Ground Truth: crystals
-Filename: FF2_EN_5, Predicted: nnocent, Ground Truth: innocent
-Filename: FF2_EN_5, Predicted: Thot' s, Ground Truth: That's
-Filename: FF2_EN_6, Predicted: red Iy, Ground Truth: really
-Filename: FF2_EN_6, Predicted: t0, Ground Truth: to
-Filename: FF2_EN_7, Predicted: , Ground Truth: Crew:do We really have to keep doing this?
-
+## Evaluate
+```
+python ocr_eval/main.py 
+```
+```
+output:
+==================================================
+              Recognition Evaluation
+==================================================
+Average Character Error Rate (CER) : 28.94%
+Average Word Error Rate (WER)      : 44.65%
+==================================================
+==================================================
+             Bounding Box Evaluation
+==================================================
+Precision           : 0.32
+Recall              : 0.56
+Hmean               : 0.41
+IoU                 : 0.24
+==================================================
+               Detection Evaluation
+==================================================
+Precision           : 0.99
+Recall              : 1.00
+F1 Score            : 1.00
+Accuracy            : 0.99
+==================================================
+Incorrect filenames for text detection: ['FF2_EN_128']
+==================================================
 ```
