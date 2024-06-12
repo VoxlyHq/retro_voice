@@ -35,7 +35,7 @@ def generate_mjpeg():
         image_changed = False
 
         if user_video.has_frame():
-            img = user_video.get_immediate_frame()
+            img = user_video.print_annotations(user_video.last_inboard_frame)
             img_byte_arr = io.BytesIO()
             img.save(img_byte_arr, format='JPEG')
 

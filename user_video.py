@@ -44,15 +44,9 @@ class UserVideo:
     def has_frame(self):
         return  self.last_inboard_frame is not None
     
-    def get_immediate_frame(self):
 #        img_byte_arr = io.BytesIO()
-
-        if  self.last_inboard_frame is not None:
-            processed_latest_inboard_frame = self.video_stream.print_annotations_pil(self.last_inboard_frame) #TODO have translate and cache options
-        else:
-            processed_latest_inboard_frame = dummy_image
-
 #        processed_latest_inboard_frame.save(img_byte_arr, format='JPEG')
-            
-        print(f"processed_latest_inboard_frame {processed_latest_inboard_frame}")
-        return processed_latest_inboard_frame
+
+    def print_annotations(self, frame):
+        return self.video_stream.print_annotations_pil(frame) #TODO have translate and cache options
+    
