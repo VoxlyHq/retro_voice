@@ -2,6 +2,9 @@
 
 ## 1. Data Collection
 
+### Status
+![Data Collection](../assets/Data_Collection.png)
+
 - The screenshots from the games are grabbed and save in a folder. 
 - Screenshots are renamed in the format of `{Name of Game}_{lang}_{id}.jpg`. eg. FF4_EN_3.jpg.
 - Evaluation images are stored in the folder `retro_voice/eval_data`
@@ -43,6 +46,10 @@ output:
 ## 2. Ground Truth Labelling Framework
 
 Pretrained Models are used to generate annotations.
+
+### Status
+![Labelling](../assets/labelling.png)
+
 ### Inference Scripts
 
 #### Detection 
@@ -104,7 +111,7 @@ if visualize,
 
 Note: need to experiment with different fast models. 
 
-#### CRAFT
+##### CRAFT
 
 ```shell
 python evaluation/detection_inference.py -m craft -v
@@ -204,19 +211,85 @@ python evaluation/translation_inference.py -m openai -o eval_data/translation_op
 ```json
 [
     {
-        'filename': 'FF2_EN_88.jpg', 
-        'original_text': ' Baigan:Please wait here. ', 
-        'translated_text': ' バイガン：ここでお待ちく ださい。 '
+        "filename": "FF2_EN_88.jpg", 
+        "original_text": " Baigan:Please wait here. ", 
+        "translated_text": " バイガン：ここでお待ちく ださい。 "
     }, 
     {
-        'filename': 'FF2_EN_91.jpg', 
-        'original_text': " Baigan: Your Majesty! I'm afraid Cecil has developed quite a rebellious air. ", 
-        'translated_text': '  バイガン: 陛下! セシルがかなり反抗的な態度を取るようになったのではないかと心配です。  '
+        "filename": "FF2_EN_91.jpg", 
+        "original_text": " Baigan: Your Majesty! I\"m afraid Cecil has developed quite a rebellious air. ", 
+        "translated_text": "  バイガン: 陛下! セシルがかなり反抗的な態度を取るようになったのではないかと心配です。  "
     }, 
     {
-        'filename': 'FF2_EN_92.jpg', 
-        'original_text': ' dy!? re, Baigan! do something. in! ', 
-        'translated_text': ' えっ！？ これ、バイガン！何かしなさい。中に！ '
+        "filename": "FF2_EN_92.jpg", 
+        "original_text": " dy!? re, Baigan! do something. in! ", 
+        "translated_text": " えっ！？ これ、バイガン！何かしなさい。中に！ "
     }
 ]
 ```
+
+
+## 3. Evaluation
+
+### Status
+![Evaluation](../assets/evaluation.png)
+
+### Detection
+The code for detection evaluation is a modified version of [TedEval](https://github.com/clovaai/TedEval).
+
+#### annotation format conversion
+```shell
+python evaluation/convert_det_format.py -m craft
+```
+```
+output:
+    eval_data/detection_craft.zip
+```
+
+#### evaluation
+Just reusing the same dataset as ground truth and predictions. 
+```shell
+python evaluation/evaluate_detection.py -g=eval_data/detection_craft.zip -s=eval_data/detection_craft.zip
+```
+```shell
+output:
+    Calculated!{"recall": 1.0, "precision": 1.0, "hmean": 1.0, "IoU": 1.0, "AP": 0}
+```
+
+### Recognition
+```shell
+python evaluation/evaluate_recognition.py
+```
+```shell
+output:
+Average Character Error Rate (CER): 3.49%
+Average Word Error Rate (WER): 6.28%
+
+Wrong Characters:
+Filename: FF2_EN_1.jpg, Predicted: , Ground Truth: iv
+Filename: FF2_EN_100.jpg, Predicted: , Ground Truth: successfully
+Filename: FF2_EN_101.jpg, Predicted: da, Ground Truth:
+
+Wrong Words:
+Filename: FF2_EN_1.jpg, Predicted: arre!, Ground Truth: arrive!
+Filename: FF2_EN_100.jpg, Predicted: , Ground Truth: successfully
+Filename: FF2_EN_101.jpg, Predicted: da, Ground Truth:
+```
+This script returns CER and WER as well as prints out the incorrect filenames and errors.
+
+### Translation
+```shell
+python evaluation/evaluate_translation.py
+```
+```shell
+output:
+Average BLEU Score: 89.23%
+
+Wrong Translations:
+Filename: FF2_EN_109.jpg
+Original Text:  King: W... What? Baigan: W... What is it?
+Translated Text: キング: なんだって…？ バイガン: なんだって…？
+Ground Truth: キング: わ...何?バイガン: わ…何ですか？
+BLEU Score: 0.71
+```
+This script returns BLEU as well as prints out mismatched filenames and translations.

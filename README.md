@@ -151,3 +151,42 @@ gunicorn -k aiohttp.worker.GunicornWebWorker --bind :5001 server.stream_http_vid
 ```bash
 gunicorn -k aiohttp.worker.GunicornWebWorker --bind unix:/tmp/voxly_app.sock server.stream_http_video:aioapp
 ```
+
+
+# Evaluation
+
+## Download dataset
+```
+python evaluation/download_dataset.py 
+```
+
+## Evaluate
+```
+python ocr_eval/main.py 
+```
+```
+output:
+==================================================
+              Recognition Evaluation
+==================================================
+Average Character Error Rate (CER) : 28.94%
+Average Word Error Rate (WER)      : 44.65%
+==================================================
+==================================================
+             Bounding Box Evaluation
+==================================================
+Precision           : 0.32
+Recall              : 0.56
+Hmean               : 0.41
+IoU                 : 0.24
+==================================================
+               Detection Evaluation
+==================================================
+Precision           : 0.99
+Recall              : 1.00
+F1 Score            : 1.00
+Accuracy            : 0.99
+==================================================
+Incorrect filenames for text detection: ['FF2_EN_128']
+==================================================
+```
