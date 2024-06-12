@@ -2,20 +2,25 @@ import os
 import asyncio
 from io import BytesIO
 import logging
-import atexit
-from threading import Thread
+import sys
 import time
+from http import HTTPStatus
+from typing import IO, Any, Dict
 
 from aiohttp import web
 import aiohttp_wsgi
+from aiohttp_wsgi.utils import parse_sockname
+from wsgiref.util import is_hop_by_hop
 import numpy as np
 import av
 import cv2
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaRelay, MediaBlackhole
-from flask import Flask, render_template, send_from_directory, request, jsonify, redirect, url_for
-from flask_login import LoginManager, logout_user, login_required, current_user
+import flask
+from flask import Flask
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from text_detector_fast import TextDetectorFast
 # from text_detector import TextDetector
@@ -27,6 +32,8 @@ from .commands import create_db
 from process_frames import FrameProcessor
 
 from PIL import Image
+
+WSGIEnviron = Dict[str, Any]
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -51,8 +58,8 @@ ROOT = os.path.dirname(__file__)
 
 
 app = Flask(__name__,
-            static_url_path='',
-            static_folder='../html')
+            static_url_path='/',
+            static_folder='../static')
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = Config.SECRET_KEY
 app.config.from_object(Config)
@@ -76,11 +83,11 @@ def load_user(user_id):
 @app.route('/test')
 def test():
     # Print the request scheme
-    scheme = request.scheme
+    scheme = flask.request.scheme
     print(f"Request Scheme: {scheme}")
     
     # Print all the request headers
-    headers = request.headers
+    headers = flask.request.headers
     print("Request Headers:")
     for header, value in headers.items():
         print(f"{header}: {value}")
@@ -92,11 +99,53 @@ def test():
     
     return response
 
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('webrtc'))
+
+@app.route('/signup', methods=['POST'])
+def signup():
+    form = flask.request.form
+    email = form.get('email')
+    password = form.get('password')
+    
+    user = User.query.filter_by(email=email).first()
+    if user:
+        return flask.jsonify({ "error": "Unauthorized" }), 401
+    
+    # create a new local user account
+    password_hash = generate_password_hash(password)
+    user = User(email=email, password=password_hash)
+    db.session.add(user)
+    db.session.commit()
+
+    return flask.jsonify({ "email": user.email })
+
+
+@app.route('/signin', methods=['POST'])
+def signin():
+    form = flask.request.form
+    email = form.get('email')
+    password = form.get('password')
+    
+    user = User.query.filter_by(email=email).first()
+    if user is None or not check_password_hash(user.password, password):
+        return flask.jsonify({ "error": "Unauthorized" }), 401
+
+    login_user(user)
+    return flask.jsonify({ "email": user.email })
+
+
+@app.route('/user', methods=['GET', 'POST'])
+def get_user():
+    if current_user.is_authenticated:
+        return flask.jsonify({ "email": current_user.email })
+    
+    return flask.jsonify({ "error": "Unauthorized" }), 401
+
+
+@app.route('/signout', methods=['POST'])
+def signout():
+    if current_user.is_authenticated:
+        logout_user()
+    return flask.jsonify({}), 200
 
 
 @app.route('/protected')
@@ -304,37 +353,81 @@ async def handle_offer(params):
     return pc.localDescription
 
 
-# NOTE: This route is currently handled by aiohttp server
-#@app.post('/offer')
-def offer():
-    """
-    This endpoint is used to establish a WebRTC connection between a client
-    and the server. Once the connection has been established the client
-    will stream video to the server, the server will add a watermark to each
-    video frame and stream the modified video back to the client. 
-    """
-
-    # While Flask does support async route handlers (with flask[async] extension),
-    # it will kill the WebRTC connections spawned by the handler as soon as the
-    # handler returns a response. The workaround is to use asyncio to run
-    # the async part of the handler and then keep the WebRTC connections alive
-    # on another thread... it's not clear though if the WebRTC stuff will get
-    # cleaned up properly when the client disconnects, might need to do some
-    # additional housekeeping!
-    #
-    # See https://github.com/aiortc/aiortc/issues/792 for additional context. 
-    try:
-        loop = asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    localDescription = loop.run_until_complete(handle_offer(request.get_json()))
-    Thread(target = loop.run_forever).start()
-    return jsonify({'sdp': localDescription.sdp, 'type': localDescription.type})
+# Generate WSGI environ from aiohttp request,
+# this is largely based on aiohttp_wsgi.WSGIHandler._get_environ()
+# from https://github.com/etianen/aiohttp-wsgi
+def _get_wsgi_environ(request: web.Request, body: IO[bytes], content_length: int) -> WSGIEnviron:
+        # Resolve the path info.
+        path_info = request.match_info.get_info()["path"]
+        #path_info = request.match_info["path_info"]
+        script_name = request.rel_url.path[:len(request.rel_url.path) - len(path_info)]
+        # Special case: If the app was mounted on the root, then the script name will
+        # currently be set to "/", which is illegal in the WSGI spec. The script name
+        # could also end with a slash if the WSGIHandler was mounted as a route
+        # manually with a trailing slash before the path_info. In either case, we
+        # correct this according to the WSGI spec by transferring the trailing slash
+        # from script_name to the start of path_info.
+        if script_name.endswith("/"):
+            script_name = script_name[:-1]
+            path_info = "/" + path_info
+        # Parse the connection info.
+        assert request.transport is not None
+        server_name, server_port = parse_sockname(request.transport.get_extra_info("sockname"))
+        remote_addr, remote_port = parse_sockname(request.transport.get_extra_info("peername"))
+        # Detect the URL scheme.
+        url_scheme = "http" if request.transport.get_extra_info("sslcontext") is None else "https"
+        # Create the environ.
+        environ = {
+            "REQUEST_METHOD": request.method,
+            "SCRIPT_NAME": script_name,
+            "PATH_INFO": path_info,
+            "RAW_URI": request.raw_path,
+            # RAW_URI: Gunicorn's non-standard field
+            "REQUEST_URI": request.raw_path,
+            # REQUEST_URI: uWSGI/Apache mod_wsgi's non-standard field
+            "QUERY_STRING": request.rel_url.raw_query_string,
+            "CONTENT_TYPE": request.headers.get("Content-Type", ""),
+            "CONTENT_LENGTH": str(content_length),
+            "SERVER_NAME": server_name,
+            "SERVER_PORT": server_port,
+            "REMOTE_ADDR": remote_addr,
+            "REMOTE_HOST": remote_addr,
+            "REMOTE_PORT": remote_port,
+            "SERVER_PROTOCOL": "HTTP/{}.{}".format(*request.version),
+            "wsgi.version": (1, 0),
+            "wsgi.url_scheme": url_scheme,
+            "wsgi.input": body,
+            "wsgi.errors": sys.stderr,
+            "wsgi.multithread": True,
+            "wsgi.multiprocess": False,
+            "wsgi.run_once": False,
+            "asyncio.executor": None,
+            "aiohttp.request": request,
+        }
+        # Add in additional HTTP headers.
+        for header_name in request.headers:
+            header_name = header_name.upper()
+            if not(is_hop_by_hop(header_name)) and header_name not in ("CONTENT-LENGTH", "CONTENT-TYPE"):
+                header_value = ",".join(request.headers.getall(header_name))
+                environ["HTTP_" + header_name.replace("-", "_")] = header_value
+        # All done!
+        return environ
 
 
 async def async_offer(request):
+    # Setup a Flask request context to access the Flask session.
+    # We don't pass the request body to Flask because we don't
+    # need Flask to process it, we just need it to extract cookies
+    # from the headers, and run extensions (like Flask-Login).
+    content_length = 0
+    body = None
+    environ = _get_wsgi_environ(request, body, content_length)
+    with app.request_context(environ):
+        if not current_user.is_authenticated:
+            return web.json_response({ 'error': 'Unauthorized' }, status=401)
+
+        print("current user in offer:", current_user.email)
+
     params = await request.json()
     localDescription = await handle_offer(params)
     return web.json_response({
@@ -369,20 +462,19 @@ async def on_async_shutdown(app):
 
 @app.route('/mpegts')
 def mpegts():
-    return send_from_directory('../html', 'video.html')
+    return flask.send_from_directory('../html', 'video.html')
 
 
-@app.route('/webrtc')
-def webrtc():
-    return send_from_directory('../html', 'webrtc.html')
+@app.route('/app')
+@app.route('/app/webrtc')
+def frontend():
+    return flask.send_from_directory('../static/app', 'index.html')
 
 
 @app.route('/')
 def index():
-    return render_template('index.j2')
+    return flask.redirect('/app')
 
-
-#atexit.register(on_shutdown)
 
 def make_aiohttp_app(flask_app):
     wsgi_handler = aiohttp_wsgi.WSGIHandler(flask_app)

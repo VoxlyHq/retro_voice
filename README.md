@@ -102,7 +102,19 @@ python ss.py -w -is -v webcam
 python ss.py -w -is -v ~/Desktop/ff2-screenrecord-first4min.mov
 ```
 
-## Flask WebRTC server
+## React WebRTC Frontend
+
+The `html` dir contains the source for the React WebRTC frontend,
+you have to build it before deploying the WebRTC backend. The build
+artifacts for the frontend will be written to `static/app` dir,
+the Flask/aiohttp server is configured to serve it from there.
+
+NOTE: When running the frontend in dev mode OAuth based logins won't work,
+to test/debug OAuth build the frontend and then run the backend in dev mode.
+
+## Flask/aiohttp WebRTC server
+
+The `server` dir contains the source for the Flask/aiohttp WebRTC backend.
 
 ### Development
 1. Install dev packages:
@@ -119,17 +131,26 @@ python ss.py -w -is -v ~/Desktop/ff2-screenrecord-first4min.mov
    ```
 4. Run the dev server with hot-reloading of the Python code:
    ```bash
-   adev runserver server/stream_http_video.py --app-factory aioapp -p 5001
+   adev runserver server/stream_http_video.py --app-factory aioapp -p 5001 -v
    ```
    Or without hot-reloading:
    ```bash
    python3 -m server.stream_http_video
    ```
+   
+You can also run the server locally with `gunicorn`, which is used in production.
+First install it with `pip3 install gunicorn`, then assuming you've previously
+built the frontend, you can run:
 
-## prod
+```bash
+gunicorn -k aiohttp.worker.GunicornWebWorker --bind :5001 server.stream_http_video:aioapp --access-logfile -
+```
 
+### Production
+
+```bash
 gunicorn -k aiohttp.worker.GunicornWebWorker --bind unix:/tmp/voxly_app.sock server.stream_http_video:aioapp
-
+```
 
 
 # Evaluation

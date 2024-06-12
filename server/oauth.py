@@ -36,11 +36,7 @@ def google_oauth_login(blueprint, token):
     except sqlalchemy.orm.exc.NoResultFound:
         oauth = OAuth(provider=blueprint.name, provider_user_id=user_id, token=token)
 
-    if oauth.user:
-        login_user(oauth.user)
-        flash("Successfully signed in.")
-
-    else:
+    if oauth.user is None:
         # create a new local user account for this user
         user = User(email=info["email"])
         # associate the new local user account with the OAuth token
@@ -48,9 +44,9 @@ def google_oauth_login(blueprint, token):
         # save and commit our database models
         db.session.add_all([user, oauth])
         db.session.commit()
-        # log in the new local user account
-        login_user(user)
-        flash("Successfully signed in.")
+        
+    login_user(oauth.user)
+    flash("Successfully signed in.")
 
     # disable Flask-Dance's default behavior for saving the OAuth token
     return False
