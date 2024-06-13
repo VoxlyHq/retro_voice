@@ -26,12 +26,14 @@ from text_detector_fast import TextDetectorFast
 # from text_detector import TextDetector
 from user_video import UserVideo
 
+from .msq import MessageQueue
 from .models import db, User
 from .oauth import google_oauth_blueprint
 from .commands import create_db
 from process_frames import FrameProcessor
 
 from PIL import Image
+
 
 WSGIEnviron = Dict[str, Any]
 
@@ -249,7 +251,7 @@ class VideoTransformTrack(MediaStreamTrack):
     """
     kind = "video"
 
-    def __init__(self, track, watermark_data, send_data=None):
+    def __init__(self, track, watermark_data, message_queue=None):
         global textDetector, user_video
         super().__init__()
         self.track = track
@@ -258,10 +260,9 @@ class VideoTransformTrack(MediaStreamTrack):
         self.inverse_alpha = 1 - self.alpha
         print("making user_video----")
         self.user_video = user_video
+        self.message_queue = message_queue
         print("making user_video done----")
-
-    def last_closest_match(self):
-        return self.user_video.closest_match        
+        self.closest_match = []
 
     async def recv(self):
         try:
@@ -284,7 +285,13 @@ class VideoTransformTrack(MediaStreamTrack):
         new_frame.pts = frame.pts
         new_frame.time_base = frame.time_base
 
-        self.closest_match = self.user_video.closest_match
+        if self.closest_match is not None and self.user_video.closest_match != self.closest_match and self.user_video.closest_match != 0:
+            self.closest_match = self.user_video.closest_match
+            print(f"closest match(VTT): {self.closest_match}")
+            for element in self.closest_match:
+                message = f"selectedLineID {element}"
+                self.message_queue.send_message(message)
+
 
         return new_frame
 
@@ -320,43 +327,25 @@ async def handle_offer(params):
         logger.info(pc_id + " " + msg, *args)
 
     recorder = MediaBlackhole()
-
-    global data_channel #TODO this is probably not the best way to do this, cause its global
-    global vc
+    message_queue = MessageQueue()
 
 
-    async def send_data():
-        global data_channel
-        last_closest_match = 0
+    async def send_data(message_queue, data_channel):
         print("starting send_data")
         while True:
-            message = "selectedLineID 5"
-            if vc is not None:
-                print(f"2vc.last_closest_match: {vc.last_closest_match()} last_closest_match: {last_closest_match}")
-
-            if vc is not None and vc.last_closest_match() is not None:
-                print(f"vc.last_closest_match: {vc.last_closest_match()} last_closest_match: {last_closest_match}")
-                if vc.last_closest_match != last_closest_match:
-                    last_closest_match = vc.last_closest_match()
-                    message = f"selectedLineID {vc.last_closest_match()}"
-                else:
-#                    message = f"selectedLineID 2"
-                    await asyncio.sleep(1)
-                    continue
-        
             if data_channel == None:
                 print("datachannel is none")
             else:
-                data_channel.send(message)
+                message = message_queue.receive_message()
+                if message:
+                    data_channel.send(message)
             await asyncio.sleep(1)
 
     # shouldn't need this
     @pc.on("datachannel")
     def on_datachannel(channel):
         log_info("Data channel is open")
-        global data_channel
-        data_channel = channel
-        asyncio.ensure_future(send_data())
+        asyncio.ensure_future(send_data(message_queue, channel))
 
         @channel.on("message")
         def on_message(message):
@@ -373,12 +362,11 @@ async def handle_offer(params):
     @pc.on("track")
     def on_track(track):
         log_info('Track received: %s', track.kind)
-        global vc
 
         if track.kind == 'video':
             log_info('Creating video transform track')
             watermark_data = load_watermark()
-            vc = VideoTransformTrack(relay.subscribe(track), watermark_data)
+            vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue)
             pc.addTrack(vc)
             recorder.addTrack(relay.subscribe(track))
 
