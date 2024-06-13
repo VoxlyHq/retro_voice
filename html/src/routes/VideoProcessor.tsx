@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 
-const VideoProcessor = ({ videoStream, cropHeight }) => {
+const VideoProcessor = ({ videoStream, cropHeight, annotations }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -39,6 +39,15 @@ const VideoProcessor = ({ videoStream, cropHeight }) => {
         // Draw the ImageBitmap onto the canvas, cropping the specified number of pixels from the top
         context.drawImage(bitmap, 0, cropHeightInt, width, height - cropHeightInt, 0, 0, width, height - cropHeightInt);
 
+        // Draw text annotations onto the canvas
+        annotations.forEach(annotation => {
+          const [coords, text] = annotation;
+          const [x1, y1] = coords[0];
+          context.font = '16px Arial';
+          context.fillStyle = 'red';
+          context.fillText(text, x1, y1 - cropHeightInt);
+        });
+
         // Create a new VideoFrame from the canvas
         const croppedFrame = new VideoFrame(canvas, { timestamp: frame.timestamp });
 
@@ -63,7 +72,7 @@ const VideoProcessor = ({ videoStream, cropHeight }) => {
       writer.close();
       video.srcObject = null;
     };
-  }, [videoStream, cropHeight]);
+  }, [videoStream, cropHeight, annotations]);
 
   return (
     <div>

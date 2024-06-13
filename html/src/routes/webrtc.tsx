@@ -148,6 +148,7 @@ export function WebRTCPage() {
   const [receivedMessages, setReceivedMessages] = useState<string[]>([]);
   const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
   const [videoStream, setVideoStream] = useState(null);
+  const [annotations, setAnnotations] = useState([]); // Add state for annotations
 
   
 
@@ -233,16 +234,17 @@ export function WebRTCPage() {
         const jsonData = event.data.split('annotations ')[1];
         
         // Parse the JSON data
-        let annotations;
+        let annotationsData;
         try {
-          annotations = JSON.parse(jsonData);
+          annotationsData = JSON.parse(jsonData);
         } catch (error) {
           console.error('Failed to parse annotations JSON:', error);
           return;
         }
 
         // Do something with the parsed annotations
-        console.log('Parsed annotations:', annotations);
+        console.log('Parsed annotations:', annotationsData);
+        setAnnotations(annotationsData);
         // You can add your code here to handle the annotations        
       }
 
@@ -679,7 +681,7 @@ export function WebRTCPage() {
             </Button>
           </CardFooter>
 
-          {isVideoStreamProcessingEnabled && videoStream && <VideoProcessor videoStream={videoStream} cropHeight={cropHeight} />}
+          {isVideoStreamProcessingEnabled && videoStream && <VideoProcessor videoStream={videoStream} cropHeight={cropHeight} annotations={annotations} />}
 
           {isMediaVisible && (
             <div className="flex space-x-8">
