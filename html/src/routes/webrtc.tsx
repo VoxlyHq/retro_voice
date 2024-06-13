@@ -284,6 +284,10 @@ export function WebRTCPage() {
       // but this still works in Chrome/Firefox for the time being
       offer.sdp = sdpFilterCodec('video', videoCodec, offer.sdp)
     }
+    let l_cropHeight = "0"
+    if(!isVideoStreamProcessingEnabled) {
+      l_cropHeight = cropHeight
+    }
 
     setOfferSDP(offer.sdp)
     const response = await fetch(`${__BASE_API_URL__}/offer`, {
@@ -291,7 +295,7 @@ export function WebRTCPage() {
         sdp: offer.sdp,
         type: offer.type,
         video_transform: videoTransform,
-        crop_height: cropHeight,
+        crop_height: l_cropHeight,
       }),
       headers: {
         'Content-Type': 'application/json',
