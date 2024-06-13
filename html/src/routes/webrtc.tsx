@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import DialogueComponent from './Dialogue'; // Adjust the import path as needed
 import { ModeToggle } from '@/components/mode-toggle'
+import VideoProcessor from './VideoProcessor';
 
 
 interface InputDevice {
@@ -113,6 +114,9 @@ export function WebRTCPage() {
   const [isLogSTUNEnabled, setIsLogSTUNEnabled] = useState(false)
   const [isLogEnabled, setIsLogEnabled] = useState(false)
   const [isFpsEnabled, setIsFpsEnabled] = useState(true)
+  const [isVideoStreamProcessingEnabled, setIsVideoStreamProcessingEnabled] = useState(false)
+  const [cropHeight, setCropHeight] = useState("100");
+
   const [isDialogueEnabled, setIsDialogueEnabled] = useState(true)  
   const [canStartWebcam, setCanStartWebcam] = useState(true)
   const [canStartScreenshare, setCanStartScreenshare] = useState(true)
@@ -138,8 +142,14 @@ export function WebRTCPage() {
   const handleNewGameLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setNewGameLabel(event.target.value);
   };
+  const handleCropHeightChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setCropHeight(event.target.value);
+  };
   const [receivedMessages, setReceivedMessages] = useState<string[]>([]);
   const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
+  const [videoStream, setVideoStream] = useState(null);
+
+  
 
 
   useEffect(() => {
@@ -372,6 +382,10 @@ export function WebRTCPage() {
       stream.getTracks().forEach((track) => {
         pcRef.current!.addTrack(track, stream)
       })
+
+      if(isVideoStreamProcessingEnabled == true){
+        setVideoStream(stream); // Set the video stream for the VideoProcessor component
+      }
     } catch (err) {
       alert('Could not acquire media: ' + err)
     }
@@ -386,6 +400,10 @@ export function WebRTCPage() {
   const onStop = () => {
     const pc = pcRef.current!
     setCanStop(false)
+    // Implement the stop logic
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+    }
 
     if (statsTimerRef.current) {
       window.clearInterval(statsTimerRef.current)
@@ -572,6 +590,29 @@ export function WebRTCPage() {
             >
               FPS
             </label>
+            <Checkbox id="use-local-video" checked={isVideoStreamProcessingEnabled} onCheckedChange={(value) => setIsVideoStreamProcessingEnabled(!!value)} />
+            <label
+              htmlFor="use-local-video"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              LocalVideoProcessing
+            </label>
+
+                <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={cropHeight}
+                  onChange={handleCropHeightChange}
+                  placeholder="100"
+                />
+              <label
+                htmlFor="crop-height"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Crop Height
+              </label>
+
+              </div>              
 
           </div>
         </CardContent>
@@ -605,6 +646,8 @@ export function WebRTCPage() {
               Stop
             </Button>
           </CardFooter>
+
+          {isVideoStreamProcessingEnabled && videoStream && <VideoProcessor videoStream={videoStream} cropHeight={cropHeight} />}
 
           {isMediaVisible && (
             <div className="flex space-x-8">
