@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import DialogueComponent from './Dialogue'; // Adjust the import path as needed
+import { ModeToggle } from '@/components/mode-toggle'
 
 
 interface InputDevice {
@@ -478,6 +479,7 @@ export function WebRTCPage() {
 
                 </div>
               )}
+
           </div>
         </CardContent>
       </Card>
@@ -675,6 +677,12 @@ export function WebRTCPage() {
           </ul>
         </CardContent>
       </Card>
+      <div>
+        Site theme
+        <ModeToggle />
+      </div>
     </div>
 )
 }
+
+
