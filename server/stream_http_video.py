@@ -253,10 +253,7 @@ def video():
 textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
 #TODO do one per user
 lang = "jp" #hard code all options for now
-disable_dialog = False #True
-disable_translation = False
 enable_cache = False
-translate = "jp,en" 
 debug_bbox = True
 
 class VideoTransformTrack(MediaStreamTrack):
@@ -265,7 +262,7 @@ class VideoTransformTrack(MediaStreamTrack):
     """
     kind = "video"
 
-    def __init__(self, track, watermark_data, message_queue=None,crop_height=None,send_annotations=True):
+    def __init__(self, track, watermark_data, message_queue=None,crop_height=None,send_annotations=True, disable_dialog=False, disable_translation=False, translate="jp,en"):
         global textDetector
         super().__init__()
         self.track = track
@@ -273,12 +270,14 @@ class VideoTransformTrack(MediaStreamTrack):
         self.alpha = watermark_data[:,:,3] / 255.0 # normalize the alpha channel
         self.inverse_alpha = 1 - self.alpha
         print("making user_video----")
+
         self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
         self.message_queue = message_queue
         self.send_annotations = send_annotations
         self.last_annotations = None
         print("making user_video done----")
         self.closest_match = []
+        self.disable_dialog = disable_dialog
 
     async def recv(self):
         try:
@@ -301,7 +300,7 @@ class VideoTransformTrack(MediaStreamTrack):
         new_frame.pts = frame.pts
         new_frame.time_base = frame.time_base
 
-        if self.closest_match is not None and self.user_video.closest_match != self.closest_match and self.user_video.closest_match != 0:
+        if self.disable_dialog == False and self.closest_match is not None and self.user_video.closest_match != self.closest_match and self.user_video.closest_match != 0:
             self.closest_match = self.user_video.closest_match
             print(f"closest match(VTT): {self.closest_match}")
             for element in self.closest_match:
@@ -398,9 +397,27 @@ async def handle_offer(params):
                     crop_height = int(crop_height)
                 except ValueError:
                     crop_height = None
-            
-            print(f"crop height = {crop_height}")
-            vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height)
+    
+            translate = params.get("translate")
+            if translate is None or translate == "":
+                translate = "jp,en"    
+            print(f"translate = {translate}")
+
+
+            disable_dialog  = False
+            pdisable_dialog = params.get("disable_dialog")
+            if pdisable_dialog == "true":
+                disable_dialog = True
+            print(f"disable_dialog = {disable_dialog}")
+
+
+            disable_translation  = False
+            pdisable_translation = params.get("disable_translation")
+            if pdisable_translation == "true":
+                disable_translation = True
+            print(f"disable_translation = {disable_translation}")
+
+            vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height, translate=translate, disable_dialog=disable_dialog, disable_translation=disable_translation)
             pc.addTrack(vc)
             recorder.addTrack(relay.subscribe(track))
 

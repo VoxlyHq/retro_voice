@@ -308,6 +308,11 @@ export function WebRTCPage() {
     } else {
       serverProcess = "false" //Tell the server don't return video feed if we process locally, we can just use the annotation events
     }
+    let disable_dialog = "true"
+    if(isDialogueEnabled) {
+      disable_dialog = "false"
+    } 
+
 
     setOfferSDP(offer.sdp)
     const response = await fetch(`${__BASE_API_URL__}/offer`, {
@@ -317,6 +322,7 @@ export function WebRTCPage() {
         video_transform: videoTransform,
         crop_height: l_cropHeight,
         server_return_video: serverProcess,
+        disable_dialog: disable_dialog,
       }),
       headers: {
         'Content-Type': 'application/json',
