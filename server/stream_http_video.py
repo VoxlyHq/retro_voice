@@ -153,7 +153,7 @@ def signout():
 def protected():
     return f'Hello, {current_user.id}! You are logged in.'
 
-
+@app.route('/app/api/script.json')
 @app.route('/script.json')
 def script_json():
     return flask.send_from_directory('../static', 'dialogues_jp_web.json')
