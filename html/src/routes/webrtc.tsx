@@ -228,7 +228,24 @@ export function WebRTCPage() {
       if (event.data.startsWith('selectedLineID')) {
         const lineId = parseInt(event.data.split(' ')[1], 10);
         setSelectedLineId(lineId);
+      } else if (event.data.startsWith('annotations')) {
+        // Split the data to get the JSON part after the prefix
+        const jsonData = event.data.split('annotations ')[1];
+        
+        // Parse the JSON data
+        let annotations;
+        try {
+          annotations = JSON.parse(jsonData);
+        } catch (error) {
+          console.error('Failed to parse annotations JSON:', error);
+          return;
+        }
+
+        // Do something with the parsed annotations
+        console.log('Parsed annotations:', annotations);
+        // You can add your code here to handle the annotations        
       }
+
     });
 
     return pc
@@ -285,8 +302,11 @@ export function WebRTCPage() {
       offer.sdp = sdpFilterCodec('video', videoCodec, offer.sdp)
     }
     let l_cropHeight = "0"
+    let serverProcess = "true"
     if(!isVideoStreamProcessingEnabled) {
       l_cropHeight = cropHeight
+    } else {
+      serverProcess = "false" //Tell the server don't return video feed if we process locally, we can just use the annotation events
     }
 
     setOfferSDP(offer.sdp)
@@ -296,6 +316,7 @@ export function WebRTCPage() {
         type: offer.type,
         video_transform: videoTransform,
         crop_height: l_cropHeight,
+        server_return_video: serverProcess,
       }),
       headers: {
         'Content-Type': 'application/json',

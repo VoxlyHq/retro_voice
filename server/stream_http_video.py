@@ -34,6 +34,11 @@ from process_frames import FrameProcessor
 
 from PIL import Image
 
+import copy
+import json
+import numpy as np
+
+
 
 WSGIEnviron = Dict[str, Any]
 
@@ -161,6 +166,16 @@ def script_json():
     return flask.send_from_directory('../static', 'dialogues_jp_web.json')
 
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
+
 def generate_encoded():
     # Parameters for the video
     width, height = 640, 480
@@ -250,7 +265,7 @@ class VideoTransformTrack(MediaStreamTrack):
     """
     kind = "video"
 
-    def __init__(self, track, watermark_data, message_queue=None,crop_height=None):
+    def __init__(self, track, watermark_data, message_queue=None,crop_height=None,send_annotations=True):
         global textDetector
         super().__init__()
         self.track = track
@@ -260,6 +275,8 @@ class VideoTransformTrack(MediaStreamTrack):
         print("making user_video----")
         self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
         self.message_queue = message_queue
+        self.send_annotations = send_annotations
+        self.last_annotations = None
         print("making user_video done----")
         self.closest_match = []
 
@@ -291,6 +308,15 @@ class VideoTransformTrack(MediaStreamTrack):
                 message = f"selectedLineID {element}"
                 self.message_queue.send_message(message)
 
+        if self.send_annotations:
+            #TODO probably a more efficent way then comparing json dumps ;/
+            annotations = self.user_video.video_stream.current_annotations
+            json_annotations = json.dumps(annotations, sort_keys=True, cls=NumpyEncoder)
+            
+            if self.last_annotations != json_annotations:
+                self.last_annotations = json_annotations 
+                if self.message_queue != None:
+                    self.message_queue.send_message("annotations " + self.last_annotations)
 
         return new_frame
 
