@@ -291,6 +291,7 @@ export function WebRTCPage() {
         sdp: offer.sdp,
         type: offer.type,
         video_transform: videoTransform,
+        crop_height: cropHeight,
       }),
       headers: {
         'Content-Type': 'application/json',

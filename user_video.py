@@ -8,16 +8,16 @@ dummy_image = Image.new('RGB', (100, 100), (255, 255, 255))
 
 #This handles per user video processing
 class UserVideo:
-    def __init__(self, lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None, debug_bbox=False):
+    def __init__(self, lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None, debug_bbox=False, crop_height=None):
         self.last_inboard_frame = None
         self.last_frame_count = 0
-        self.crop_height = 71
+        self.crop_height = crop_height
         self.closest_match = [] #this can be a list of items
 
         self.frameProcessor = FrameProcessor(lang, disable_dialog,)
 
         self.video_stream = VideoStreamWithAnnotations(background_task=self.process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
-                                                    show_fps=True, crop_y_coordinate=None, frameProcessor=self.frameProcessor, textDetector=textDetector, debug_bbox=debug_bbox) #TODO crop should be set later by user
+                                                    show_fps=True, crop_y_coordinate=crop_height, frameProcessor=self.frameProcessor, textDetector=textDetector, debug_bbox=debug_bbox) #TODO crop should be set later by user
         #video_stream.stop()
 
 

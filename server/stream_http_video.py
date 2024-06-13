@@ -243,7 +243,6 @@ disable_translation = False
 enable_cache = False
 translate = "jp,en" 
 debug_bbox = True
-user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox)
 
 class VideoTransformTrack(MediaStreamTrack):
     """
@@ -251,15 +250,15 @@ class VideoTransformTrack(MediaStreamTrack):
     """
     kind = "video"
 
-    def __init__(self, track, watermark_data, message_queue=None):
-        global textDetector, user_video
+    def __init__(self, track, watermark_data, message_queue=None,crop_height=None):
+        global textDetector
         super().__init__()
         self.track = track
         self.watermark_data = watermark_data
         self.alpha = watermark_data[:,:,3] / 255.0 # normalize the alpha channel
         self.inverse_alpha = 1 - self.alpha
         print("making user_video----")
-        self.user_video = user_video
+        self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
         self.message_queue = message_queue
         print("making user_video done----")
         self.closest_match = []
@@ -366,7 +365,16 @@ async def handle_offer(params):
         if track.kind == 'video':
             log_info('Creating video transform track')
             watermark_data = load_watermark()
-            vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue)
+            crop_height = params.get("crop_height")
+            
+            if crop_height is not None:
+                try:
+                    crop_height = int(crop_height)
+                except ValueError:
+                    crop_height = None
+            
+            print(f"crop height = {crop_height}")
+            vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height)
             pc.addTrack(vc)
             recorder.addTrack(relay.subscribe(track))
 

@@ -15,7 +15,7 @@ user_video = None
 
 def init_web(lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None, debug_bbox=False):
     global user_video #TODO do one per user
-    user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox)
+    user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=72)
 
 image_changed = False
 
