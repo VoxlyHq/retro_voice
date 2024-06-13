@@ -28,8 +28,8 @@ class UserVideo:
             if frame is not None:
                 #print("Background task accessing the latest frame...")
                 closest_match = self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
-                if closest_match != None:
-                    print("Closest match(uservideo): ", closest_match[0])
+                if closest_match != None and closest_match != 0:
+                    print("Closest match(uservideo): ", closest_match)
                     self.closest_match = closest_match[0]
                 time.sleep(1/24)  # Wait for 1 second
 
