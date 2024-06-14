@@ -190,8 +190,8 @@ class VideoStreamWithAnnotations:
                     top_left, bottom_right = self._calculate_annotation_bounds(self.current_annotations)
                     self._annotate_translation(pil_image, draw, top_left, bottom_right)
 
-                elif self.debug_bbox:
-                    self._draw_debug_bboxes(draw, self.current_annotations)
+                if self.debug_bbox:
+                    self._draw_bboxes(draw, self.current_annotations)
 
                 else:
                     self._draw_bboxes(draw, self.current_annotations)
