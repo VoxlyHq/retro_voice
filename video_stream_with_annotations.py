@@ -132,9 +132,9 @@ class VideoStreamWithAnnotations:
         return abs_diff
     
     def set_dialogue_bg_color(self, pil_image):
-        bbox, _, _ = self.current_annotations[0]
+        bbox, _ = self.current_annotations[0]
 
-        top_left, bottom_right = bbox[0], bbox[2]
+        top_left, bottom_right = bbox
         bbox = top_left[0], top_left[1], bottom_right[0], bottom_right[1]
 
         bg_color_ref_point = (top_left[0] - 10, top_left[1] + 40)
@@ -148,9 +148,9 @@ class VideoStreamWithAnnotations:
         abs_diff_const = 500
         colors = []
 
-        bbox, _, _ = self.current_annotations[0]
+        bbox, _ = self.current_annotations[0]
 
-        top_left, bottom_right = bbox[0], bbox[2]
+        top_left, bottom_right = bbox
         bbox = top_left[0], top_left[1], bottom_right[0], bottom_right[1]
 
         img_crop = pil_image.crop(bbox)
@@ -193,16 +193,16 @@ class VideoStreamWithAnnotations:
                 if self.debug_bbox:
                     self._draw_bboxes(draw, self.current_annotations)
 
-                else:
+                if not bool(translate) and not self.debug_bbox:
                     self._draw_bboxes(draw, self.current_annotations)
 
         return pil_image
     
     def _calculate_annotation_bounds(self, annotations):
         top_left = annotations[0][0][0]
-        largest_x = max(ann[0][2][0] for ann in annotations)
-        largest_y = max(ann[0][2][1] for ann in annotations)
-        bottom_right = (largest_x, largest_y)
+        bottom_right = annotations[-1][0][-1]
+        if top_left[0] > bottom_right[0]:
+            top_left, bottom_right = bottom_right, top_left
         return tuple(map(int, top_left)), tuple(map(int, bottom_right))
 
     def _annotate_translation(self, pil_image, draw, top_left, bottom_right):
@@ -218,16 +218,9 @@ class VideoStreamWithAnnotations:
         text_position = (top_left[0], top_left[1])
         draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
 
-    def _draw_debug_bboxes(self, draw, annotations):
-        for bbox, text, prob in annotations:
-            top_left, bottom_right = tuple(map(int, bbox[0])), tuple(map(int, bbox[2]))
-            draw.rectangle([top_left, bottom_right], outline="red", width=2)
-            text_position = (top_left[0], top_left[1] - 10)
-            draw.text(text_position, text, fill="yellow")
-
     def _draw_bboxes(self, draw, annotations):
-        for bbox, text, prob in annotations:
-            top_left, bottom_right = tuple(map(int, bbox[0])), tuple(map(int, bbox[2]))
+        for bbox, text in annotations:
+            top_left, bottom_right = bbox
             draw.rectangle([top_left, bottom_right], outline="red", width=2)
             text_position = (top_left[0], top_left[1] - 10)
             draw.text(text_position, text, fill="yellow")
