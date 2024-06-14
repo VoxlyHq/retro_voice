@@ -5,7 +5,7 @@ import threading
 import time
 import numpy as np
 from collections import Counter
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw, ImageFilter
 from image_diff import image_crop_title_bar
 
 os_name = platform.system()
@@ -187,10 +187,11 @@ class VideoStreamWithAnnotations:
                 draw = ImageDraw.Draw(pil_image)
 
                 if translate:
-                    top_left, bottom_right = self._calculate_annotation_bounds(self.current_annotations)
-                    self._annotate_translation(pil_image, draw, top_left, bottom_right)
+                    top_left = self._calculate_annotation_bounds(self.current_annotations)
+                    pil_image = self._annotate_translation(pil_image, draw, top_left)
 
                 if self.debug_bbox:
+                    draw = ImageDraw.Draw(pil_image)
                     self._draw_bboxes(draw, self.current_annotations)
 
                 if not bool(translate) and not self.debug_bbox:
@@ -200,23 +201,27 @@ class VideoStreamWithAnnotations:
     
     def _calculate_annotation_bounds(self, annotations):
         top_left = annotations[0][0][0]
-        bottom_right = annotations[-1][0][-1]
-        if top_left[0] > bottom_right[0]:
-            top_left, bottom_right = bottom_right, top_left
-        return tuple(map(int, top_left)), tuple(map(int, bottom_right))
+        return tuple(map(int, top_left))
 
-    def _annotate_translation(self, pil_image, draw, top_left, bottom_right):
-        self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
-        self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
+    def _annotate_translation(self, pil_image, draw, top_left):
+
+        # Blurring the background text
+        blurred_image = pil_image.filter(ImageFilter.GaussianBlur(10))
+        mask = Image.new("L", pil_image.size, 0)
+        draw_mask = ImageDraw.Draw(mask)
+
+        for res_ in self.current_annotations:
+            # Draw the rectangle on the mask
+            draw_mask.rectangle(res_[0], fill=255)
         
-        dialogue_bbox = [top_left, bottom_right]
-        draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
+        image_with_blur = Image.composite(blurred_image, pil_image, mask)
 
-        dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
-        translation_adjusted = self.adjust_translation_text(self.current_translations, draw, self.font, dialogue_bbox_width)
-
+        # Add translation text 
+        dialogue_text_color = "white"
+        draw = ImageDraw.Draw(image_with_blur)
         text_position = (top_left[0], top_left[1])
-        draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
+        draw.text(text_position, self.current_translations, font=self.font, fill=dialogue_text_color)
+        return image_with_blur
 
     def _draw_bboxes(self, draw, annotations):
         for bbox, text in annotations:
