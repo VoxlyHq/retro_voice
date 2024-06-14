@@ -183,73 +183,54 @@ class VideoStreamWithAnnotations:
     def print_annotations_pil(self, pil_image):
         translate = self.background_task_args["translate"]
         with self.frame_lock:
-            if self.current_annotations != None and self.current_annotations != []:
+            if self.current_annotations:
+                draw = ImageDraw.Draw(pil_image)
+
                 if translate:
-                    top_left = self.current_annotations[0][0][0]
-                    # finding largest x and y coordinates for bottom_right
-                    largest_x = 0
-                    largest_y = 0
-                    for i in self.current_annotations:
-                        ann = i[0][2]
-                        if ann[0] >= largest_x:
-                            largest_x = ann[0]
-                        if ann[1] >= largest_y:
-                            largest_y = ann[1]
-                    bottom_right = [largest_x, largest_y]
+                    top_left, bottom_right = self._calculate_annotation_bounds(self.current_annotations)
+                    self._annotate_translation(pil_image, draw, top_left, bottom_right)
 
-                    # Ensure the coordinates are in the correct format (floats or integers)
-                    top_left = tuple(map(int, top_left))
-                    bottom_right = tuple(map(int, bottom_right))
+                elif self.debug_bbox:
+                    self._draw_debug_bboxes(draw, self.current_annotations)
 
-                    # Annotate text. Adjust the position if necessary.
-                    self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
-                    self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
-
-                    draw = ImageDraw.Draw(pil_image)
-
-                    dialogue_bbox = [tuple(top_left), tuple(bottom_right)]
-                    draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
-
-                    dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
-                    translation_adjusted = self.adjust_translation_text(self.current_translations, draw,
-                                                                        self.font, dialogue_bbox_width)
-
-                    text_position = (top_left[0], top_left[1])
-                    draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
-
-                if self.debug_bbox is True:
-                    for (bbox, text, prob) in self.current_annotations:
-                        # Extracting min and max coordinates for the rectangle
-                        top_left = bbox[0]
-                        bottom_right = bbox[2]
-
-                        # Ensure the coordinates are in the correct format (floats or integers)
-                        top_left = tuple(map(int, top_left))
-                        bottom_right = tuple(map(int, bottom_right))
-
-                        # Annotate text. Adjust the position if necessary.
-                        draw = ImageDraw.Draw(pil_image)
-                        draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                        draw.text(text_position, text, fill="yellow")
-                
-                if self.debug_bbox is False and translate is None:
-                    for (bbox, text, prob) in self.current_annotations:
-                        # Extracting min and max coordinates for the rectangle
-                        top_left = bbox[0]
-                        bottom_right = bbox[2]
-
-                        # Ensure the coordinates are in the correct format (floats or integers)
-                        top_left = tuple(map(int, top_left))
-                        bottom_right = tuple(map(int, bottom_right))
-
-                        # Annotate text. Adjust the position if necessary.
-                        draw = ImageDraw.Draw(pil_image)
-                        draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                        draw.text(text_position, text, fill="yellow")
+                else:
+                    self._draw_bboxes(draw, self.current_annotations)
 
         return pil_image
+    
+    def _calculate_annotation_bounds(self, annotations):
+        top_left = annotations[0][0][0]
+        largest_x = max(ann[0][2][0] for ann in annotations)
+        largest_y = max(ann[0][2][1] for ann in annotations)
+        bottom_right = (largest_x, largest_y)
+        return tuple(map(int, top_left)), tuple(map(int, bottom_right))
+
+    def _annotate_translation(self, pil_image, draw, top_left, bottom_right):
+        self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
+        self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
+        
+        dialogue_bbox = [top_left, bottom_right]
+        draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
+
+        dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
+        translation_adjusted = self.adjust_translation_text(self.current_translations, draw, self.font, dialogue_bbox_width)
+
+        text_position = (top_left[0], top_left[1])
+        draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
+
+    def _draw_debug_bboxes(self, draw, annotations):
+        for bbox, text, prob in annotations:
+            top_left, bottom_right = tuple(map(int, bbox[0])), tuple(map(int, bbox[2]))
+            draw.rectangle([top_left, bottom_right], outline="red", width=2)
+            text_position = (top_left[0], top_left[1] - 10)
+            draw.text(text_position, text, fill="yellow")
+
+    def _draw_bboxes(self, draw, annotations):
+        for bbox, text, prob in annotations:
+            top_left, bottom_right = tuple(map(int, bbox[0])), tuple(map(int, bbox[2]))
+            draw.rectangle([top_left, bottom_right], outline="red", width=2)
+            text_position = (top_left[0], top_left[1] - 10)
+            draw.text(text_position, text, fill="yellow")
 
     def print_annotations(self, frame):
         pil_image = self.print_annotations_pil(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
