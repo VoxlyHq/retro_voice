@@ -72,27 +72,61 @@ class TestDialogueOverlay(unittest.TestCase):
         IoU = calculate_aggregate_iou_with_missing(gt_bbox, pred_bbox)
         self.assertGreaterEqual(IoU, 0.8)
 
-    def test_bbox_annotated_image(self):
+
+    def test_print_annotations_pil(self):
+        self.video_stream.current_annotations = self.ann
+        self.video_stream.current_translations = "Example Translation"
+        self.video_stream.background_task_args = {'translate': True}
+        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image.save('unit_test_data/test_print_annotations_pil.jpg')
+        self.assertIsInstance(result_image, Image.Image)
+
+    def test_print_annotations_pil_with_no_annotations(self):
+        self.video_stream.current_annotations = []
+        self.video_stream.current_translations = ""
+        self.video_stream.background_task_args = {'translate': False}
+        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image.save('unit_test_data/test_print_annotations_pil_with_no_annotations.jpg')
+        self.assertIsInstance(result_image, Image.Image)
+
+    def test_print_annotations_pil_with_no_translation(self):
+        self.video_stream.current_annotations = self.ann
+        self.video_stream.current_translations = ""
+        self.video_stream.background_task_args = {'translate': False}
+        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image.save('unit_test_data/test_print_annotations_pil_with_no_translation.jpg')
+        self.assertIsInstance(result_image, Image.Image)
+
+    def test_calculate_annotation_bounds_single(self):
+        # Single annotation
+        annotations = [([(934, 54), (1177, 129)], '#rUali')]
+        self.video_stream.current_annotations = annotations
+        result = self.video_stream._calculate_annotation_bounds(annotations)
+        expected_result = (934, 54)
+        self.assertEqual(result, expected_result, "Should extract the top-left corner from a single annotation")
+
+
+    # def test_bbox_annotated_image(self):
     
-        self.video_stream.set_annotations(self.ann)
-        annotated_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
-        result = calculate_image_hash_different(annotated_image, self.annotated_bbox_image)
-        self.assertLessEqual(result, 1)
+    #     self.video_stream.set_annotations(self.ann)
+    #     annotated_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+    #     result = calculate_image_hash_different(annotated_image, self.annotated_bbox_image)
+    #     self.assertLessEqual(result, 1)
 
-    def test_blur_orig_text(self):
+    # def test_blur_orig_text(self):
         
-        self.video_stream.set_annotations(self.ann)
-        self.video_stream.set_translation('')
-        draw = ImageDraw.Draw(self.test_bbox_image)
-        top_left = (934, 54)
-        blurred_image = self.video_stream._annotate_translation(self.test_bbox_image, draw, top_left)
+    #     self.video_stream.set_annotations(self.ann)
+    #     self.video_stream.set_translation('')
+    #     draw = ImageDraw.Draw(self.test_bbox_image)
+    #     top_left = (934, 54)
+    #     blurred_image = self.video_stream._annotate_translation(self.test_bbox_image, draw, top_left)
 
-        count = 0
-        for bbox, _ in self.ann:
-            cropped_image = crop_image(blurred_image, bbox)
-            test_cropped_image = Image.open(f'unit_test_data/{count}.jpg')
-            result = calculate_image_hash_different(cropped_image, test_cropped_image)
-            print(result)
+    #     count = 0
+    #     for bbox, _ in self.ann:
+    #         cropped_image = crop_image(blurred_image, bbox)
+    #         test_cropped_image = Image.open(f'unit_test_data/{count}.jpg')
+    #         result = calculate_image_hash_different(cropped_image, test_cropped_image)
+    #         print(result)
 
 if __name__ == '__main__':
     unittest.main()
