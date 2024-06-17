@@ -49,8 +49,7 @@ class TestDialogueOverlay(unittest.TestCase):
         self.test_data_dir = Path('unit_test_data')
         self.test_bbox_image = Image.open(self.test_data_dir / 'overlap_bbox.jpg')
         self.draw = ImageDraw.Draw(self.test_bbox_image)
-        self.annotated_bbox_image = Image.open(self.test_data_dir / 'annotated_bbox.jpg')
-        self.blurred_bbox_image = Image.open(self.test_data_dir / 'blurred_bbox.jpg')
+        self.translate_image = Image.open(self.test_data_dir / 'test_font_size.jpg')
 
         self.ann = [([(934, 54), (1177, 129)], '#rUali'),
                 ([(984, 710), (1206, 782)], 'HP 200-'),
@@ -58,99 +57,111 @@ class TestDialogueOverlay(unittest.TestCase):
                 ([(478, 732), (538, 780)], '3'),
                 ([(626, 732), (768, 780)], 'tvl'),
                 ([(1210, 730), (1350, 782)], '200')]
-
-    # def test_combine_overlapping_bbox(self):
-    #     """
-    #     Test postprocessing step of ocr , combining overlapping bounding box
-    #     """
-    #     self.ocr_processor.method = OCREngine.EASYOCR
-    #     _, _, annotations, _ = self.ocr_processor.run_ocr(self.test_bbox_image)
-    #     gt_bbox = [[(934, 54), (1177, 129)],
-    #                 [(984, 710), (1206, 782)],
-    #                 [(85, 721), (457, 785)],
-    #                 [(478, 732), (538, 780)],
-    #                 [(626, 732), (768, 780)],
-    #                 [(1210, 730), (1350, 782)]]
-    #     pred_bbox = [i[0] for i in annotations]
-    #     IoU = calculate_aggregate_iou_with_missing(gt_bbox, pred_bbox)
-    #     self.assertGreaterEqual(IoU, 0.8)
-
-
-    # def test_print_annotations_pil(self):
-    #     self.video_stream.current_annotations = self.ann
-    #     self.video_stream.current_translations = "Example Translation"
-    #     self.video_stream.background_task_args = {'translate': True}
-    #     result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
-    #     result_image.save(self.test_data_dir / 'test_print_annotations_pil.jpg')
-    #     self.assertIsInstance(result_image, Image.Image)
-
-    # def test_print_annotations_pil_with_no_annotations(self):
-    #     self.video_stream.current_annotations = []
-    #     self.video_stream.current_translations = ""
-    #     self.video_stream.background_task_args = {'translate': False}
-    #     result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
-    #     result_image.save(self.test_data_dir / 'test_print_annotations_pil_with_no_annotations.jpg')
-    #     self.assertIsInstance(result_image, Image.Image)
-
-    # def test_print_annotations_pil_with_no_translation(self):
-    #     self.video_stream.current_annotations = self.ann
-    #     self.video_stream.current_translations = ""
-    #     self.video_stream.background_task_args = {'translate': False}
-    #     result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
-    #     result_image.save(self.test_data_dir / 'test_print_annotations_pil_with_no_translation.jpg')
-    #     self.assertIsInstance(result_image, Image.Image)
-
-    # def test_calculate_annotation_bounds_single(self):
-    #     # Single annotation
-    #     annotations = [([(934, 54), (1177, 129)], '#rUali')]
-    #     self.video_stream.current_annotations = annotations
-    #     result = self.video_stream._calculate_annotation_bounds(annotations)
-    #     expected_result = (934, 54)
-    #     self.assertEqual(result, expected_result, "Should extract the top-left corner from a single annotation")
-
-    # def test_calculate_annotation_bounds_multiple(self):
         
-    #     self.video_stream.current_annotations = self.ann
-    #     result = self.video_stream._calculate_annotation_bounds(self.ann)
-    #     expected_result = (934, 54)
-    #     self.assertEqual(result, expected_result, "Should correctly extract the top-left corner from the first annotation")
+        self.ann2 = [([(136, 121), (502, 178)], 'Crew: Why'),
+                        ([(543, 131), (681, 173)], 'ore'),
+                        ([(721, 131), (815, 173)], 'We'),
+                        ([(858, 119), (1171, 179)], 'robbing'),
+                        ([(185, 199), (546, 255)], 'crystols'),
+                        ([(592, 202), (772, 250)], 'from'),
+                        ([(825, 201), (1172, 255)], 'innocent'),
+                        ([(185, 272), (496, 340)], 'People?'),
+                        ([(135, 353), (634, 407)], "Crew: Thot' s"),
+                        ([(681, 363), (813, 403)], 'our'),
+                        ([(859, 349), (1070, 413)], 'duty.')]
 
-    # def test_calculate_annotation_bounds_empty(self):
-    #     # Test with no annotations
-    #     annotations = []
-    #     self.video_stream.current_annotations = annotations
-    #     with self.assertRaises(IndexError):
-    #         self.video_stream._calculate_annotation_bounds(annotations)
+    def test_combine_overlapping_bbox(self):
+        """
+        Test postprocessing step of ocr , combining overlapping bounding box
+        """
+        self.ocr_processor.method = OCREngine.EASYOCR
+        _, _, annotations, _ = self.ocr_processor.run_ocr(self.test_bbox_image)
+        gt_bbox = [[(934, 54), (1177, 129)],
+                    [(984, 710), (1206, 782)],
+                    [(85, 721), (457, 785)],
+                    [(478, 732), (538, 780)],
+                    [(626, 732), (768, 780)],
+                    [(1210, 730), (1350, 782)]]
+        pred_bbox = [i[0] for i in annotations]
+        IoU = calculate_aggregate_iou_with_missing(gt_bbox, pred_bbox)
+        self.assertGreaterEqual(IoU, 0.8)
+
+
+    def test_print_annotations_pil(self):
+        self.video_stream.current_annotations = self.ann
+        self.video_stream.current_translations = "Example Translation"
+        self.video_stream.background_task_args = {'translate': True}
+        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image.save(self.test_data_dir / 'test_print_annotations_pil.jpg')
+        self.assertIsInstance(result_image, Image.Image)
+
+    def test_print_annotations_pil_with_no_annotations(self):
+        self.video_stream.current_annotations = []
+        self.video_stream.current_translations = ""
+        self.video_stream.background_task_args = {'translate': False}
+        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image.save(self.test_data_dir / 'test_print_annotations_pil_with_no_annotations.jpg')
+        self.assertIsInstance(result_image, Image.Image)
+
+    def test_print_annotations_pil_with_no_translation(self):
+        self.video_stream.current_annotations = self.ann
+        self.video_stream.current_translations = ""
+        self.video_stream.background_task_args = {'translate': False}
+        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image.save(self.test_data_dir / 'test_print_annotations_pil_with_no_translation.jpg')
+        self.assertIsInstance(result_image, Image.Image)
+
+    def test_calculate_annotation_bounds_single(self):
+        # Single annotation
+        annotations = [([(934, 54), (1177, 129)], '#rUali')]
+        self.video_stream.current_annotations = annotations
+        result = self.video_stream._calculate_annotation_bounds(annotations)
+        expected_result = (934, 54)
+        self.assertEqual(result, expected_result, "Should extract the top-left corner from a single annotation")
+
+    def test_calculate_annotation_bounds_multiple(self):
+        
+        self.video_stream.current_annotations = self.ann
+        result = self.video_stream._calculate_annotation_bounds(self.ann)
+        expected_result = (934, 54)
+        self.assertEqual(result, expected_result, "Should correctly extract the top-left corner from the first annotation")
+
+    def test_calculate_annotation_bounds_empty(self):
+        # Test with no annotations
+        annotations = []
+        self.video_stream.current_annotations = annotations
+        with self.assertRaises(IndexError):
+            self.video_stream._calculate_annotation_bounds(annotations)
     
-    # def test_draw_bboxes_single_annotation(self):
-    #     # Setup a single annotation
-    #     annotations = [([(934, 54), (1177, 129)], '#rUali')]
-    #     self.video_stream._draw_bboxes(self.draw, annotations)
-    #     # Check for red bounding box
-    #     self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (255, 0, 0), "Top left should be red")
-    #     self.assertEqual(self.test_bbox_image.getpixel((1177, 129)), (255, 0, 0), "Bottom right should be red")
-    #     # Save annotated image
-    #     self.test_bbox_image.save(self.test_data_dir / 'test_draw_bboxes_single_annotation.jpg')
+    def test_draw_bboxes_single_annotation(self):
+        # Setup a single annotation
+        annotations = [([(934, 54), (1177, 129)], '#rUali')]
+        self.video_stream._draw_bboxes(self.draw, annotations)
+        # Check for red bounding box
+        self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (255, 0, 0), "Top left should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((1177, 129)), (255, 0, 0), "Bottom right should be red")
+        # Save annotated image
+        self.test_bbox_image.save(self.test_data_dir / 'test_draw_bboxes_single_annotation.jpg')
 
-    # def test_draw_bboxes_multiple_annotations(self):
-    #     # Setup multiple annotations
-    #     annotations = self.ann
-    #     self.video_stream._draw_bboxes(self.draw, annotations)
-    #     # Check for red bounding box
-    #     self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (255, 0, 0), "Top left of first bbox should be red")
-    #     self.assertEqual(self.test_bbox_image.getpixel((1177, 129)), (255, 0, 0), "Bottom right of first bbox should be red")
-    #     self.assertEqual(self.test_bbox_image.getpixel((626, 732)), (255, 0, 0), "Top left of fifth bbox should be red")
-    #     self.assertEqual(self.test_bbox_image.getpixel((457, 785)), (255, 0, 0), "Bottom right of third bbox should be red")
-    #     self.assertEqual(self.test_bbox_image.getpixel((1350, 782)), (255, 0, 0), "Bottom right of last bbox should be red")
-    #     # Save annotated image
-    #     self.test_bbox_image.save(self.test_data_dir / 'test_draw_bboxes_multiple_annotations.jpg')
+    def test_draw_bboxes_multiple_annotations(self):
+        # Setup multiple annotations
+        annotations = self.ann
+        self.video_stream._draw_bboxes(self.draw, annotations)
+        # Check for red bounding box
+        self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (255, 0, 0), "Top left of first bbox should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((1177, 129)), (255, 0, 0), "Bottom right of first bbox should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((626, 732)), (255, 0, 0), "Top left of fifth bbox should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((457, 785)), (255, 0, 0), "Bottom right of third bbox should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((1350, 782)), (255, 0, 0), "Bottom right of last bbox should be red")
+        # Save annotated image
+        self.test_bbox_image.save(self.test_data_dir / 'test_draw_bboxes_multiple_annotations.jpg')
 
-    # def test_draw_bboxes_no_annotations(self):
-    #     # No annotations
-    #     annotations = []
-    #     self.video_stream._draw_bboxes(self.draw, annotations)
-    #     # Check that no changes were made to the image (still white)
-    #     self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (3, 2, 106), "Should remain the same")
+    def test_draw_bboxes_no_annotations(self):
+        # No annotations
+        annotations = []
+        self.video_stream._draw_bboxes(self.draw, annotations)
+        # Check that no changes were made to the image (still white)
+        self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (3, 2, 106), "Should remain the same")
 
     def test_calculate_font_size_basic(self):
         text = "This is a test text to fit within the dialogue box."
@@ -184,6 +195,51 @@ class TestDialogueOverlay(unittest.TestCase):
         result_size = self.video_stream.calculate_font_size(-300, -100, text, 35)
         self.assertIsNone(result_size, "Font size calculation should return None for negative dimensions")
     
+    def test_adjust_translation_text_basic(self):
+        translation = "This is a test text to fit within the dialogue box."
+        dialogue_box_width = 1016
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.draw, self.video_stream.font, dialogue_box_width)
+        self.assertIsInstance(adjusted_text, str)
+        self.assertEqual("This is a test text to fit within the dialogue box. ", adjusted_text)
+
+    def test_adjust_translation_text_long_text(self):
+        translation = "This is a very long test text that should span multiple lines within the dialogue box to test the text adjustment functionality."
+        dialogue_box_width = 1016
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.draw, self.video_stream.font, dialogue_box_width)
+        self.assertIsInstance(adjusted_text, str)
+        self.assertEqual('This is a very long test text that should span multiple lines within\nthe dialogue box to test the text adjustment functionality. '
+, adjusted_text)
+        self.assertIn("\n", adjusted_text, "Long text should contain newline characters to fit within the dialogue box width.")
+
+    def test_annotate_translation_basic(self):
+        translation = "This is a test translation."
+        top_left = (136, 121)
+        self.video_stream.current_annotations = self.ann2
+        self.video_stream.current_translations = translation
+        result_image = self.video_stream._annotate_translation(self.translate_image.copy(), self.draw, top_left)
+        result_image.save(self.test_data_dir / 'test_annotate_translation_basic.jpg')
+        self.assertIsInstance(result_image, Image.Image)
+        self.assertNotEqual(result_image, self.translate_image, "Image should be different after annotation.")
+
+    def test_annotate_translation_long_text(self):
+        translation = "This is a very long translation text that should span multiple lines within the dialogue box to test the annotation functionality." * 5
+        top_left = (136, 121)
+        self.video_stream.current_annotations = self.ann2
+        self.video_stream.current_translations = translation
+        result_image = self.video_stream._annotate_translation(self.translate_image.copy(), self.draw, top_left)
+        result_image.save(self.test_data_dir / 'test_annotate_translation_long_text.jpg')
+        self.assertIsInstance(result_image, Image.Image)
+        self.assertNotEqual(result_image, self.translate_image, "Image should be different after annotation.")
+    
+
+    def test_annotate_translation_empty(self):
+        translation = ""
+        top_left = (136, 121)
+        self.video_stream.current_annotations = self.ann2
+        self.video_stream.current_translations = translation
+        result_image = self.video_stream._annotate_translation(self.translate_image.copy(), self.draw, top_left)
+        result_image.save(self.test_data_dir / 'test_annotate_translation_empty.jpg')
+        self.assertIsInstance(result_image, Image.Image)
 
     
 if __name__ == '__main__':
