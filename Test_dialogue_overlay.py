@@ -8,6 +8,7 @@ from thefuzz import fuzz
 from ocr_enum import OCREngine
 from shapely.geometry import box
 from image_diff import calculate_image_hash_different
+from pathlib import Path
 
 def calculate_iou(bbox1, bbox2):
     box1 = box(bbox1[0][0], bbox1[0][1], bbox1[1][0], bbox1[1][1])
@@ -45,9 +46,11 @@ class TestDialogueOverlay(unittest.TestCase):
         self.ocr_processor = OCRProcessor(language='en', method=OCREngine.EASYOCR)
         self.video_stream = VideoStreamWithAnnotations(background_task=None, background_task_args={'translate' : ''}, show_fps=False,
                                                        frameProcessor=FrameProcessor('en'), textDetector=TextDetectorFast('pretrained/fast_base_tt_640_finetune_ic17mlt.pth'))
-        self.test_bbox_image = Image.open('unit_test_data/overlap_bbox.jpg')
-        self.annotated_bbox_image = Image.open('unit_test_data/annotated_bbox.jpg')
-        self.blurred_bbox_image = Image.open('unit_test_data/blurred_bbox.jpg')
+        self.test_data_dir = Path('unit_test_data')
+        self.test_bbox_image = Image.open(self.test_data_dir / 'overlap_bbox.jpg')
+        self.draw = ImageDraw.Draw(self.test_bbox_image)
+        self.annotated_bbox_image = Image.open(self.test_data_dir / 'annotated_bbox.jpg')
+        self.blurred_bbox_image = Image.open(self.test_data_dir / 'blurred_bbox.jpg')
 
         self.ann = [([(934, 54), (1177, 129)], '#rUali'),
                 ([(984, 710), (1206, 782)], 'HP 200-'),
@@ -78,7 +81,7 @@ class TestDialogueOverlay(unittest.TestCase):
         self.video_stream.current_translations = "Example Translation"
         self.video_stream.background_task_args = {'translate': True}
         result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
-        result_image.save('unit_test_data/test_print_annotations_pil.jpg')
+        result_image.save(self.test_data_dir / 'test_print_annotations_pil.jpg')
         self.assertIsInstance(result_image, Image.Image)
 
     def test_print_annotations_pil_with_no_annotations(self):
@@ -86,7 +89,7 @@ class TestDialogueOverlay(unittest.TestCase):
         self.video_stream.current_translations = ""
         self.video_stream.background_task_args = {'translate': False}
         result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
-        result_image.save('unit_test_data/test_print_annotations_pil_with_no_annotations.jpg')
+        result_image.save(self.test_data_dir / 'test_print_annotations_pil_with_no_annotations.jpg')
         self.assertIsInstance(result_image, Image.Image)
 
     def test_print_annotations_pil_with_no_translation(self):
@@ -94,7 +97,7 @@ class TestDialogueOverlay(unittest.TestCase):
         self.video_stream.current_translations = ""
         self.video_stream.background_task_args = {'translate': False}
         result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
-        result_image.save('unit_test_data/test_print_annotations_pil_with_no_translation.jpg')
+        result_image.save(self.test_data_dir / 'test_print_annotations_pil_with_no_translation.jpg')
         self.assertIsInstance(result_image, Image.Image)
 
     def test_calculate_annotation_bounds_single(self):
@@ -118,28 +121,36 @@ class TestDialogueOverlay(unittest.TestCase):
         self.video_stream.current_annotations = annotations
         with self.assertRaises(IndexError):
             self.video_stream._calculate_annotation_bounds(annotations)
-
-    # def test_bbox_annotated_image(self):
     
-    #     self.video_stream.set_annotations(self.ann)
-    #     annotated_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
-    #     result = calculate_image_hash_different(annotated_image, self.annotated_bbox_image)
-    #     self.assertLessEqual(result, 1)
+    def test_draw_bboxes_single_annotation(self):
+        # Setup a single annotation
+        annotations = [([(934, 54), (1177, 129)], '#rUali')]
+        self.video_stream._draw_bboxes(self.draw, annotations)
+        # Check for red bounding box
+        self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (255, 0, 0), "Top left should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((1177, 129)), (255, 0, 0), "Bottom right should be red")
+        # Save annotated image
+        self.test_bbox_image.save(self.test_data_dir / 'test_draw_bboxes_single_annotation.jpg')
 
-    # def test_blur_orig_text(self):
-        
-    #     self.video_stream.set_annotations(self.ann)
-    #     self.video_stream.set_translation('')
-    #     draw = ImageDraw.Draw(self.test_bbox_image)
-    #     top_left = (934, 54)
-    #     blurred_image = self.video_stream._annotate_translation(self.test_bbox_image, draw, top_left)
+    def test_draw_bboxes_multiple_annotations(self):
+        # Setup multiple annotations
+        annotations = self.ann
+        self.video_stream._draw_bboxes(self.draw, annotations)
+        # Check for red bounding box
+        self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (255, 0, 0), "Top left of first bbox should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((1177, 129)), (255, 0, 0), "Bottom right of first bbox should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((626, 732)), (255, 0, 0), "Top left of fifth bbox should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((457, 785)), (255, 0, 0), "Bottom right of third bbox should be red")
+        self.assertEqual(self.test_bbox_image.getpixel((1350, 782)), (255, 0, 0), "Bottom right of last bbox should be red")
+        # Save annotated image
+        self.test_bbox_image.save(self.test_data_dir / 'test_draw_bboxes_multiple_annotations.jpg')
 
-    #     count = 0
-    #     for bbox, _ in self.ann:
-    #         cropped_image = crop_image(blurred_image, bbox)
-    #         test_cropped_image = Image.open(f'unit_test_data/{count}.jpg')
-    #         result = calculate_image_hash_different(cropped_image, test_cropped_image)
-    #         print(result)
-
+    def test_draw_bboxes_no_annotations(self):
+        # No annotations
+        annotations = []
+        self.video_stream._draw_bboxes(self.draw, annotations)
+        # Check that no changes were made to the image (still white)
+        self.assertEqual(self.test_bbox_image.getpixel((934, 54)), (3, 2, 106), "Should remain the same")
+    
 if __name__ == '__main__':
     unittest.main()
