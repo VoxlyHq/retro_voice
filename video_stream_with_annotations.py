@@ -7,6 +7,7 @@ import numpy as np
 from collections import Counter
 from PIL import Image, ImageFont, ImageDraw, ImageFilter
 from image_diff import image_crop_title_bar
+import textwrap
 
 os_name = platform.system()
 #TODO we should remove this from this file 
@@ -126,58 +127,60 @@ class VideoStreamWithAnnotations:
                 break
 
         cv2.destroyAllWindows()
-    
-    def cal_abs_diff(self, color1, color2):
-        abs_diff = sum([abs(i - j) for i,j in zip(color1, color2)])
-        return abs_diff
-    
-    def set_dialogue_bg_color(self, pil_image):
-        bbox, _ = self.current_annotations[0]
-
-        top_left, bottom_right = bbox
-        bbox = top_left[0], top_left[1], bottom_right[0], bottom_right[1]
-
-        bg_color_ref_point = (top_left[0] - 10, top_left[1] + 40)
-        dialogue_bg_color = pil_image.getpixel(bg_color_ref_point)
-
-        return dialogue_bg_color
-    
-    def set_dialogue_text_color(self, pil_image, dialogue_bg_color):
-        
-        # random threshold number to determine difference between background color and text color
-        abs_diff_const = 500
-        colors = []
-
-        bbox, _ = self.current_annotations[0]
-
-        top_left, bottom_right = bbox
-        bbox = top_left[0], top_left[1], bottom_right[0], bottom_right[1]
-
-        img_crop = pil_image.crop(bbox)
-        for i in range(img_crop.size[0]):
-            for j in range(img_crop.size[1]):
-                colors.append(img_crop.getpixel((i,j)))
-        
-        counter = Counter(colors)
-
-        for k in counter.most_common()[:20]:
-            color = k[0]
-            if self.cal_abs_diff(dialogue_bg_color, color) > abs_diff_const:
-                return color
 
     def adjust_translation_text(self, translation, draw, font, dialogue_bbox_width):
         """Adding newline when translation text is longer than dialogue_bbox_width"""
 
-        char_width = 0
+        word_width = 0
         translation_adjusted = ""
-        for char in translation:
-            char_width += draw.textlength(char, font=font)
-            if char_width > dialogue_bbox_width:
-                char_width = 0
-                translation_adjusted += "\n"
+        for word in translation.split():
+            word_width += draw.textlength(word + ' ', font=font)
+            if word_width > dialogue_bbox_width:
+                word_width = 0
+                translation_adjusted += word + "\n"
             else:
-                translation_adjusted += char
+                translation_adjusted += word + ' '
         return translation_adjusted
+    
+    def calculate_font_size(self, dialogue_box_width, dialogue_box_height, text, initial_font_size=35, font_path='../fonts/YuGothB.ttc'):
+        """
+        Find the font size that can fit all text in the dialogue box
+        """
+        if dialogue_box_width <= 0 or dialogue_box_height <= 0:
+            return None
+
+        def fits(font_size):
+            try:
+                font = ImageFont.truetype(font_path, font_size)
+                # Calculate the line width to wrap text
+                line_width = dialogue_box_width // font_size
+                wrapped_text = textwrap.fill(text, width=line_width)
+
+                bbox = draw.textbbox((0, 0), wrapped_text, font=font)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+
+                return text_width <= dialogue_box_width and text_height <= dialogue_box_height
+            except IOError:
+                print(f"Error: Font file not found at {font_path}")
+                return False
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                return False
+
+        draw = ImageDraw.Draw(Image.new('RGB', (dialogue_box_width, dialogue_box_height)))
+        min_size, max_size = 1, initial_font_size
+        result_size = min_size
+
+        while min_size <= max_size:
+            mid_size = (min_size + max_size) // 2
+            if fits(mid_size):
+                result_size = mid_size
+                min_size = mid_size + 1
+            else:
+                max_size = mid_size - 1
+
+        return result_size
 
 
     def print_annotations_pil(self, pil_image):
@@ -219,8 +222,17 @@ class VideoStreamWithAnnotations:
         # Add translation text 
         dialogue_text_color = "white"
         draw = ImageDraw.Draw(image_with_blur)
-        text_position = (top_left[0], top_left[1])
-        draw.text(text_position, self.current_translations, font=self.font, fill=dialogue_text_color)
+        text_position = top_left
+
+        # calculate allowed width for translation text (top left x position to 100 pixel before edge of image)
+        pixel_offset = pil_image.size[0] // 5
+        dialogue_bbox_width = (pil_image.size[0] - pixel_offset) -  top_left[0]
+        dialogue_bbox_height = 500 # approximately the height of bbox
+        font_size = self.calculate_font_size(dialogue_bbox_width, dialogue_bbox_height, self.current_translations)
+        self.font = ImageFont.truetype(self.font_path, font_size)
+
+        adjusted_translation_text = self.adjust_translation_text(self.current_translations, draw, self.font, dialogue_bbox_width)
+        draw.text(text_position, adjusted_translation_text, font=self.font, fill=dialogue_text_color)
         return image_with_blur
 
     def _draw_bboxes(self, draw, annotations):
