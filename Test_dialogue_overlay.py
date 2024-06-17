@@ -105,6 +105,19 @@ class TestDialogueOverlay(unittest.TestCase):
         expected_result = (934, 54)
         self.assertEqual(result, expected_result, "Should extract the top-left corner from a single annotation")
 
+    def test_calculate_annotation_bounds_multiple(self):
+        
+        self.video_stream.current_annotations = self.ann
+        result = self.video_stream._calculate_annotation_bounds(self.ann)
+        expected_result = (934, 54)
+        self.assertEqual(result, expected_result, "Should correctly extract the top-left corner from the first annotation")
+
+    def test_calculate_annotation_bounds_empty(self):
+        # Test with no annotations
+        annotations = []
+        self.video_stream.current_annotations = annotations
+        with self.assertRaises(IndexError):
+            self.video_stream._calculate_annotation_bounds(annotations)
 
     # def test_bbox_annotated_image(self):
     
