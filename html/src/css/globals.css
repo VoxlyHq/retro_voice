@@ -6,3 +6,12 @@
 .hidden {
     display: none;
 }
+
+.annotation {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 4px;
+    border: 1px solid #000;
+    font-size: 12px;
+    white-space: nowrap;
+  }
