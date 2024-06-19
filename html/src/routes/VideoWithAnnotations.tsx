@@ -7,10 +7,8 @@ const VideoWithAnnotations = forwardRef(({ annotations }, videoRef) => {
     const videoContainer = videoContainerRef.current;
 
     // Remove existing annotations
-    debugger;
-    while (videoContainer.firstChild && videoContainer.firstChild.nodeName === 'DIV') {
-      videoContainer.removeChild(videoContainer.firstChild);
-    }
+    const oldAnnotations = videoContainer.querySelectorAll('.annotation');
+    oldAnnotations.forEach(annotation => annotation.remove());
 
     // Add new annotations
     annotations.forEach((annotation) => {
