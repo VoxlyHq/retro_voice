@@ -10,6 +10,7 @@ import DialogueComponent from './Dialogue'; // Adjust the import path as needed
 import { ModeToggle } from '@/components/mode-toggle'
 //import VideoProcessor from './VideoProcessor';
 import VideoWithAnnotations from './VideoWithAnnotations';
+import VideoProcessor from './VideoProcessor'
 
 
 interface InputDevice {
@@ -116,6 +117,7 @@ export function WebRTCPage() {
   const [isLogEnabled, setIsLogEnabled] = useState(false)
   const [isFpsEnabled, setIsFpsEnabled] = useState(true)
   const [isVideoStreamProcessingEnabled, setIsVideoStreamProcessingEnabled] = useState(false)
+  const [isLocalAnnotationsEnabled, setIsLocalAnnotationsEnabled] = useState(true)
   const [cropHeight, setCropHeight] = useState("100");
 
   const [isDialogueEnabled, setIsDialogueEnabled] = useState(true)  
@@ -185,6 +187,7 @@ export function WebRTCPage() {
     }
 
     const pc = new RTCPeerConnection(config)
+
 
     setIceGatheringState(pc.iceGatheringState)
     setIceConnectionState(pc.iceConnectionState)
@@ -635,6 +638,13 @@ export function WebRTCPage() {
             >
               FPS
             </label>
+            <Checkbox id="use-local-video" checked={isLocalAnnotationsEnabled} onCheckedChange={(value) => setIsLocalAnnotationsEnabled(!!value)} />
+            <label
+              htmlFor="use-local-annotations"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Local Annotations
+            </label>
             <Checkbox id="use-local-video" checked={isVideoStreamProcessingEnabled} onCheckedChange={(value) => setIsVideoStreamProcessingEnabled(!!value)} />
             <label
               htmlFor="use-local-video"
@@ -724,9 +734,15 @@ export function WebRTCPage() {
             </div>
           )}
           <div id="media" style={{ display: isMediaVisible ? 'block' : 'none' }}>
-            <video id="video" ref={videoRef} autoPlay playsInline></video>
-            <VideoWithAnnotations annotations={annotations} videoRef={videoRef} />
-          </div>
+              {isVideoStreamProcessingEnabled ? (
+                <VideoProcessor ref={videoRef} annotations={annotations} />
+              ) :
+              isLocalAnnotationsEnabled ? (
+                <VideoWithAnnotations ref={videoRef} annotations={annotations} />
+              ) : (
+                <video id="video" ref={videoRef} autoPlay playsInline></video>
+              )}
+            </div>
         </CardContent>
       </Card>
       {(offerSDP || answerSDP) && isLogSTUNEnabled && (
