@@ -252,6 +252,9 @@ export function WebRTCPage() {
 
         // Do something with the parsed annotations
         console.log('Parsed annotations:', annotationsData);
+        if (annotationsData == null) {
+            annotationsData = [];
+        }
         setAnnotations(annotationsData);
         // You can add your code here to handle the annotations        
       }
