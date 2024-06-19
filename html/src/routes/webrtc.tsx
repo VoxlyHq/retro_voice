@@ -151,14 +151,11 @@ export function WebRTCPage() {
   const [receivedMessages, setReceivedMessages] = useState<string[]>([]);
   const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
   const [videoStream, setVideoStream] = useState(null);
-  const [annotations, setAnnotations] = useState([
-    [[[145, 75], [417, 75], [417, 125], [145, 125]], "\u3075\u3044\u3057\u300c\u30dd\u306f\u308a", 0.08253407365218739],
-    [[[448, 78], [760, 78], [760, 128], [448, 128]], "\u305f\u3044\u3061\u3087\u3046\u3082\u2026\u2025", 0.4356818845932889],
-    [[[146, 142], [422, 142], [422, 194], [146, 194]], "\u3053\u3044\u3057\u300c\u3044\u304f\u3089", 0.02566485342643045],
-    [[[447, 140], [838, 140], [838, 194], [447, 194]], "\u5d0e\u3044\u305f\u3044\u3068\u306f\u3044\u3048\u2026", 0.04534099983367455],
-    [[[145, 205], [650, 205], [650, 259]], "\u3078\u3044\u3057\u300c\u3064\u307f\u3082\u306a\u3044\u3072\u3068\u304c\u3089", 0.13894110381394825],
-    [[[683, 209], [912, 209], [912, 261], [683, 261]], "\u30bf\u30ea\u30e6\u30ef\u30eb\u304d", 0.11187227270992363]
-  ]); // Add state for annotations
+  const [annotations, setAnnotations] = useState({
+    annotations: [{ pos: [100, 50], text: "Foreign Text 1" }],
+    debug_bbox: [{ pos: [300, 100], text: "Debug Text 1" }],
+    translations: [{ pos: [200, 150], text: "Translation Text 1" }]
+  }); // Add state for annotations
 
   
 
@@ -738,7 +735,7 @@ export function WebRTCPage() {
                 <VideoProcessor ref={videoRef} annotations={annotations} />
               ) :
               isLocalAnnotationsEnabled ? (
-                <VideoWithAnnotations ref={videoRef} annotations={annotations} />
+                <VideoWithAnnotations ref={videoRef} annotationsData={annotations} />
               ) : (
                 <video id="video" ref={videoRef} autoPlay playsInline></video>
               )}

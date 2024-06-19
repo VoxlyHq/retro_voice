@@ -180,7 +180,7 @@ def generate_encoded():
     # Parameters for the video
     width, height = 640, 480
     fps = 24
-    frame_delay = 1 / fps  # Delay to achieve ~24 FPS
+    frame_delay = (1 / fps)*4  # Delay to achieve ~24 FPS
     
     # Setup memory buffer
     buffer = BytesIO()
@@ -315,7 +315,9 @@ class VideoTransformTrack(MediaStreamTrack):
             if self.last_annotations != json_annotations:
                 self.last_annotations = json_annotations 
                 if self.message_queue != None:
-                    self.message_queue.send_message("annotations " + self.last_annotations)
+                    # this is normally what we print
+                    annotations_translations = self.user_video.dump_annotations()
+                    self.message_queue.send_message("annotations " + json.dumps(annotations_translations, sort_keys=True, cls=NumpyEncoder))
 
         return new_frame
 
