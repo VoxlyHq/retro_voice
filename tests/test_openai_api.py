@@ -6,12 +6,14 @@ from PIL import Image
 from openai_api import OpenAI_API  
 from utils import clean_vision_model_output
 from thefuzz import fuzz
+from pathlib import Path
 
 class TestOpenAI_API(unittest.TestCase):
     
     def setUp(self):
         self.api = OpenAI_API()
-        self.sample_image = Image.open('unit_test_data/windows_eng_ff4.png')
+        self.test_data_dir = Path("tests/unit_test_data")
+        self.sample_image = Image.open(self.test_data_dir / 'windows_eng_ff4.png')
         if self.sample_image.mode == "RGBA":
             self.sample_image = self.sample_image.convert("RGB")
         buffered = BytesIO()

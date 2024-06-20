@@ -9,7 +9,7 @@ from utils import draw_translation
 class TestFrameProcessor(unittest.TestCase):
     def setUp(self):
         self.processor = FrameProcessor(language='en', save_outputs=True)
-        self.test_data_dir = Path("unit_test_data")
+        self.test_data_dir = Path("tests/unit_test_data")
         self.input_image_path = self.test_data_dir / "test_image.jpg"
         self.expected_output_image_path = self.test_data_dir / "test_translation_annotated.jpg"
         self.annotations_path = self.test_data_dir / "test_ocr_annotations.json"
@@ -42,8 +42,8 @@ class TestFrameProcessor(unittest.TestCase):
         # Run the image through the processor
         last_played, previous_image, highlighted_image, annotations, translation = self.processor.run_image(self.input_image)
         
-        # Save the outputs to disk
-        self.processor.save_outputs_to_disk(self.input_image, highlighted_image, annotations, translation)
+        # # Save the outputs to disk
+        # self.processor.save_outputs_to_disk(self.input_image, highlighted_image, annotations, translation)
         
         # Check that the files were created
         output_dir = Path("outputs")

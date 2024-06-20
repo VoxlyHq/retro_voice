@@ -46,7 +46,7 @@ class TestDialogueOverlay(unittest.TestCase):
         self.ocr_processor = OCRProcessor(language='en', method=OCREngine.EASYOCR)
         self.video_stream = VideoStreamWithAnnotations(background_task=None, background_task_args={'translate' : ''}, show_fps=False,
                                                        frameProcessor=FrameProcessor('en'), textDetector=TextDetectorFast('pretrained/fast_base_tt_640_finetune_ic17mlt.pth'))
-        self.test_data_dir = Path('unit_test_data')
+        self.test_data_dir = Path('tests/unit_test_data')
         self.test_bbox_image = Image.open(self.test_data_dir / 'overlap_bbox.jpg')
         self.draw = ImageDraw.Draw(self.test_bbox_image)
         self.translate_image = Image.open(self.test_data_dir / 'test_font_size.jpg')

@@ -3,12 +3,14 @@ from PIL import Image
 from ocr import OCRProcessor  
 from thefuzz import fuzz
 from ocr_enum import OCREngine
+from pathlib import Path
 
 class TestOCRProcessor(unittest.TestCase):
     def setUp(self):
         self.ocr_processor = OCRProcessor(language='en', method=OCREngine.EASYOCR)
-        self.image = Image.open('unit_test_data/windows_eng_ff4.png').convert('RGB')
-        self.dialogue_image = Image.open('unit_test_data/orig_dialogue_box.jpg')
+        self.test_data_dir = Path("tests/unit_test_data")
+        self.image = Image.open(self.test_data_dir / 'windows_eng_ff4.png').convert('RGB')
+        self.dialogue_image = Image.open(self.test_data_dir / 'orig_dialogue_box.jpg')
     
     def test_process_image(self):
         image_bytes = self.ocr_processor.process_image(self.image)
