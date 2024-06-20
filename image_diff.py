@@ -78,6 +78,41 @@ def calculate_image_file_difference(img_path1, img_path2):
 
     return percent_diff
 
+def crop_image_by_bboxes(image, bboxes):
+    """
+    crop the image into a list of small images based on bounding boxes
+    """
+    cropped_images = []
+    for bbox in bboxes:
+        x1,y1, x2, y2 = bbox[0][0], bbox[0][1], bbox[1][0], bbox[1][1]
+        img_cropped = image.crop((x1, y1, x2, y2))
+        cropped_images.append(img_cropped)
+    return cropped_images
+
+def combine_images(images, orientation='vertical', padding=10):
+    widths, heights = zip(*(i.size for i in images))
+
+    if orientation == 'horizontal':
+        total_width = sum(widths) + padding * (len(images) - 1)
+        max_height = max(heights)
+        combined_image = Image.new('RGB', (total_width, max_height), color=(255, 255, 255))
+
+        x_offset = 0
+        for img in images:
+            combined_image.paste(img, (x_offset, 0))
+            x_offset += img.width + padding
+    else:  # vertical
+        total_height = sum(heights) + padding * (len(images) - 1)
+        max_width = max(widths)
+        combined_image = Image.new('RGB', (max_width, total_height), color=(255, 255, 255))
+
+        y_offset = 0
+        for img in images:
+            combined_image.paste(img, (0, y_offset))
+            y_offset += img.height + padding
+
+    return combined_image
+
 if __name__ == "__main__":
     # Example usage
     img_path1 = 'window_capture.jpg'

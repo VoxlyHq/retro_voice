@@ -4,7 +4,7 @@ import logging
 from PIL import Image, ImageDraw
 import easyocr
 from openai_api import OpenAI_API
-from image_diff import image_crop_dialogue_box
+from image_diff import crop_image_by_bboxes, combine_images
 from ocr_enum import OCREngine
 import re
 from utils import clean_vision_model_output
@@ -110,7 +110,12 @@ class OCRProcessor:
         elif self.method == OCREngine.OPENAI:
             detection_result = self.det_easyocr(image_bytes)
             if detection_result != []:
-                dialogue_box_img = image_crop_dialogue_box(image, detection_result)
+                bboxes = [i[0] for i in detection_result]
+                # 4 points to 2 points
+                bboxes = [[i[0], i[2]] for i in bboxes]
+                bbox_cropped_images = crop_image_by_bboxes(image, bboxes)
+                dialogue_box_img = combine_images(bbox_cropped_images, 'horizontal')
+                # dialogue_box_img = image_crop_dialogue_box(image, detection_result)
                 dialogue_box_image_bytes = self.process_image(dialogue_box_img)
                 drawable_image = self.draw_highlight(image_bytes, detection_result)
                 response = self.ocr_openai(dialogue_box_image_bytes)
