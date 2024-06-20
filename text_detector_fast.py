@@ -17,7 +17,7 @@ class TextDetectorFast:
 
         self.graph = self.load_model()
         # self.fast = fast.FAST(config="test_detector_configs/fast_tiny_ic17mlt_640.py", checkpoint=checkpoint,ema=True)
-        self.fast = fast.FAST(config="test_detector_configs/fast_base_ic15_1280_finetune_ic17mlt.py", checkpoint=checkpoint,ema=True)
+        self.fast = fast.FAST(config="test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py", checkpoint=checkpoint,ema=True)
 
     def load_image(self, image_path):
         image = Image.open(image_path).convert('RGB')
