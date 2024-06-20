@@ -80,7 +80,15 @@ def calculate_image_file_difference(img_path1, img_path2):
 
 def crop_image_by_bboxes(image, bboxes):
     """
-    crop the image into a list of small images based on bounding boxes
+    Crop the image into a list of small images based on bounding boxes.
+    
+    Args:
+    - image (PIL.Image.Image): The input image to be cropped.
+    - bboxes (list of tuples): List of bounding boxes. Each bounding box is represented
+      as a tuple of tuples ((x1, y1), (x2, y2)).
+
+    Returns:
+    - list of PIL.Image.Image: List of cropped images.
     """
     cropped_images = []
     for bbox in bboxes:
@@ -90,6 +98,17 @@ def crop_image_by_bboxes(image, bboxes):
     return cropped_images
 
 def combine_images(images, orientation='vertical', padding=10):
+    """
+    Combine a list of images into a single image with the specified orientation and padding.
+
+    Args:
+    - images (list of PIL.Image.Image): List of images to be combined.
+    - orientation (str): 'vertical' or 'horizontal'. Default is 'vertical'.
+    - padding (int): Space between images. Default is 10.
+
+    Returns:
+    - PIL.Image.Image: Combined image.
+    """
     widths, heights = zip(*(i.size for i in images))
 
     if orientation == 'horizontal':
