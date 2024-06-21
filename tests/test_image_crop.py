@@ -1,8 +1,8 @@
 import unittest
-from PIL import Image
+from PIL import Image, ImageChops
 import io
 import imagehash
-from image_diff import image_crop_title_bar, image_crop_in_top_half, image_crop_dialogue_box
+from image_diff import image_crop_title_bar, image_crop_in_top_half, image_crop_dialogue_box, crop_image_by_bboxes, combine_images
 from pathlib import Path
 
 class TestImageCropTitleBar(unittest.TestCase):
@@ -14,6 +14,42 @@ class TestImageCropTitleBar(unittest.TestCase):
         self.windows_image = Image.open(self.test_data_dir / 'windows_jp_ff4.png')
         self.dialogue_image_orig = Image.open(self.test_data_dir / 'orig_dialogue_box.jpg')
         self.dialogue_image = Image.open(self.test_data_dir / 'dialogue_box.jpg')
+        self.type2_image = Image.open(self.test_data_dir / 'overlap_bbox.jpg')
+        self.bbox1 = [[(97, 203), (344, 246)],
+                        [(368, 212), (462, 240)],
+                        [(486, 212), (550, 238)],
+                        [(578, 202), (789, 245)],
+                        [(130, 257), (371, 298)],
+                        [(398, 258), (523, 298)],
+                        [(578, 258), (788, 294)],
+                        [(128, 308), (341, 352)],
+                        [(97, 363), (391, 399)],
+                        [(398, 370), (430, 398)],
+                        [(460, 368), (552, 398)],
+                        [(578, 361), (720, 404)]]
+        self.size1 = [(247, 43),
+                        (94, 28),
+                        (64, 26),
+                        (211, 43),
+                        (241, 41),
+                        (125, 40),
+                        (210, 36),
+                        (213, 44),
+                        (294, 36),
+                        (32, 28),
+                        (92, 30),
+                        (142, 43)]
+        self.bbox2 = [[(934, 54), (1177, 129)],
+                        [(984, 710), (1206, 782)],
+                        [(85, 721), (457, 785)],
+                        [(478, 732), (538, 780)],
+                        [(626, 732), (768, 780)],
+                        [(1210, 730), (1350, 782)]]
+        self.size2 = [(243, 75), (222, 72), (372, 64), (60, 48), (142, 48), (140, 52)]
+
+    def compare_images(self, img1, img2):
+        # Compare two images
+        return ImageChops.difference(img1, img2).getbbox() is None
 
     def test_image_crop_title_bar(self):
         cropped_image = image_crop_title_bar(self.osx_image)
@@ -48,6 +84,47 @@ class TestImageCropTitleBar(unittest.TestCase):
         dialogue_box_image_hash = imagehash.average_hash(self.dialogue_image)
 
         self.assertEqual(cropped_image_hash, dialogue_box_image_hash, "The cropped images do not match.")
+    
+    def test_crop_image_by_bboxes_type1(self):
+        '''type1 : normal dialogue box'''
+        type1_image = self.dialogue_image_orig
+        cropped_images = crop_image_by_bboxes(type1_image, self.bbox1)
+        self.assertEqual(len(cropped_images), 12)
+        for cropped_image, size in zip(cropped_images, self.size1):
+            self.assertEqual(cropped_image.size, size)
+            self.assertEqual(cropped_image.size, size)
+
+    def test_crop_image_by_bboxes_type2(self):
+        '''type2 : battle dialogue box : separated'''
+        cropped_images = crop_image_by_bboxes(self.type2_image, self.bbox2)
+        self.assertEqual(len(cropped_images), 6)
+        for cropped_image, size in zip(cropped_images, self.size2):
+            self.assertEqual(cropped_image.size, size)
+            self.assertEqual(cropped_image.size, size)
+
+    def test_combine_images_vertical_type1(self):
+        cropped_images = crop_image_by_bboxes(self.dialogue_image_orig, self.bbox1)
+        combined_image = combine_images(cropped_images, orientation='vertical', padding=10)
+        expected_image = Image.open(self.test_data_dir / 'expected_combined_vertical_type1.jpg')
+        self.assertTrue(self.compare_images(combined_image, expected_image))
+    
+    def test_combine_images_horizontal_type1(self):
+        cropped_images = crop_image_by_bboxes(self.dialogue_image_orig, self.bbox1)
+        combined_image = combine_images(cropped_images, orientation='horizontal', padding=10)
+        expected_image = Image.open(self.test_data_dir / 'expected_combined_horizontal_type1.jpg')
+        self.assertTrue(self.compare_images(combined_image, expected_image))
+
+    def test_combine_images_vertical_type2(self):
+        cropped_images = crop_image_by_bboxes(self.type2_image, self.bbox2)
+        combined_image = combine_images(cropped_images, orientation='vertical', padding=10)
+        expected_image = Image.open(self.test_data_dir / 'expected_combined_vertical_type2.jpg')
+        self.assertTrue(self.compare_images(combined_image, expected_image))
+    
+    def test_combine_images_horizontal_type2(self):
+        cropped_images = crop_image_by_bboxes(self.type2_image, self.bbox2)
+        combined_image = combine_images(cropped_images, orientation='horizontal', padding=10)
+        expected_image = Image.open(self.test_data_dir / 'expected_combined_horizontal_type2.jpg')
+        self.assertTrue(self.compare_images(combined_image, expected_image))
 
 
 if __name__ == '__main__':
