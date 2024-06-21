@@ -269,7 +269,8 @@ class FrameProcessor:
     def run_translation_vision(self, img, translate, detection_result):
         target_lang = translate.split(',')[1]
         
-        if detection_result:
+        if len(detection_result) >= 1:
+
 
             bboxes = [i[0] for i in detection_result]
             # 4 points to 2 points
@@ -286,7 +287,7 @@ class FrameProcessor:
 
             return str, result
         else:
-            '', {}
+            return '', {}
 
     def process_frame(self, frame_pil, frame_count, fps):
         """
@@ -321,7 +322,7 @@ class FrameProcessor:
                 highlighted_image, annotations = self.ocr_processor.run_det(img)
 
                 last_played = 0
-                
+
                 translation, result = self.run_translation_vision(img, translate, annotations)
 
                 self.previous_image = img
