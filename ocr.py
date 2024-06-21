@@ -123,6 +123,119 @@ class OCRProcessor:
                 return filtered_text, drawable_image, detection_result, response
             return '', None, [], {}
 
+    def combine_overlapping_rectangles(self, rectangles):
+        """
+        Combine overlapping rectangles from a list of rectangles.
+
+        Args:
+            rectangles (list of tuples): A list of rectangles, each defined by a tuple of two points (top-left and bottom-right).
+
+        Returns:
+            list of tuples: A list of combined rectangles.
+        """
+        combined_rectangles = list(rectangles)  # Make a copy of the input list
+
+        while True:
+            overlap_found = False
+            new_rectangles = []
+
+            i = 0
+            while i < len(combined_rectangles):
+                rect1 = combined_rectangles[i]
+                combined = False
+                for j in range(i + 1, len(combined_rectangles)):
+                    rect2 = combined_rectangles[j]
+                    if self.check_overlap(rect1, rect2):
+                        combined_rect = self.combine_rectangles(rect1, rect2)
+                        new_rectangles.append(combined_rect)
+                        combined_rectangles.pop(j)
+                        overlap_found = True
+                        combined = True
+                        break
+
+                if not combined:
+                    new_rectangles.append(rect1)
+                i += 1
+
+            combined_rectangles = new_rectangles
+
+            if not overlap_found:
+                break
+
+        return combined_rectangles
+
+    def check_overlap(self, rect1, rect2):
+        """
+        Check if two rectangles overlap.
+
+        Args:
+            rect1 (tuple of tuples): First rectangle defined by two points (top-left and bottom-right).
+            rect2 (tuple of tuples): Second rectangle defined by two points (top-left and bottom-right).
+
+        Returns:
+            bool: True if the rectangles overlap, False otherwise.
+        """
+        x1, y1 = rect1[0]
+        x2, y2 = rect1[1]
+        x3, y3 = rect2[0]
+        x4, y4 = rect2[1]
+        if x2 < x3 or x4 < x1 or y2 < y3 or y4 < y1:
+            return False
+        return True
+
+    def combine_rectangles(self, rect1, rect2):
+        """
+        Combine two overlapping rectangles into a single rectangle.
+
+        Args:
+            rect1 (tuple of tuples): First rectangle defined by two points (top-left and bottom-right).
+            rect2 (tuple of tuples): Second rectangle defined by two points (top-left and bottom-right).
+
+        Returns:
+            tuple of tuples: A combined rectangle defined by two points (top-left and bottom-right).
+        """
+        x1 = min(rect1[0][0], rect2[0][0])
+        y1 = min(rect1[0][1], rect2[0][1])
+        x2 = max(rect1[1][0], rect2[1][0])
+        y2 = max(rect1[1][1], rect2[1][1])
+        return [(x1, y1), (x2, y2)]
+
+    def postprocess_bbox(self, results):
+        """
+        Combine overlapping bounding boxes and their associated text.
+
+        Args:
+            results (list of tuples): A list of results, each containing a bounding box, recognized text and probability.
+
+        Returns:
+            list of tuples: A list of combined bounding boxes and concatenated text.
+        """
+        text_regions = []
+        for result in results:
+            bbox = result[0]  # Get the bounding box coordinates
+            x1, y1 = int(bbox[0][0]), int(bbox[0][1])
+            x2, y2 = int(bbox[2][0]), int(bbox[2][1])
+            points = [(x1, y1), (x2, y2)]
+            # If needed, add thresholds to ignore tiny text fields based on height and width
+            text = result[1]  # Get the recognized text
+            text_regions.append((points, text))
+        
+        # Combine overlapping rectangles into a single rectangle
+        combined_regions = self.combine_overlapping_rectangles([region[0] for region in text_regions])
+        
+        # Update the combined regions with the recognized text
+        final_regions = []
+        for combined_region in combined_regions:
+            text = ""
+            for region in text_regions:
+                if self.check_overlap(region[0], combined_region):
+                    text += region[1] + " "
+            text = text.strip()
+            final_regions.append((combined_region, text))
+        
+        return final_regions
+
+
     def run_ocr(self, image):
         """
         Perform OCR on the image, log the time taken, and return the results.
@@ -132,6 +245,7 @@ class OCRProcessor:
         """
         start_time = time.time()
         output_text, highlighted_image, annotations, reg_result = self.ocr_and_highlight(image)
+        annotations = self.postprocess_bbox(annotations)
         end_time = time.time()
         logging.info(f"OCR found text: {output_text}")
         logging.info(f"Time taken: {end_time - start_time} seconds")

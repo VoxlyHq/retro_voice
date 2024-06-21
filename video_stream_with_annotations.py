@@ -5,8 +5,9 @@ import threading
 import time
 import numpy as np
 from collections import Counter
-from PIL import Image, ImageFont, ImageDraw
+from PIL import Image, ImageFont, ImageDraw, ImageFilter
 from image_diff import image_crop_title_bar
+import textwrap
 
 os_name = platform.system()
 #TODO we should remove this from this file 
@@ -126,130 +127,120 @@ class VideoStreamWithAnnotations:
                 break
 
         cv2.destroyAllWindows()
-    
-    def cal_abs_diff(self, color1, color2):
-        abs_diff = sum([abs(i - j) for i,j in zip(color1, color2)])
-        return abs_diff
-    
-    def set_dialogue_bg_color(self, pil_image):
-        bbox, _, _ = self.current_annotations[0]
-
-        top_left, bottom_right = bbox[0], bbox[2]
-        bbox = top_left[0], top_left[1], bottom_right[0], bottom_right[1]
-
-        bg_color_ref_point = (top_left[0] - 10, top_left[1] + 40)
-        dialogue_bg_color = pil_image.getpixel(bg_color_ref_point)
-
-        return dialogue_bg_color
-    
-    def set_dialogue_text_color(self, pil_image, dialogue_bg_color):
-        
-        # random threshold number to determine difference between background color and text color
-        abs_diff_const = 500
-        colors = []
-
-        bbox, _, _ = self.current_annotations[0]
-
-        top_left, bottom_right = bbox[0], bbox[2]
-        bbox = top_left[0], top_left[1], bottom_right[0], bottom_right[1]
-
-        img_crop = pil_image.crop(bbox)
-        for i in range(img_crop.size[0]):
-            for j in range(img_crop.size[1]):
-                colors.append(img_crop.getpixel((i,j)))
-        
-        counter = Counter(colors)
-
-        for k in counter.most_common()[:20]:
-            color = k[0]
-            if self.cal_abs_diff(dialogue_bg_color, color) > abs_diff_const:
-                return color
 
     def adjust_translation_text(self, translation, draw, font, dialogue_bbox_width):
         """Adding newline when translation text is longer than dialogue_bbox_width"""
 
-        char_width = 0
+        word_width = 0
         translation_adjusted = ""
-        for char in translation:
-            char_width += draw.textlength(char, font=font)
-            if char_width > dialogue_bbox_width:
-                char_width = 0
-                translation_adjusted += "\n"
+        for word in translation.split():
+            word_width += draw.textlength(word + ' ', font=font)
+            if word_width > dialogue_bbox_width:
+                word_width = 0
+                translation_adjusted += word + "\n"
             else:
-                translation_adjusted += char
+                translation_adjusted += word + ' '
         return translation_adjusted
+    
+    def calculate_font_size(self, dialogue_box_width, dialogue_box_height, text, initial_font_size=35, font_path='../fonts/YuGothB.ttc'):
+        """
+        Find the font size that can fit all text in the dialogue box
+        """
+        if dialogue_box_width <= 0 or dialogue_box_height <= 0:
+            return None
+
+        def fits(font_size):
+            try:
+                font = ImageFont.truetype(font_path, font_size)
+                # Calculate the line width to wrap text
+                line_width = dialogue_box_width // font_size
+                wrapped_text = textwrap.fill(text, width=line_width)
+
+                bbox = draw.textbbox((0, 0), wrapped_text, font=font)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+
+                return text_width <= dialogue_box_width and text_height <= dialogue_box_height
+            except IOError:
+                print(f"Error: Font file not found at {font_path}")
+                return False
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                return False
+
+        draw = ImageDraw.Draw(Image.new('RGB', (dialogue_box_width, dialogue_box_height)))
+        min_size, max_size = 1, initial_font_size
+        result_size = min_size
+
+        while min_size <= max_size:
+            mid_size = (min_size + max_size) // 2
+            if fits(mid_size):
+                result_size = mid_size
+                min_size = mid_size + 1
+            else:
+                max_size = mid_size - 1
+
+        return result_size
 
 
     def print_annotations_pil(self, pil_image):
         translate = self.background_task_args["translate"]
         with self.frame_lock:
-            if self.current_annotations != None and self.current_annotations != []:
+            if self.current_annotations:
+                draw = ImageDraw.Draw(pil_image)
+
                 if translate:
-                    top_left = self.current_annotations[0][0][0]
-                    # finding largest x and y coordinates for bottom_right
-                    largest_x = 0
-                    largest_y = 0
-                    for i in self.current_annotations:
-                        ann = i[0][2]
-                        if ann[0] >= largest_x:
-                            largest_x = ann[0]
-                        if ann[1] >= largest_y:
-                            largest_y = ann[1]
-                    bottom_right = [largest_x, largest_y]
+                    top_left = self._calculate_annotation_bounds(self.current_annotations)
+                    pil_image = self._annotate_translation(pil_image, draw, top_left)
 
-                    # Ensure the coordinates are in the correct format (floats or integers)
-                    top_left = tuple(map(int, top_left))
-                    bottom_right = tuple(map(int, bottom_right))
-
-                    # Annotate text. Adjust the position if necessary.
-                    self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
-                    self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
-
+                if self.debug_bbox:
                     draw = ImageDraw.Draw(pil_image)
+                    self._draw_bboxes(draw, self.current_annotations)
 
-                    dialogue_bbox = [tuple(top_left), tuple(bottom_right)]
-                    draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
-
-                    dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
-                    translation_adjusted = self.adjust_translation_text(self.current_translations, draw,
-                                                                        self.font, dialogue_bbox_width)
-
-                    text_position = (top_left[0], top_left[1])
-                    draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
-
-                if self.debug_bbox is True:
-                    for (bbox, text, prob) in self.current_annotations:
-                        # Extracting min and max coordinates for the rectangle
-                        top_left = bbox[0]
-                        bottom_right = bbox[2]
-
-                        # Ensure the coordinates are in the correct format (floats or integers)
-                        top_left = tuple(map(int, top_left))
-                        bottom_right = tuple(map(int, bottom_right))
-
-                        # Annotate text. Adjust the position if necessary.
-                        draw = ImageDraw.Draw(pil_image)
-                        draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                        draw.text(text_position, text, fill="yellow")
-                
-                if self.debug_bbox is False and translate is None:
-                    for (bbox, text, prob) in self.current_annotations:
-                        # Extracting min and max coordinates for the rectangle
-                        top_left = bbox[0]
-                        bottom_right = bbox[2]
-
-                        # Ensure the coordinates are in the correct format (floats or integers)
-                        top_left = tuple(map(int, top_left))
-                        bottom_right = tuple(map(int, bottom_right))
-
-                        # Annotate text. Adjust the position if necessary.
-                        draw = ImageDraw.Draw(pil_image)
-                        draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                        draw.text(text_position, text, fill="yellow")
+                if not bool(translate) and not self.debug_bbox:
+                    self._draw_bboxes(draw, self.current_annotations)
 
         return pil_image
+    
+    def _calculate_annotation_bounds(self, annotations):
+        top_left = annotations[0][0][0]
+        return tuple(map(int, top_left))
+
+    def _annotate_translation(self, pil_image, draw, top_left):
+
+        # Blurring the background text
+        blurred_image = pil_image.filter(ImageFilter.GaussianBlur(10))
+        mask = Image.new("L", pil_image.size, 0)
+        draw_mask = ImageDraw.Draw(mask)
+
+        for res_ in self.current_annotations:
+            # Draw the rectangle on the mask
+            draw_mask.rectangle(res_[0], fill=255)
+        
+        image_with_blur = Image.composite(blurred_image, pil_image, mask)
+
+        # Add translation text 
+        dialogue_text_color = "white"
+        draw = ImageDraw.Draw(image_with_blur)
+        text_position = top_left
+
+        # calculate allowed width for translation text (top left x position to 100 pixel before edge of image)
+        pixel_offset = pil_image.size[0] // 5
+        dialogue_bbox_width = (pil_image.size[0] - pixel_offset) -  top_left[0]
+        dialogue_bbox_height = 500 # approximately the height of bbox
+        font_size = self.calculate_font_size(dialogue_bbox_width, dialogue_bbox_height, self.current_translations)
+        self.font = ImageFont.truetype(self.font_path, font_size)
+
+        adjusted_translation_text = self.adjust_translation_text(self.current_translations, draw, self.font, dialogue_bbox_width)
+        draw.text(text_position, adjusted_translation_text, font=self.font, fill=dialogue_text_color)
+        return image_with_blur
+
+    def _draw_bboxes(self, draw, annotations):
+        for bbox, text in annotations:
+            top_left, bottom_right = bbox
+            draw.rectangle([top_left, bottom_right], outline="red", width=2)
+            text_position = (top_left[0], top_left[1] - 10)
+            draw.text(text_position, text, fill="yellow")
 
     def print_annotations(self, frame):
         pil_image = self.print_annotations_pil(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))

@@ -378,8 +378,7 @@ class FrameProcessor:
                 {
                     "bbox": [[int(point[0]), int(point[1])] for point in bbox],
                     "text": text,
-                    "prob": float(prob)
-                } for bbox, text, prob in ocr_annotations
+                } for bbox, text in ocr_annotations
             ]
             with open(ocr_annotations_path, 'w', encoding='utf-8') as f:
                 json.dump(ocr_annotations, f, ensure_ascii=False, indent=4)
@@ -390,8 +389,7 @@ class FrameProcessor:
                 {
                     "bbox": [[int(point[0]), int(point[1])] for point in bbox],
                     "text": text,
-                    "prob": float(prob)
-                } for bbox, text, prob in ocr_annotations
+                } for bbox, text in ocr_annotations
             ]
             with open(ocr_annotations_path, 'w', encoding='utf-8') as f:
                 json.dump(ocr_annotations, f, ensure_ascii=False, indent=4)
