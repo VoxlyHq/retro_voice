@@ -375,8 +375,10 @@ class FrameProcessor:
                     
                 if closest_entry is None and last_played:
                     if self.disable_dialog:
+                        print("disable_dialog")
                         translation, result = self.run_translation(last_played, translate)
                     else:
+                        print("looking for entry")
                         content_to_translate = []
                         for entry in last_played:
                             content = self.dialogues[entry]

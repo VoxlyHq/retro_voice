@@ -37,6 +37,10 @@ export default defineConfig(({ command, mode }) => {
             return r
           },
         },
+        '/audio': {
+          target: env.VITE_DEV_BACKEND_HOST,
+          changeOrigin: true,
+        },
       },
     }
   }

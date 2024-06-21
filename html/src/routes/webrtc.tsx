@@ -6,31 +6,39 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter }
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import DialogueComponent from './Dialogue'; // Adjust the import path as needed
+import { ModeToggle } from '@/components/mode-toggle'
+//import VideoProcessor from './VideoProcessor';
+import VideoWithAnnotations from './VideoWithAnnotations';
+import VideoProcessor from './VideoProcessor'
+
 
 interface InputDevice {
   id: string
   label: string
 }
 
+interface Game {
+  id: string
+  label: string
+}
+
 async function enumerateInputDevices(): Promise<InputDevice[]> {
-  let mediaDevices: MediaDeviceInfo[] = []
+  let mediaDevices: MediaDeviceInfo[] = [];
 
-  try {
-    mediaDevices = await navigator.mediaDevices.enumerateDevices()
-  } catch (e) {
-    alert(e)
-  }
+  mediaDevices = await navigator.mediaDevices.enumerateDevices();
+  console.log("mediaDevices", mediaDevices)
 
-  let counter = 0
+  let counter = 0;
   return mediaDevices
-    .filter((device) => device.kind == 'videoinput')
+    .filter((device) => device.kind === 'videoinput' && device.deviceId)
     .map((device) => {
-      counter += 1
+      counter += 1;
       return {
         id: device.deviceId,
         label: device.label || 'Device #' + counter,
-      }
-    })
+      };
+    });
 }
 
 function sdpFilterCodec(kind: string, codec: string, realSdp: string) {
@@ -97,11 +105,22 @@ function escapeRegExp(str: string) {
 
 export function WebRTCPage() {
   const [videoInputs, setVideoInputs] = useState<InputDevice[]>([])
+  const [availableGames, setAvailableGames] = useState<Game[]>([]) // Add the available games here
+  const [newGameLabel, setNewGameLabel] = useState<string>('');
   const [videoDevice, setVideoDevice] = useState('default')
+  const [selectedGame, setSelectedGame] = useState("1")
   const [videoRes, setVideoRes] = useState('default')
   const [videoTransform, setVideoTransform] = useState('none')
-  const [videoCodec, setVideoCodec] = useState('H264/90000')
+  const [videoCodec, setVideoCodec] = useState('VP8/90000')
   const [isSTUNEnabled, setIsSTUNEnabled] = useState(false)
+  const [isLogSTUNEnabled, setIsLogSTUNEnabled] = useState(false)
+  const [isLogEnabled, setIsLogEnabled] = useState(false)
+  const [isFpsEnabled, setIsFpsEnabled] = useState(true)
+  const [isVideoStreamProcessingEnabled, setIsVideoStreamProcessingEnabled] = useState(false)
+  const [isLocalAnnotationsEnabled, setIsLocalAnnotationsEnabled] = useState(true)
+  const [cropHeight, setCropHeight] = useState("100");
+
+  const [isDialogueEnabled, setIsDialogueEnabled] = useState(true)  
   const [canStartWebcam, setCanStartWebcam] = useState(true)
   const [canStartScreenshare, setCanStartScreenshare] = useState(true)
   const [canStop, setCanStop] = useState(false)
@@ -117,11 +136,43 @@ export function WebRTCPage() {
   const [outboundWidth, setOutboundWidth] = useState(0)
   const [outboundHeight, setOutboundHeight] = useState(0)
   const [inboundCodec, setInboundCodec] = useState('')
+  const dataChannelRef = useRef<RTCDataChannel | null>(null);
   const [inboundFps, setInboundFps] = useState('')
   const [inboundWidth, setInboundWidth] = useState(0)
   const [inboundHeight, setInboundHeight] = useState(0)
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const statsTimerRef = useRef<number | null>(null)
+  const handleNewGameLabelChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setNewGameLabel(event.target.value);
+  };
+  const handleCropHeightChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setCropHeight(event.target.value);
+  };
+  const [receivedMessages, setReceivedMessages] = useState<string[]>([]);
+  const [selectedLineId, setSelectedLineId] = useState<number | null>(null);
+  const [videoStream, setVideoStream] = useState(null);
+  const [annotations, setAnnotations] = useState({
+    annotations: [{ pos: [100, 50], text: "Foreign Text 1" }],
+    debug_bbox: [{ pos: [300, 100], text: "Debug Text 1" }],
+    translations: [{ pos: [200, 150], text: "Translation Text 1" }]
+  }); // Add state for annotations
+
+  
+
+
+  useEffect(() => {
+    const sampleGames: Game[] = [
+      { id: '1', label: 'Final Fantasy IV (Japan)' },
+      { id: '2', label: 'Final Fantasy II - SNES USA' },
+      { id: '3', label: 'Chrono Trigger' },
+      { id: '4', label: 'Secret of Mana' },
+      { id: '5', label: 'EarthBound' },
+      { id: '6', label: 'Super Mario RPG' },
+      { id: '999', label: 'New Game' },
+    ];
+    setAvailableGames(sampleGames);
+  }, []);
+
 
   function createPeerConnection() {
     const config: any = {
@@ -133,6 +184,7 @@ export function WebRTCPage() {
     }
 
     const pc = new RTCPeerConnection(config)
+
 
     setIceGatheringState(pc.iceGatheringState)
     setIceConnectionState(pc.iceConnectionState)
@@ -168,6 +220,46 @@ export function WebRTCPage() {
         videoRef.current.srcObject = evt.streams[0]
       }
     })
+
+    // Create data channel
+    const dataChannel = pc.createDataChannel('chat');
+    dataChannelRef.current = dataChannel;
+
+    dataChannel.addEventListener('open', () => {
+      console.log('Data channel is open');
+      dataChannel.send('ping Hello from the client!');
+    });
+
+    dataChannel.addEventListener('message', (event) => {
+      console.log(`Received message: ${event.data}`);
+      setReceivedMessages((prevMessages) => [...prevMessages, event.data]);
+
+      if (event.data.startsWith('selectedLineID')) {
+        const lineId = parseInt(event.data.split(' ')[1], 10);
+        setSelectedLineId(lineId);
+      } else if (event.data.startsWith('annotations')) {
+        // Split the data to get the JSON part after the prefix
+        const jsonData = event.data.split('annotations ')[1];
+        
+        // Parse the JSON data
+        let annotationsData;
+        try {
+          annotationsData = JSON.parse(jsonData);
+        } catch (error) {
+          console.error('Failed to parse annotations JSON:', error);
+          return;
+        }
+
+        // Do something with the parsed annotations
+        console.log('Parsed annotations:', annotationsData);
+        if (annotationsData == null) {
+            annotationsData = [];
+        }
+        setAnnotations(annotationsData);
+        // You can add your code here to handle the annotations        
+      }
+
+    });
 
     return pc
   }
@@ -222,6 +314,18 @@ export function WebRTCPage() {
       // but this still works in Chrome/Firefox for the time being
       offer.sdp = sdpFilterCodec('video', videoCodec, offer.sdp)
     }
+    let l_cropHeight = "0"
+    let serverProcess = "true"
+    if(!isVideoStreamProcessingEnabled) {
+      l_cropHeight = cropHeight
+    } else {
+      serverProcess = "false" //Tell the server don't return video feed if we process locally, we can just use the annotation events
+    }
+    let disable_dialog = "true"
+    if(isDialogueEnabled) {
+      disable_dialog = "false"
+    } 
+
 
     setOfferSDP(offer.sdp)
     const response = await fetch(`${__BASE_API_URL__}/offer`, {
@@ -229,6 +333,9 @@ export function WebRTCPage() {
         sdp: offer.sdp,
         type: offer.type,
         video_transform: videoTransform,
+        crop_height: l_cropHeight,
+        server_return_video: serverProcess,
+        disable_dialog: disable_dialog,
       }),
       headers: {
         'Content-Type': 'application/json',
@@ -320,6 +427,10 @@ export function WebRTCPage() {
       stream.getTracks().forEach((track) => {
         pcRef.current!.addTrack(track, stream)
       })
+
+//      if(isVideoStreamProcessingEnabled == true){
+//        setVideoStream(stream); // Set the video stream for the VideoProcessor component
+//      }
     } catch (err) {
       alert('Could not acquire media: ' + err)
     }
@@ -334,6 +445,10 @@ export function WebRTCPage() {
   const onStop = () => {
     const pc = pcRef.current!
     setCanStop(false)
+    // Implement the stop logic
+    if (videoStream) {
+      videoStream.getTracks().forEach(track => track.stop());
+    }
 
     if (statsTimerRef.current) {
       window.clearInterval(statsTimerRef.current)
@@ -374,6 +489,65 @@ export function WebRTCPage() {
     <div className="space-y-4 my-4">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
+          <CardTitle className="text-xl">Game</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+        <div className="flex items-center space-x-2">
+
+            <label
+              htmlFor="use-stun"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Game Name
+            </label>
+
+
+            <Select onValueChange={setSelectedGame}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Final Fintasy IV (Japan)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {availableGames.map((game) => (
+                    <SelectItem key={game.id} value={game.id}>
+                      {game.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+
+            <Checkbox id="use-dialogue" checked={isDialogueEnabled} onCheckedChange={(value) => setIsDialogueEnabled(!!value)} />
+              <label
+                htmlFor="use-dialogue"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Dialogue
+              </label>
+
+              {selectedGame === '999' && (
+                <div>
+                  <input
+                    type="text"
+                    value={newGameLabel}
+                    onChange={handleNewGameLabelChange}
+                    placeholder="Enter new game label"
+                  />
+                <label
+                  htmlFor="use-game-name"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Game Name
+                </label>
+
+                </div>
+              )}
+
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="max-w-4xl mx-auto">
+        <CardHeader>
           <CardTitle className="text-xl">Options</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -407,7 +581,7 @@ export function WebRTCPage() {
               </SelectContent>
             </Select>
             <Select onValueChange={setVideoTransform}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] hidden">
                 <SelectValue placeholder="No transform" />
               </SelectTrigger>
               <SelectContent>
@@ -425,14 +599,13 @@ export function WebRTCPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="default">Default codecs</SelectItem>
-                  <SelectItem value="VP8/90000">VP8</SelectItem>
+                <SelectItem value="default">Default codecs</SelectItem>
+                <SelectItem value="VP8/90000">VP8</SelectItem>
                   <SelectItem value="H264/90000">H264</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex items-center space-x-2">
             <Checkbox id="use-stun" checked={isSTUNEnabled} onCheckedChange={(value) => setIsSTUNEnabled(!!value)} />
             <label
@@ -441,10 +614,63 @@ export function WebRTCPage() {
             >
               Use STUN/TURN server
             </label>
+            <Checkbox id="use-log-stun" checked={isLogSTUNEnabled} onCheckedChange={(value) => setIsLogSTUNEnabled(!!value)} />
+            <label
+              htmlFor="use-log-stun"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Log STUN Info
+            </label>
+            <Checkbox id="use-log" checked={isLogEnabled} onCheckedChange={(value) => setIsLogEnabled(!!value)} />
+            <label
+              htmlFor="use-log"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Log Debug
+            </label>
+            <Checkbox id="use-fps" checked={isFpsEnabled} onCheckedChange={(value) => setIsFpsEnabled(!!value)} />
+            <label
+              htmlFor="use-fps"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              FPS
+            </label>
+            <Checkbox id="use-local-video" checked={isLocalAnnotationsEnabled} onCheckedChange={(value) => setIsLocalAnnotationsEnabled(!!value)} />
+            <label
+              htmlFor="use-local-annotations"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Local Annotations
+            </label>
+            <Checkbox id="use-local-video" checked={isVideoStreamProcessingEnabled} onCheckedChange={(value) => setIsVideoStreamProcessingEnabled(!!value)} />
+            <label
+              htmlFor="use-local-video"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              LocalVideoProcessing
+            </label>
+
+                <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={cropHeight}
+                  onChange={handleCropHeightChange}
+                  placeholder="100"
+                />
+              <label
+                htmlFor="crop-height"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Crop Height
+              </label>
+
+              </div>              
+
           </div>
         </CardContent>
       </Card>
       <Card className="max-w-fit mx-auto">
+      {isLogEnabled && (
         <CardHeader>
           <CardTitle className="text-xl">State</CardTitle>
           <CardDescription>
@@ -459,29 +685,9 @@ export function WebRTCPage() {
             </p>
           </CardDescription>
         </CardHeader>
+      )}
         <CardContent>
-          {isMediaVisible && (
-            <div className="flex space-x-8">
-              <div>
-                <h3 className="text-lg">Outbound Stats</h3>
-                <pre>
-                  {outboundCodec}@{outboundWidth}x{outboundHeight}
-                </pre>
-                <pre>{outboundFps} fps</pre>
-              </div>
-              <div>
-                <h3 className="text-lg">Inbound Stats</h3>
-                <pre>
-                  {inboundCodec}@{inboundWidth}x{inboundHeight}
-                </pre>
-                <pre>{inboundFps} fps</pre>
-              </div>
-            </div>
-          )}
-          <div id="media" style={{ display: isMediaVisible ? 'block' : 'none' }}>
-            <video id="video" ref={videoRef} autoPlay playsInline></video>
-          </div>
-          <CardFooter className="space-x-2 my-2 p-0">
+           <CardFooter className="space-x-2 my-2 p-0">
             <Button onClick={onStartWebcam} disabled={!canStartWebcam}>
               Start Webcam
             </Button>
@@ -492,9 +698,51 @@ export function WebRTCPage() {
               Stop
             </Button>
           </CardFooter>
+
+
+          {isMediaVisible && (
+            <div className="flex space-x-8">
+              <div>
+                {isLogEnabled && (
+                  <div>
+                  <h3 className="text-lg">Outbound Stats</h3>
+                  <pre>
+                    {outboundCodec}@{outboundWidth}x{outboundHeight}
+                  </pre>
+                </div>
+                )}
+                {isFpsEnabled && (
+                  <pre>{outboundFps} fps</pre>
+                )}
+              </div>
+              <div>
+              {isLogEnabled && (
+                  <div>
+                <h3 className="text-lg">Inbound Stats</h3>
+                <pre>
+                  {inboundCodec}@{inboundWidth}x{inboundHeight}
+                </pre>
+                </div>
+              )}
+                {isFpsEnabled && (
+                <pre>{inboundFps} fps</pre>
+                )}
+              </div>
+            </div>
+          )}
+          <div id="media" style={{ display: isMediaVisible ? 'block' : 'none' }}>
+              {isVideoStreamProcessingEnabled ? (
+                <VideoProcessor ref={videoRef} annotations={annotations} />
+              ) :
+              isLocalAnnotationsEnabled ? (
+                <VideoWithAnnotations ref={videoRef} annotationsData={annotations} />
+              ) : (
+                <video id="video" ref={videoRef} autoPlay playsInline></video>
+              )}
+            </div>
         </CardContent>
       </Card>
-      {(offerSDP || answerSDP) && (
+      {(offerSDP || answerSDP) && isLogSTUNEnabled && (
         <Card className="max-w-fit mx-auto">
           <CardHeader>
             <CardTitle className="text-xl">SDP</CardTitle>
@@ -508,6 +756,34 @@ export function WebRTCPage() {
           </CardContent>
         </Card>
       )}
+      { isDialogueEnabled && (
+        <Card className="max-w-fit mx-auto">
+          <CardHeader>
+            <CardTitle className="text-xl">Dialogue</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             <DialogueComponent selectedGame={selectedGame} selectedLineId={selectedLineId} setSelectedLineId={setSelectedLineId}   />
+          </CardContent>
+          </Card> 
+      )}
+      <Card className="max-w-fit mx-auto">
+        <CardHeader>
+          <CardTitle className="text-xl">Received Messages</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ul>
+            {receivedMessages.map((msg, index) => (
+              <li key={index}>{msg}</li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+      <div>
+        Site theme
+        <ModeToggle />
+      </div>
     </div>
-  )
+)
 }
+
+

@@ -26,12 +26,19 @@ from text_detector_fast import TextDetectorFast
 # from text_detector import TextDetector
 from user_video import UserVideo
 
+from .msq import MessageQueue
 from .models import db, User
 from .oauth import google_oauth_blueprint
 from .commands import create_db
 from process_frames import FrameProcessor
 
 from PIL import Image
+
+import copy
+import json
+import numpy as np
+
+
 
 WSGIEnviron = Dict[str, Any]
 
@@ -153,12 +160,27 @@ def signout():
 def protected():
     return f'Hello, {current_user.id}! You are logged in.'
 
+@app.route('/app/api/script.json')
+@app.route('/script.json')
+def script_json():
+    return flask.send_from_directory('../static', 'dialogues_jp_web.json')
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NumpyEncoder, self).default(obj)
 
 def generate_encoded():
     # Parameters for the video
     width, height = 640, 480
     fps = 24
-    frame_delay = 1 / fps  # Delay to achieve ~24 FPS
+    frame_delay = (1 / fps)*4  # Delay to achieve ~24 FPS
     
     # Setup memory buffer
     buffer = BytesIO()
@@ -231,30 +253,30 @@ def video():
 textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
 #TODO do one per user
 lang = "jp" #hard code all options for now
-disable_dialog = True
-disable_translation = False
 enable_cache = False
-translate = "jp,en" 
 debug_bbox = False
-user_video = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox)
-
 class VideoTransformTrack(MediaStreamTrack):
     """
     Custom WebRTC MediaStreamTrack that overlays a watermark onto each video frame.
     """
     kind = "video"
 
-    def __init__(self, track, watermark_data):
-        global textDetector, user_video
+    def __init__(self, track, watermark_data, message_queue=None,crop_height=None,send_annotations=True, disable_dialog=False, disable_translation=False, translate="jp,en"):
+        global textDetector
         super().__init__()
         self.track = track
         self.watermark_data = watermark_data
         self.alpha = watermark_data[:,:,3] / 255.0 # normalize the alpha channel
         self.inverse_alpha = 1 - self.alpha
         print("making user_video----")
-        self.user_video = user_video
+
+        self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
+        self.message_queue = message_queue
+        self.send_annotations = send_annotations
+        self.last_annotations = None
         print("making user_video done----")
-        
+        self.closest_match = []
+        self.disable_dialog = disable_dialog
 
     async def recv(self):
         try:
@@ -276,6 +298,25 @@ class VideoTransformTrack(MediaStreamTrack):
         new_frame = av.VideoFrame.from_image(self.user_video.print_annotations(frame_cropped))
         new_frame.pts = frame.pts
         new_frame.time_base = frame.time_base
+
+        if self.disable_dialog == False and self.closest_match is not None and self.user_video.closest_match != self.closest_match and self.user_video.closest_match != 0:
+            self.closest_match = self.user_video.closest_match
+            print(f"closest match(VTT): {self.closest_match}")
+            for element in self.closest_match:
+                message = f"selectedLineID {element}"
+                self.message_queue.send_message(message)
+
+        if self.send_annotations:
+            #TODO probably a more efficent way then comparing json dumps ;/
+            annotations = self.user_video.video_stream.current_annotations
+            json_annotations = json.dumps(annotations, sort_keys=True, cls=NumpyEncoder)
+            
+            if self.last_annotations != json_annotations:
+                self.last_annotations = json_annotations 
+                if self.message_queue != None:
+                    # this is normally what we print
+                    annotations_translations = self.user_video.dump_annotations()
+                    self.message_queue.send_message("annotations " + json.dumps(annotations_translations, sort_keys=True, cls=NumpyEncoder))
 
         return new_frame
 
@@ -299,8 +340,7 @@ class VideoTransformTrack(MediaStreamTrack):
 logger = logging.getLogger("pc")
 pcs = set() # current WebRTC  peer connections
 relay = MediaRelay()
-
-
+        
 async def handle_offer(params):
     offer = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
@@ -312,10 +352,26 @@ async def handle_offer(params):
         logger.info(pc_id + " " + msg, *args)
 
     recorder = MediaBlackhole()
+    message_queue = MessageQueue()
+
+
+    async def send_data(message_queue, data_channel):
+        print("starting send_data")
+        while True:
+            if data_channel == None:
+                print("datachannel is none")
+            else:
+                message = message_queue.receive_message()
+                if message:
+                    data_channel.send(message)
+            await asyncio.sleep(1)
 
     # shouldn't need this
     @pc.on("datachannel")
     def on_datachannel(channel):
+        log_info("Data channel is open")
+        asyncio.ensure_future(send_data(message_queue, channel))
+
         @channel.on("message")
         def on_message(message):
             if isinstance(message, str) and message.startswith("ping"):
@@ -335,7 +391,35 @@ async def handle_offer(params):
         if track.kind == 'video':
             log_info('Creating video transform track')
             watermark_data = load_watermark()
-            pc.addTrack(VideoTransformTrack(relay.subscribe(track), watermark_data))
+            crop_height = params.get("crop_height")
+            
+            if crop_height is not None:
+                try:
+                    crop_height = int(crop_height)
+                except ValueError:
+                    crop_height = None
+    
+            translate = params.get("translate")
+            if translate is None or translate == "":
+                translate = "jp,en"    
+            print(f"translate = {translate}")
+
+
+            disable_dialog  = False
+            pdisable_dialog = params.get("disable_dialog")
+            if pdisable_dialog == "true":
+                disable_dialog = True
+            print(f"disable_dialog = {disable_dialog}")
+
+
+            disable_translation  = False
+            pdisable_translation = params.get("disable_translation")
+            if pdisable_translation == "true":
+                disable_translation = True
+            print(f"disable_translation = {disable_translation}")
+
+            vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height, translate=translate, disable_dialog=disable_dialog, disable_translation=disable_translation)
+            pc.addTrack(vc)
             recorder.addTrack(relay.subscribe(track))
 
         @track.on("ended")
@@ -469,6 +553,23 @@ def mpegts():
 @app.route('/app/webrtc')
 def frontend():
     return flask.send_from_directory('../static/app', 'index.html')
+
+
+def format_filename(number):
+    # Format the number with leading zeros to ensure it's four digits
+    number_padded = f"{number:04d}"
+
+    # Create the file name using the padded number
+    file_name = f"ff4_v1_prologue_{number_padded}.mp3"
+
+    return file_name
+
+@app.route('/audio/<id>.mp3')
+def serve_audio(id):
+    lang = 'jp'
+    return flask.send_from_directory(f"../output_v2_{lang}_elevenlabs/", format_filename(int(id)))
+
+
 
 
 @app.route('/')

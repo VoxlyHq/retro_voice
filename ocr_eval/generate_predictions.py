@@ -89,7 +89,7 @@ def main():
     text_detector = TextDetectorFast("weeeee", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")  
     debug_bbox = False
 
-    Uservideo = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, text_detector, debug_bbox=False)
+    Uservideo = UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, text_detector, debug_bbox=False, crop_height=72)
 
     folder_path = Path(args.folder_path)
     results = []
