@@ -268,15 +268,20 @@ class FrameProcessor:
 
     def run_translation_vision(self, img, translate, detection_result):
         target_lang = translate.split(',')[1]
+        print(target_lang)
+        print(detection_result)
         
-        if detection_result:
+        if len(detection_result) >= 1:
+
 
             bboxes = [i[0] for i in detection_result]
+            print('bboxes', bboxes)
             # 4 points to 2 points
             # bboxes = [[i[0], i[2]] for i in bboxes]
             bbox_cropped_images = crop_image_by_bboxes(img, bboxes)
             dialogue_box_img = combine_images(bbox_cropped_images, 'vertical')
             # dialogue_box_img = image_crop_dialogue_box(image, detection_result)
+            print('dialogue_box_img')
             dialogue_box_image_bytes = self.ocr_processor.process_image(dialogue_box_img)
 
             str, result = self.translate_openai_vision(dialogue_box_image_bytes, target_lang)
@@ -286,7 +291,7 @@ class FrameProcessor:
 
             return str, result
         else:
-            '', {}
+            return '', {}
 
     def process_frame(self, frame_pil, frame_count, fps):
         """
@@ -321,6 +326,8 @@ class FrameProcessor:
                 highlighted_image, annotations = self.ocr_processor.run_det(img)
 
                 last_played = 0
+
+                print(annotations)
                 
                 translation, result = self.run_translation_vision(img, translate, annotations)
 
