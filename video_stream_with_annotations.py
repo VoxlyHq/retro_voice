@@ -142,7 +142,7 @@ class VideoStreamWithAnnotations:
                 translation_adjusted += word + ' '
         return translation_adjusted
     
-    def calculate_font_size(self, dialogue_box_width, dialogue_box_height, text, initial_font_size=35, font_path='../fonts/YuGothB.ttc'):
+    def calculate_font_size(self, dialogue_box_width, dialogue_box_height, text, initial_font_size=35):
         """
         Find the font size that can fit all text in the dialogue box
         """
@@ -151,7 +151,7 @@ class VideoStreamWithAnnotations:
 
         def fits(font_size):
             try:
-                font = ImageFont.truetype(font_path, font_size)
+                font = ImageFont.truetype(self.font_path, font_size)
                 # Calculate the line width to wrap text
                 line_width = dialogue_box_width // font_size
                 wrapped_text = textwrap.fill(text, width=line_width)
@@ -162,7 +162,7 @@ class VideoStreamWithAnnotations:
 
                 return text_width <= dialogue_box_width and text_height <= dialogue_box_height
             except IOError:
-                print(f"Error: Font file not found at {font_path}")
+                print(f"Error: Font file not found at {self.font_path}")
                 return False
             except Exception as e:
                 print(f"An error occurred: {e}")
