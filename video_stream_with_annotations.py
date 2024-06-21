@@ -142,7 +142,7 @@ class VideoStreamWithAnnotations:
                 translation_adjusted += word + ' '
         return translation_adjusted
     
-    def calculate_font_size(self, dialogue_box_width, dialogue_box_height, text, initial_font_size=35, font_path='../fonts/YuGothB.ttc'):
+    def calculate_font_size(self, dialogue_box_width, dialogue_box_height, text, initial_font_size=35):
         """
         Find the font size that can fit all text in the dialogue box
         """
@@ -151,7 +151,7 @@ class VideoStreamWithAnnotations:
 
         def fits(font_size):
             try:
-                font = ImageFont.truetype(font_path, font_size)
+                font = self.font.font_variant(size=font_size)
                 # Calculate the line width to wrap text
                 line_width = dialogue_box_width // font_size
                 wrapped_text = textwrap.fill(text, width=line_width)
@@ -162,7 +162,7 @@ class VideoStreamWithAnnotations:
 
                 return text_width <= dialogue_box_width and text_height <= dialogue_box_height
             except IOError:
-                print(f"Error: Font file not found at {font_path}")
+                print(f"Error: Font file not found at {self.font_path}")
                 return False
             except Exception as e:
                 print(f"An error occurred: {e}")
@@ -229,10 +229,10 @@ class VideoStreamWithAnnotations:
         dialogue_bbox_width = (pil_image.size[0] - pixel_offset) -  top_left[0]
         dialogue_bbox_height = 500 # approximately the height of bbox
         font_size = self.calculate_font_size(dialogue_bbox_width, dialogue_bbox_height, self.current_translations)
-        self.font = ImageFont.truetype(self.font_path, font_size)
+        font = self.font.font_variant(size=font_size)
 
-        adjusted_translation_text = self.adjust_translation_text(self.current_translations, draw, self.font, dialogue_bbox_width)
-        draw.text(text_position, adjusted_translation_text, font=self.font, fill=dialogue_text_color)
+        adjusted_translation_text = self.adjust_translation_text(self.current_translations, draw, font, dialogue_bbox_width)
+        draw.text(text_position, adjusted_translation_text, font=font, fill=dialogue_text_color)
         return image_with_blur
 
     def _draw_bboxes(self, draw, annotations):

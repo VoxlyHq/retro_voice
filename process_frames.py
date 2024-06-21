@@ -20,6 +20,7 @@ import imagehash
 from ocr import OCRProcessor
 from ocr_enum import OCREngine
 from utils import clean_vision_model_output
+from image_diff import crop_image_by_bboxes, combine_images
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
@@ -238,6 +239,18 @@ class FrameProcessor:
         print(f"{cleaned_string=}")
         return cleaned_string, result
     
+    def translate_openai_vision(self, image_bytes, target_lang):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        result = self.openai_api.call_translation_vision_api(image_bytes, target_lang)
+
+        content =  result['choices'][0]['message']['content'] 
+        
+        cleaned_string = clean_vision_model_output(content)
+        print(f"{cleaned_string=}")
+        return cleaned_string, result
+    
+    
     def run_translation(self, content, translate):
         start_time = time.time() # Record the start time
 
@@ -252,6 +265,29 @@ class FrameProcessor:
         print(f"Time taken: {end_time - start_time} seconds")
                   
         return str, result
+
+    def run_translation_vision(self, img, translate, detection_result):
+        target_lang = translate.split(',')[1]
+        
+        if len(detection_result) >= 1:
+
+
+            bboxes = [i[0] for i in detection_result]
+            # 4 points to 2 points
+            # bboxes = [[i[0], i[2]] for i in bboxes]
+            bbox_cropped_images = crop_image_by_bboxes(img, bboxes)
+            dialogue_box_img = combine_images(bbox_cropped_images, 'vertical')
+            # dialogue_box_img = image_crop_dialogue_box(image, detection_result)
+            dialogue_box_image_bytes = self.ocr_processor.process_image(dialogue_box_img)
+
+            str, result = self.translate_openai_vision(dialogue_box_image_bytes, target_lang)
+            print("---- Translated Text ----")
+            print(str)
+            print("-----------------------")
+
+            return str, result
+        else:
+            return '', {}
 
     def process_frame(self, frame_pil, frame_count, fps):
         """
@@ -275,6 +311,24 @@ class FrameProcessor:
         if hash_diff >= 7:
             # print("Images are more than 10% different. Proceed with OCR.")
             print("Images are more than 7 hamming distance. Proceed with OCR")
+
+            # crop the image to top half
+            img_crop = image_crop_in_top_half(img)
+
+            # if we are using gpt4o for OCR and translation, we can combine both into one api call.
+            translation = ""
+            if self.method == OCREngine.OCR_TRANSLATE:
+
+                highlighted_image, annotations = self.ocr_processor.run_det(img)
+
+                last_played = 0
+
+                translation, result = self.run_translation_vision(img, translate, annotations)
+
+                self.previous_image = img
+                self.last_annotations = annotations
+                
+                return last_played, self.previous_image, highlighted_image, annotations, translation
 
             # crop the image to top half
             img_crop = image_crop_in_top_half(img)

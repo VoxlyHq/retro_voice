@@ -42,6 +42,23 @@ class OpenAI_API:
         
         return response_json
     
+    def call_translation_vision_api(self, image, target_lang):
+
+        # content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
+        base64_image = base64.b64encode(image).decode('utf-8')
+        target_lang = self.lang_list.get(target_lang, target_lang)
+        self.set_translation_vision_payload(base64_image, target_lang)
+
+        payload = {
+            "model": self.translation_model,
+            "messages": self.translation_message,
+            "max_tokens": 300
+            }
+        
+        response_json = self.call_api(payload)
+        
+        return response_json
+    
     def call_vision_api(self, image_bytes):
         # Getting the base64 string
         base64_image = base64.b64encode(image_bytes).decode('utf-8')
@@ -72,6 +89,31 @@ class OpenAI_API:
                         {
                         "type": "text",
                         "text": f"Translate this sentence into {target_lang}.\n{content}"
+                        },
+                ]
+                }
+            ]
+    
+    def set_translation_vision_payload(self, content, target_lang):
+        self.translation_message = [
+                
+                {
+                                "role": "system",
+                                "content": "You are trained to translate or make assumption about text.Correct typos in the text. You are a helpful and great assistant designed to output text in this format. ``` ```. You are NOT to output any other unnecessary texts. ONLY ``` ```.If there is no translation, you MUST ONLY OUTPUT ``` ```."
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                        "type": "text",
+                        "text": f"Translate this sentence into {target_lang}.\n{content}"
+                        },
+
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{content}"
+                        }
                         },
                 ]
                 }

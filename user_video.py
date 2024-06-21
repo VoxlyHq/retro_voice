@@ -14,7 +14,7 @@ class UserVideo:
         self.last_frame_count = 0
         self.crop_height = 71
 
-        self.frameProcessor = FrameProcessor(lang, disable_dialog,method=OCREngine.OPENAI)
+        self.frameProcessor = FrameProcessor(lang, disable_dialog, method=OCREngine.OCR_TRANSLATE)
 
         self.video_stream = VideoStreamWithAnnotations(background_task=self.process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
                                                     show_fps=True, crop_y_coordinate=None, frameProcessor=self.frameProcessor, textDetector=textDetector, debug_bbox=debug_bbox) #TODO crop should be set later by user
