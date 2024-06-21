@@ -198,16 +198,16 @@ class TestDialogueOverlay(unittest.TestCase):
     def test_adjust_translation_text_basic(self):
         translation = "This is a test text to fit within the dialogue box."
         dialogue_box_width = 1016
-        adjusted_text = self.video_stream.adjust_translation_text(translation, self.draw, self.video_stream.font, dialogue_box_width)
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.video_stream.font, dialogue_box_width)
         self.assertIsInstance(adjusted_text, str)
         self.assertEqual("This is a test text to fit within the dialogue box. ", adjusted_text)
 
     def test_adjust_translation_text_long_text(self):
         translation = "This is a very long test text that should span multiple lines within the dialogue box to test the text adjustment functionality."
         dialogue_box_width = 1016
-        adjusted_text = self.video_stream.adjust_translation_text(translation, self.draw, self.video_stream.font, dialogue_box_width)
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.video_stream.font, dialogue_box_width)
         self.assertIsInstance(adjusted_text, str)
-        self.assertEqual('This is a very long test text that should span multiple lines within\nthe dialogue box to test the text adjustment functionality. '
+        self.assertEqual('This is a very long test text that should span multiple lines within the\ndialogue box to test the text adjustment functionality. '
 , adjusted_text)
         self.assertIn("\n", adjusted_text, "Long text should contain newline characters to fit within the dialogue box width.")
 
