@@ -130,7 +130,11 @@ class VideoStreamWithAnnotations:
         word_width = 0
         translation_adjusted = ""
         for word in translation.split():
-            word_width += draw.textlength(word + ' ', font=font)
+            text_bbox = font.getbbox(word)
+            #text_size = font.getsize(text)
+            text_width = text_bbox[2] - text_bbox[0]
+
+            word_width += text_width
             if word_width > dialogue_bbox_width:
                 word_width = 0
                 translation_adjusted += word + "\n"
@@ -194,6 +198,7 @@ class VideoStreamWithAnnotations:
                     largest_x = 0
                     largest_y = 0
                     for i in self.current_annotations:
+                        print(f"i[0] - #{i[0]}")
                         ann = i[0][2]
                         if ann[0] >= largest_x:
                             largest_x = ann[0]
@@ -307,7 +312,7 @@ class VideoStreamWithAnnotations:
         font_size = self.calculate_font_size(dialogue_bbox_width, dialogue_bbox_height, self.current_translations)
         font = self.font.font_variant(size=font_size)
 
-        adjusted_translation_text = self.adjust_translation_text(self.current_translations, draw, font, dialogue_bbox_width)
+        adjusted_translation_text = self.adjust_translation_text(self.current_translations, font, dialogue_bbox_width)
         draw.text(text_position, adjusted_translation_text, font=font, fill=dialogue_text_color)
         return image_with_blur
 
