@@ -199,7 +199,7 @@ class VideoStreamWithAnnotations:
                     largest_y = 0
                     for i in self.current_annotations:
                         print(f"i[0] - #{i[0]}")
-                        ann = i[0][2]
+                        ann = i[0][0] #TODO was ? i[0][2]
                         if ann[0] >= largest_x:
                             largest_x = ann[0]
                         if ann[1] >= largest_y:
