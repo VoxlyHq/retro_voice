@@ -254,8 +254,7 @@ textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_fine
 #TODO do one per user
 lang = "jp" #hard code all options for now
 enable_cache = False
-debug_bbox = True
-
+debug_bbox = False
 class VideoTransformTrack(MediaStreamTrack):
     """
     Custom WebRTC MediaStreamTrack that overlays a watermark onto each video frame.
