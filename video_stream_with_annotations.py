@@ -151,7 +151,7 @@ class VideoStreamWithAnnotations:
 
         def fits(font_size):
             try:
-                font = ImageFont.truetype(self.font_path, font_size)
+                font = self.font.font_variant(size=font_size)
                 # Calculate the line width to wrap text
                 line_width = dialogue_box_width // font_size
                 wrapped_text = textwrap.fill(text, width=line_width)
@@ -229,10 +229,10 @@ class VideoStreamWithAnnotations:
         dialogue_bbox_width = (pil_image.size[0] - pixel_offset) -  top_left[0]
         dialogue_bbox_height = 500 # approximately the height of bbox
         font_size = self.calculate_font_size(dialogue_bbox_width, dialogue_bbox_height, self.current_translations)
-        self.font = ImageFont.truetype(self.font_path, font_size)
+        font = self.font.font_variant(size=font_size)
 
-        adjusted_translation_text = self.adjust_translation_text(self.current_translations, draw, self.font, dialogue_bbox_width)
-        draw.text(text_position, adjusted_translation_text, font=self.font, fill=dialogue_text_color)
+        adjusted_translation_text = self.adjust_translation_text(self.current_translations, draw, font, dialogue_bbox_width)
+        draw.text(text_position, adjusted_translation_text, font=font, fill=dialogue_text_color)
         return image_with_blur
 
     def _draw_bboxes(self, draw, annotations):
