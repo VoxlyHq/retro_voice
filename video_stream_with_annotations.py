@@ -150,23 +150,16 @@ class VideoStreamWithAnnotations:
             return None
 
         def fits(font_size):
-            try:
-                font = self.font.font_variant(size=font_size)
-                # Calculate the line width to wrap text
-                line_width = dialogue_box_width // font_size
-                wrapped_text = textwrap.fill(text, width=line_width)
+            font = self.font.font_variant(size=font_size)
+            # Calculate the line width to wrap text
+            line_width = dialogue_box_width // font_size
+            wrapped_text = textwrap.fill(text, width=line_width)
 
-                bbox = draw.textbbox((0, 0), wrapped_text, font=font)
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
+            bbox = draw.textbbox((0, 0), wrapped_text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
 
-                return text_width <= dialogue_box_width and text_height <= dialogue_box_height
-            except IOError:
-                print(f"Error: Font file not found at {self.font_path}")
-                return False
-            except Exception as e:
-                print(f"An error occurred: {e}")
-                return False
+            return text_width <= dialogue_box_width and text_height <= dialogue_box_height
 
         draw = ImageDraw.Draw(Image.new('RGB', (dialogue_box_width, dialogue_box_height)))
         min_size, max_size = 1, initial_font_size
