@@ -128,6 +128,18 @@ class OCRProcessor:
                 return filtered_text, drawable_image, detection_result, response
             return '', None, [], {}
 
+    def det_and_highlight(self, image):
+        """
+        Perform Text Detection on the image and highlight bounding boxes.
+
+        :param image: The input PIL Image
+        :return: Tuple containing the annotated image, and Detection result
+        """
+        image_bytes = self.process_image(image)
+        result = self.det_easyocr(image_bytes)
+        drawable_image = self.draw_highlight(image_bytes, result)
+        return drawable_image, result
+
     def combine_overlapping_rectangles(self, rectangles):
         """
         Combine overlapping rectangles from a list of rectangles.
@@ -255,6 +267,21 @@ class OCRProcessor:
         logging.info(f"OCR found text: {output_text}")
         logging.info(f"Time taken: {end_time - start_time} seconds")
         return output_text, highlighted_image, annotations, reg_result
+
+    def run_det(self, image):
+        """
+        Perform Text Detection on the image, log the time taken, and return the results.
+
+        :param image: The input PIL Image
+        :return: Tuple containing the  annotated image and annotations 
+        """
+        start_time = time.time()
+        highlighted_image, annotations = self.det_and_highlight(image)
+        annotations = self.postprocess_bbox(annotations)
+        end_time = time.time()
+        logging.info(f"Detection found bboxes: {len(annotations)}")
+        logging.info(f"Time taken: {end_time - start_time} seconds")
+        return  highlighted_image, annotations
 
     def reformat(self,det_res):
         '''
