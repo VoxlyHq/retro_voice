@@ -186,74 +186,21 @@ class VideoStreamWithAnnotations:
         with self.frame_lock:
             if self.current_annotations != None and self.current_annotations != []:
                 if translate:
-                    top_left = self.current_annotations[0][0][0]
-                    # finding largest x and y coordinates for bottom_right
-                    largest_x = 0
-                    largest_y = 0
-                    for i in self.current_annotations:
-                        print(f"i[0] - #{i[0]}")
-                        ann = i[0][0] #TODO was ? i[0][2]
-                        if ann[0] >= largest_x:
-                            largest_x = ann[0]
-                        if ann[1] >= largest_y:
-                            largest_y = ann[1]
-                    bottom_right = [largest_x, largest_y]
-                    # Ensure the coordinates are in the correct format (floats or integers)
-                    top_left = tuple(map(int, top_left))
-                    bottom_right = tuple(map(int, bottom_right))
+                    text_position = self._calculate_annotation_bounds(self.current_annotations)
 
-                    # Annotate text. Adjust the position if necessary.
-                    #TODO send bg_color self.dialogue_bg_color = self.set_dialogue_bg_color(pil_image)
-                    #TODO send bg_color self.dialogue_text_color = self.set_dialogue_text_color(pil_image, self.dialogue_bg_color)
+                    translation_adjusted = self.adjust_translation_text(self.current_translations, self.font, self.dialogue_bbox_width)
 
-
-                    dialogue_bbox = [tuple(top_left), tuple(bottom_right)]
-                    #TODO send rectangle info draw.rectangle(dialogue_bbox, fill=self.dialogue_bg_color)
-
-                    dialogue_bbox_width = dialogue_bbox[1][0] - dialogue_bbox[0][0]
-                    translation_adjusted = self.adjust_translation_text(self.current_translations,
-                                                                        self.font, dialogue_bbox_width)
-
-                    text_position = (top_left[0], top_left[1])
-#                    draw.text(text_position, translation_adjusted, font=self.font, fill=self.dialogue_text_color)
+                    bottom_right = (text_position[0] + self.dialogue_bbox_width, text_position[1] + self.dialogue_bbox_height)
+                    dialogue_bbox = [text_position, bottom_right]
 
                     oanno = {"pos": text_position, "text": translation_adjusted, "bbox": dialogue_bbox}
                     out_annotations["translations"].append(oanno)
 
                 if self.debug_bbox is True:
-                    for (bbox, text, prob) in self.current_annotations:
-                        # Extracting min and max coordinates for the rectangle
-                        top_left = bbox[0]
-                        bottom_right = bbox[2]
-
-                        # Ensure the coordinates are in the correct format (floats or integers)
-                        top_left = tuple(map(int, top_left))
-                        bottom_right = tuple(map(int, bottom_right))
-
-                        # Annotate text. Adjust the position if necessary.
-                        #TODO rectangle info draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                        #draw.text(text_position, text, fill="yellow")
-                        oanno = {"pos": text_position, "text": text}
-                        out_annotations["debug_bbox"].append(oanno)
+                    out_annotations["debug_bbox"] = self._get_bboxes_and_text(self.current_annotations)
                 
                 if self.debug_bbox is False and translate is None:
-                    for (bbox, text, prob) in self.current_annotations:
-                        # Extracting min and max coordinates for the rectangle
-                        top_left = bbox[0]
-                        bottom_right = bbox[2]
-
-                        # Ensure the coordinates are in the correct format (floats or integers)
-                        top_left = tuple(map(int, top_left))
-                        bottom_right = tuple(map(int, bottom_right))
-
-                        # Annotate text. Adjust the position if necessary.
-                        #TODO rectangle info draw.rectangle([top_left, bottom_right], outline="red", width=2)
-                        text_position = (top_left[0], top_left[1] - 10)  # Adjusted position to draw text above the box
-                        #draw.text(text_position, text, fill="yellow")
-
-                        oanno = {"pos": text_position, "text": text}
-                        out_annotations["annotations"].append(oanno)
+                    out_annotations["annotations"] = self._get_bboxes_and_text(self.current_annotations)
 
         return out_annotations
 
@@ -300,13 +247,13 @@ class VideoStreamWithAnnotations:
 
         # calculate allowed width for translation text (top left x position to 100 pixel before edge of image)
         pixel_offset = pil_image.size[0] // 5
-        dialogue_bbox_width = (pil_image.size[0] - pixel_offset) -  top_left[0]
-        dialogue_bbox_height = 500 # approximately the height of bbox
-        font_size = self.calculate_font_size(dialogue_bbox_width, dialogue_bbox_height, self.current_translations)
-        font = self.font.font_variant(size=font_size)
+        self.dialogue_bbox_width = (pil_image.size[0] - pixel_offset) -  top_left[0]
+        self.dialogue_bbox_height = 500 # approximately the height of bbox
+        font_size = self.calculate_font_size(self.dialogue_bbox_width, self.dialogue_bbox_height, self.current_translations)
+        self.font = self.font.font_variant(size=font_size)
 
-        adjusted_translation_text = self.adjust_translation_text(self.current_translations, font, dialogue_bbox_width)
-        draw.text(text_position, adjusted_translation_text, font=font, fill=dialogue_text_color)
+        adjusted_translation_text = self.adjust_translation_text(self.current_translations, self.font, self.dialogue_bbox_width)
+        draw.text(text_position, adjusted_translation_text, font=self.font, fill=dialogue_text_color)
         return image_with_blur
 
     def _draw_bboxes(self, draw, annotations):
@@ -315,6 +262,14 @@ class VideoStreamWithAnnotations:
             draw.rectangle([top_left, bottom_right], outline="red", width=2)
             text_position = (top_left[0], top_left[1] - 10)
             draw.text(text_position, text, fill="yellow")
+    
+    def _get_bboxes_and_text(self, annotations):
+        bboxes_and_text = []
+        for bbox, text in annotations:
+            top_left, bottom_right = bbox
+            text_position = (top_left[0], top_left[1] - 10)
+            bboxes_and_text.append({"pos": text_position, "text": text})
+        return bboxes_and_text
 
     def print_annotations(self, frame):
         pil_image = self.print_annotations_pil(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
