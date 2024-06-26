@@ -175,59 +175,99 @@ class VideoStreamWithAnnotations:
 
         return result_size
 
-    #TODO merge this and print_annotations
-    def dump_annotations(self):
+    def process_annotations(self, pil_image=None):
         out_annotations = {
             "translations": [],
             "annotations": [],
             "debug_bbox": []
         }
-        translate = self.background_task_args["translate"]
-        with self.frame_lock:
-            if self.current_annotations != None and self.current_annotations != []:
-                if translate:
-                    text_position = self._calculate_annotation_bounds(self.current_annotations)
-
-                    translation_adjusted = self.adjust_translation_text(self.current_translations, self.font, self.dialogue_bbox_width)
-
-                    bottom_right = (text_position[0] + self.dialogue_bbox_width, text_position[1] + self.dialogue_bbox_height)
-                    dialogue_bbox = [text_position, bottom_right]
-
-                    oanno = {"pos": text_position, "text": translation_adjusted, "bbox": dialogue_bbox}
-                    out_annotations["translations"].append(oanno)
-
-                if self.debug_bbox is True:
-                    out_annotations["debug_bbox"] = self._get_bboxes_and_text(self.current_annotations)
-                
-                if self.debug_bbox is False and translate is None:
-                    out_annotations["annotations"] = self._get_bboxes_and_text(self.current_annotations)
-
-        return out_annotations
-
-    def print_annotations_pil(self, pil_image):
-        translate = self.background_task_args["translate"]
+        translate = self.background_task_args.get("translate")
+        
         with self.frame_lock:
             if self.current_annotations:
-                draw = ImageDraw.Draw(pil_image)
+                if pil_image is not None:
+                    draw = ImageDraw.Draw(pil_image)
 
                 if translate:
-                    top_left = self._calculate_annotation_bounds(self.current_annotations)
-                    pil_image = self._annotate_translation(pil_image, draw, top_left)
+
+                    text_position = self._calculate_annotation_bounds(self.current_annotations)
+
+                    if pil_image:
+                        dialogue_text_color = 'white'
+
+                        pil_image = self._generate_blurred_image(pil_image)
+                        draw = ImageDraw.Draw(pil_image)
+
+                        # calculate allowed width for translation text (top left x position to 100 pixel before edge of image)
+                        pixel_offset = pil_image.size[0] // 5
+                        self.dialogue_bbox_width = (pil_image.size[0] - pixel_offset) -  text_position[0]
+                        self.dialogue_bbox_height = 500 # approximately the height of bbox
+                        font_size = self.calculate_font_size(self.dialogue_bbox_width, self.dialogue_bbox_height, self.current_translations)
+                        self.font = self.font.font_variant(size=font_size)
+
+                        translation_adjusted = self.adjust_translation_text(self.current_translations, self.font, self.dialogue_bbox_width)
+
+                        bottom_right = (text_position[0] + self.dialogue_bbox_width, text_position[1] + self.dialogue_bbox_height)
+                        dialogue_bbox = [text_position, bottom_right]
+                    
+                        self._annotate_translation(draw, text_position, translation_adjusted, dialogue_text_color)
+                    
+                    else:
+
+                        translation_adjusted = self.adjust_translation_text(self.current_translations, self.font, self.dialogue_bbox_width)
+                        
+                        bottom_right = (text_position[0] + self.dialogue_bbox_width, text_position[1] + self.dialogue_bbox_height)
+                        dialogue_bbox = [text_position, bottom_right]
+                        
+                    oanno = {"pos": text_position, "text": translation_adjusted, "bbox": dialogue_bbox}
+                    out_annotations["translations"].append(oanno)
+                    
+                    
 
                 if self.debug_bbox:
-                    draw = ImageDraw.Draw(pil_image)
-                    self._draw_bboxes(draw, self.current_annotations)
+                    out_annotations["debug_bbox"] = self._get_bboxes_and_text(self.current_annotations)
+                    if pil_image:
+                        self._draw_bboxes(draw, self.current_annotations)
+                
+                if not translate and not self.debug_bbox:
+                    out_annotations["annotations"] = self._get_bboxes_and_text(self.current_annotations)
+                    if pil_image:
+                        self._draw_bboxes(draw, self.current_annotations)
 
-                if not bool(translate) and not self.debug_bbox:
-                    self._draw_bboxes(draw, self.current_annotations)
+        if pil_image:
+            return out_annotations, pil_image
+        else:
+            return out_annotations, None
 
-        return pil_image
+
+    #TODO merge this and print_annotations
+    def dump_annotations(self):
+        return self.process_annotations()[0]
+
+    # def print_annotations_pil(self, pil_image):
+    #     translate = self.background_task_args["translate"]
+    #     with self.frame_lock:
+    #         if self.current_annotations:
+    #             draw = ImageDraw.Draw(pil_image)
+
+    #             if translate:
+    #                 top_left = self._calculate_annotation_bounds(self.current_annotations)
+    #                 pil_image = self._annotate_translation(pil_image, draw, top_left)
+
+    #             if self.debug_bbox:
+    #                 draw = ImageDraw.Draw(pil_image)
+    #                 self._draw_bboxes(draw, self.current_annotations)
+
+    #             if not bool(translate) and not self.debug_bbox:
+    #                 self._draw_bboxes(draw, self.current_annotations)
+
+    #     return pil_image
     
     def _calculate_annotation_bounds(self, annotations):
         top_left = annotations[0][0][0]
         return tuple(map(int, top_left))
 
-    def _annotate_translation(self, pil_image, draw, top_left):
+    def _generate_blurred_image(self, pil_image):
 
         # Blurring the background text
         blurred_image = pil_image.filter(ImageFilter.GaussianBlur(10))
@@ -240,21 +280,12 @@ class VideoStreamWithAnnotations:
         
         image_with_blur = Image.composite(blurred_image, pil_image, mask)
 
-        # Add translation text 
-        dialogue_text_color = "white"
-        draw = ImageDraw.Draw(image_with_blur)
-        text_position = top_left
-
-        # calculate allowed width for translation text (top left x position to 100 pixel before edge of image)
-        pixel_offset = pil_image.size[0] // 5
-        self.dialogue_bbox_width = (pil_image.size[0] - pixel_offset) -  top_left[0]
-        self.dialogue_bbox_height = 500 # approximately the height of bbox
-        font_size = self.calculate_font_size(self.dialogue_bbox_width, self.dialogue_bbox_height, self.current_translations)
-        self.font = self.font.font_variant(size=font_size)
-
-        adjusted_translation_text = self.adjust_translation_text(self.current_translations, self.font, self.dialogue_bbox_width)
-        draw.text(text_position, adjusted_translation_text, font=self.font, fill=dialogue_text_color)
         return image_with_blur
+
+
+    def _annotate_translation(self, draw, text_position, adjusted_translation_text, dialogue_text_color):
+
+        draw.text(text_position, adjusted_translation_text, font=self.font, fill=dialogue_text_color)
 
     def _draw_bboxes(self, draw, annotations):
         for bbox, text in annotations:
@@ -272,8 +303,8 @@ class VideoStreamWithAnnotations:
         return bboxes_and_text
 
     def print_annotations(self, frame):
-        pil_image = self.print_annotations_pil(Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)))
-        return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+        _, annotated_frame = self.process_annotations(frame)
+        return annotated_frame
 
 
     def run_video(self, path):

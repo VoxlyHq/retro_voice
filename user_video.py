@@ -53,7 +53,7 @@ class UserVideo:
 #        processed_latest_inboard_frame.save(img_byte_arr, format='JPEG')
 
     def print_annotations(self, frame):
-        return self.video_stream.print_annotations_pil(frame) #TODO have translate and cache options
+        return self.video_stream.print_annotations(frame) #TODO have translate and cache options
     
     def dump_annotations(self):
         return self.video_stream.dump_annotations()
