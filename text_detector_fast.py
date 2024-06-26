@@ -11,7 +11,7 @@ from tqdm import tqdm
 import fast
 
 class TextDetectorFast:
-    def __init__(self, model_path, min_confidence=0.5, width=240, height=240, padding=0.0, checkpoint="checkpoints/checkpoint_31ep.pth.tar"):
+    def __init__(self, model_path, min_confidence=0.5, width=240, height=240, padding=0.0, checkpoint="checkpoints/checkpoint_60ep.pth.tar"):
         self.model_path = model_path
         self.min_confidence = min_confidence
         self.width = width
@@ -69,6 +69,7 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--image_dir", type=str, default='eval_data/images', help="paths to input images")
     ap.add_argument("-m", "--pretrained_model", type=str, default="pretrained/fast_tiny_ic15_736_finetune_ic17mlt.pth", help="path to input pretrained model")
+    ap.add_argument("-cp", "--checkpoint", type=str, default="checkpoints/checkpoint_60ep.pth.tar", help="path to checkpoint model")
     ap.add_argument("-c", "--min-confidence", type=float, default=0.5, help="minimum probability required to inspect a region")
     ap.add_argument("-w", "--width", type=int, default=320, help="nearest multiple of 32 for resized width")
     ap.add_argument("-e", "--height", type=int, default=320, help="nearest multiple of 32 for resized height")
@@ -79,7 +80,9 @@ if __name__ == "__main__":
     total_duration = 0
 
     pretrained_model = args["pretrained_model"]
-    assert Path(pretrained_model).exists(), 'Please download the pretrained model from here. [https://github.com/czczup/FAST/blob/main/config/fast/ic15/fast_tiny_ic15_736_finetune_ic17mlt.py]'
+    checkpoint_model = args["checkpoint"]
+    assert Path(pretrained_model).exists(), 'Please download the pretrained model from here. [https://github.com/czczup/FAST/releases/download/release/fast_tiny_ic15_736_finetune_ic17mlt.pth]'
+    assert Path(checkpoint_model).exists(), 'Please download the checkpoint model from here. [https://drive.google.com/file/d/18J2h1TBqqgli7QkH2ccmKq58IMpYSFHR/view?usp=drive_link]'
 
     image_dir = Path(args["image_dir"])
     image_paths = [i for i in image_dir.iterdir() if i.is_file() and i.suffix == '.jpg']
@@ -89,7 +92,7 @@ if __name__ == "__main__":
     
     abs_start_time = time.time()
 
-    detector = TextDetectorFast(pretrained_model, args["min_confidence"], args["width"], args["height"], args["padding"])
+    detector = TextDetectorFast(pretrained_model, args["min_confidence"], args["width"], args["height"], args["padding"], checkpoint=checkpoint_model)
 
     for image_path in tqdm(image_paths):
         image = Image.open(image_path)
