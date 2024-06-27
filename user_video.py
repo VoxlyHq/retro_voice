@@ -3,7 +3,7 @@ import time
 from process_frames import FrameProcessor
 from video_stream_with_annotations import VideoStreamWithAnnotations
 from PIL import Image
-from ocr_enum import OCREngine
+from ocr_enum import OCREngine, DETEngine
 
 dummy_image = Image.new('RGB', (100, 100), (255, 255, 255))
 
@@ -15,7 +15,7 @@ class UserVideo:
         self.crop_height = crop_height
         self.closest_match = [] #this can be a list of items
 
-        self.frameProcessor = FrameProcessor(lang, disable_dialog, method=OCREngine.EASYOCR)
+        self.frameProcessor = FrameProcessor(lang, disable_dialog, method=OCREngine.OPENAI, detection_method=DETEngine.FAST)
 
         self.video_stream = VideoStreamWithAnnotations(background_task=self.process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
                                                     show_fps=True, crop_y_coordinate=crop_height, frameProcessor=self.frameProcessor, textDetector=textDetector, debug_bbox=debug_bbox) #TODO crop should be set later by user
