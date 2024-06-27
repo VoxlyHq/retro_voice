@@ -240,28 +240,8 @@ class VideoStreamWithAnnotations:
             return out_annotations, None
 
 
-    #TODO merge this and print_annotations
     def dump_annotations(self):
         return self.process_annotations()[0]
-
-    # def print_annotations_pil(self, pil_image):
-    #     translate = self.background_task_args["translate"]
-    #     with self.frame_lock:
-    #         if self.current_annotations:
-    #             draw = ImageDraw.Draw(pil_image)
-
-    #             if translate:
-    #                 top_left = self._calculate_annotation_bounds(self.current_annotations)
-    #                 pil_image = self._annotate_translation(pil_image, draw, top_left)
-
-    #             if self.debug_bbox:
-    #                 draw = ImageDraw.Draw(pil_image)
-    #                 self._draw_bboxes(draw, self.current_annotations)
-
-    #             if not bool(translate) and not self.debug_bbox:
-    #                 self._draw_bboxes(draw, self.current_annotations)
-
-    #     return pil_image
     
     def _calculate_annotation_bounds(self, annotations):
         top_left = annotations[0][0][0]
