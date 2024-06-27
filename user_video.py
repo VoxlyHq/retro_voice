@@ -15,7 +15,7 @@ class UserVideo:
         self.crop_height = crop_height
         self.closest_match = [] #this can be a list of items
 
-        self.frameProcessor = FrameProcessor(lang, disable_dialog, method=OCREngine.OCR_TRANSLATE)
+        self.frameProcessor = FrameProcessor(lang, disable_dialog, method=OCREngine.EASYOCR)
 
         self.video_stream = VideoStreamWithAnnotations(background_task=self.process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
                                                     show_fps=True, crop_y_coordinate=crop_height, frameProcessor=self.frameProcessor, textDetector=textDetector, debug_bbox=debug_bbox) #TODO crop should be set later by user
