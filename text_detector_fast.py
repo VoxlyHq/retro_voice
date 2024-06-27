@@ -18,29 +18,8 @@ class TextDetectorFast:
         self.height = height
         self.padding = padding
 
-        self.graph = self.load_model()
         self.fast = fast.FAST(config="test_detector_configs/fast_tiny_ic15_736_finetune_ic17mlt.py", checkpoint=checkpoint,ema=True)
         # self.fast = fast.FAST(config="test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py", checkpoint=checkpoint,ema=True)
-
-    def load_image(self, image_path):
-        image = Image.open(image_path).convert('RGB')
-        orig = np.array(image)
-        origH, origW = orig.shape[:2]
-
-        rW, rH = origW / float(self.width), origH / float(self.height)
-        image = image.resize((self.width, self.height))
-        image = np.array(image)
-        return image, orig, rW, rH, origW, origH
-
-    def preprocess_image(self, image):
-        image = image.convert('RGB')
-        
-        image = image.resize((self.width, self.height))
-        image = np.array(image)
-        return image
-
-    def load_model(self):
-        return None
 
     def process_single_image(self, image):
         
@@ -51,9 +30,6 @@ class TextDetectorFast:
     
     def has_text(self, image):
         return self.fast.has_text(image)
-
-    def close_session(self):
-        None
 
 def convert_to_top_left_bottom_right(coordinate_sets):
     converted_sets = []
@@ -111,7 +87,6 @@ if __name__ == "__main__":
         image.save(output)
 
     print(f"Output images are saved in {output_dir}")
-    detector.close_session()
 
     average_duration = total_duration / 100
     print(f"Average duration: {average_duration:.4f} seconds")
