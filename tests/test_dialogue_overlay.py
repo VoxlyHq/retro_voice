@@ -45,7 +45,7 @@ class TestDialogueOverlay(unittest.TestCase):
     def setUp(self):
         self.ocr_processor = OCRProcessor(language='en', method=OCREngine.EASYOCR)
         self.video_stream = VideoStreamWithAnnotations(background_task=None, background_task_args={'translate' : ''}, show_fps=False,
-                                                       frameProcessor=FrameProcessor('en'), textDetector=TextDetectorFast('pretrained/fast_base_tt_640_finetune_ic17mlt.pth'))
+                                                       frameProcessor=FrameProcessor('en'), textDetector=TextDetectorFast('pretrained/fast_tiny_ic15_736_finetune_ic17mlt.pth',checkpoint='checkpoints/checkpoint_60ep.pth.tar'))
         self.test_data_dir = Path('tests/unit_test_data')
         self.test_bbox_image = Image.open(self.test_data_dir / 'overlap_bbox.jpg')
         self.draw = ImageDraw.Draw(self.test_bbox_image)
@@ -198,16 +198,16 @@ class TestDialogueOverlay(unittest.TestCase):
     def test_adjust_translation_text_basic(self):
         translation = "This is a test text to fit within the dialogue box."
         dialogue_box_width = 1016
-        adjusted_text = self.video_stream.adjust_translation_text(translation, self.draw, self.video_stream.font, dialogue_box_width)
+        adjusted_text = self.video_stream.adjust_translation_text(translation,  self.video_stream.font, dialogue_box_width)
         self.assertIsInstance(adjusted_text, str)
         self.assertEqual("This is a test text to fit within the dialogue box. ", adjusted_text)
 
     def test_adjust_translation_text_long_text(self):
         translation = "This is a very long test text that should span multiple lines within the dialogue box to test the text adjustment functionality."
         dialogue_box_width = 1016
-        adjusted_text = self.video_stream.adjust_translation_text(translation, self.draw, self.video_stream.font, dialogue_box_width)
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.video_stream.font, dialogue_box_width)
         self.assertIsInstance(adjusted_text, str)
-        self.assertEqual('This is a very long test text that should span multiple lines within\nthe dialogue box to test the text adjustment functionality. '
+        self.assertEqual('This is a very long test text that should span multiple lines within the\ndialogue box to test the text adjustment functionality. '
 , adjusted_text)
         self.assertIn("\n", adjusted_text, "Long text should contain newline characters to fit within the dialogue box width.")
 
