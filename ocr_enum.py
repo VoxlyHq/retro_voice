@@ -12,3 +12,14 @@ class OCREngine(Enum):
             return OCREngine[label.upper()]
         else:
             raise argparse.ArgumentTypeError(f"Invalid value for OCR method: {label}")
+        
+class DETEngine(Enum):
+    EASYOCR = 1
+    FAST = 2
+
+    @staticmethod
+    def from_str(label):
+        if label.lower() in ('easyocr', 'fast'):
+            return OCREngine[label.upper()]
+        else:
+            raise argparse.ArgumentTypeError(f"Invalid value for OCR method: {label}")
