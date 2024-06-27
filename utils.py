@@ -10,7 +10,8 @@ if os_name == 'Windows':
 elif os_name == 'Darwin':
     font_path = "/System/Library/Fonts/ヒラギノ丸ゴ ProN W4.ttc"
 else:
-    raise Exception(f"Unsupported OS: {os_name}")
+    #linux? maybe make this explicit
+    self.font_path = "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc" #sudo apt-get install fonts-noto-cjk
 
 def draw_highlight(image_bytes, result, outline_color="red", text_color="yellow", outline_width=2):
     """
