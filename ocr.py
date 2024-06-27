@@ -9,6 +9,7 @@ from ocr_enum import OCREngine, DETEngine
 import re
 from utils import clean_vision_model_output
 from text_detector_fast import TextDetectorFast, convert_to_four_points_format
+from claude_api import Claude_API, extract_between_tags
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +30,7 @@ class OCRProcessor:
             self.reader = easyocr.Reader(['en']) if language == 'en' else easyocr.Reader(['en', 'ja'])
         
         self.openai_api = OpenAI_API()
+        self.claude_api = Claude_API()
 
         if self.detection_method == DETEngine.FAST:
             self.fast = TextDetectorFast("pretrained/fast_tiny_ic15_736_finetune_ic17mlt.pth")
@@ -112,6 +114,10 @@ class OCRProcessor:
     def ocr_openai(self, image_bytes):
         response = self.openai_api.call_vision_api(image_bytes)
         return response
+    
+    def ocr_claude(self, image_bytes):
+        response = self.claude_api.call_vision_api(image_bytes)
+        return response
 
 
     def ocr_and_highlight(self, image):
@@ -128,27 +134,33 @@ class OCRProcessor:
             drawable_image = self.draw_highlight(image_bytes, filtered_result)
             filtered_text = ' '.join([text for _, text, _ in filtered_result])
             return filtered_text, drawable_image, filtered_result, None
-        elif self.method == OCREngine.OPENAI:
+        else:
             if self.detection_method == DETEngine.FAST:
                 detection_result = self.det_fast(image)
             else:
                 detection_result = self.det_easyocr(image_bytes)
             if detection_result != []:
-                bboxes = [i[0] for i in detection_result]
-                # 4 points to 2 points
-                bboxes = [[i[0], i[2]] for i in bboxes]
-                bbox_cropped_images = crop_image_by_bboxes(image, bboxes)
-                dialogue_box_img = combine_images(bbox_cropped_images, 'horizontal')
-                # dialogue_box_img = image_crop_dialogue_box(image, detection_result)
-                dialogue_box_image_bytes = self.process_image(dialogue_box_img)
+                # bboxes = [i[0] for i in detection_result]
+                # # 4 points to 2 points
+                # bboxes = [[i[0], i[2]] for i in bboxes]
+                # bbox_cropped_images = crop_image_by_bboxes(image, bboxes)
+                # dialogue_box_img = combine_images(bbox_cropped_images, 'horizontal')
+                # # dialogue_box_img = image_crop_dialogue_box(image, detection_result)
+                # dialogue_box_image_bytes = self.process_image(dialogue_box_img)
                 drawable_image = self.draw_highlight(image_bytes, detection_result)
-                response = self.ocr_openai(dialogue_box_image_bytes)
-                if response.get('choices', None) is None:
-                    reg_result = ''
-                else:
-                    reg_result = response['choices'][0]['message']['content']
-                # TODO : experiment with prompts to get better results
-                filtered_text = clean_vision_model_output(reg_result)
+                if self.method == OCREngine.OPENAI:
+                    image_bytes = self.process_image(image)
+                    response = self.ocr_openai(image_bytes)
+                    if response.get('choices', None) is None:
+                        reg_result = ''
+                    else:
+                        reg_result = response['choices'][0]['message']['content']
+                    # TODO : experiment with prompts to get better results
+                    filtered_text = clean_vision_model_output(reg_result)
+                if self.method == OCREngine.CLAUDE:
+                    image_bytes = self.claude_api.preprocess(image)
+                    response = self.ocr_claude(image_bytes)
+                    filtered_text = ' '.join(extract_between_tags('original_text', response))
                 return filtered_text, drawable_image, detection_result, response
             return '', None, [], {}
 
@@ -338,12 +350,12 @@ class OCRProcessor:
 
 
 if __name__ == "__main__":
-    ocr_processor = OCRProcessor()
+    ocr_processor = OCRProcessor('en', method=OCREngine.CLAUDE, detection_method=DETEngine.FAST)
     
-    image_path = 'unit_test_data/windows_eng_ff4.png'
+    image_path = 'tests/unit_test_data/windows_eng_ff4.png'
     image = Image.open(image_path).convert('RGB')
-    output_text, highlighted_image, annotations = ocr_processor.ocr_and_highlight(image)
-    highlighted_image.save("unit_test_data/highlighted_windows_eng_ff4.jpg")
+    output_text, highlighted_image, annotations,response = ocr_processor.ocr_and_highlight(image)
+    highlighted_image.save("tests/unit_test_data/highlighted_windows_eng_ff4.jpg")
     print(f'{output_text=}')
     print(f'{annotations=}')
-    print('Output Image is saved as unit_test_data/highlighted_windows_eng_ff4.png')
+    print('Output Image is saved as unit_test_data/highlighted_windows_eng_ff4.jpg')
