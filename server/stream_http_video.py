@@ -231,6 +231,12 @@ class VideoTransformTrack(MediaStreamTrack):
         try:
             with sentry_sdk.start_transaction(op="task", name="Process Frame"):
                 frame = await self.track.recv()
+
+                # Consume all available frames.
+                # If we don't do this, we'll bloat indefinitely.
+                while not self.track._queue.empty():
+                    frame = await self.track.recv()
+
                 #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
                 return self.process_frame(frame)
         except Exception as e:
