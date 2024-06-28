@@ -21,6 +21,8 @@ from flask import Flask
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
+import sentry_sdk
+from flask import Flask
 
 from text_detector_fast import TextDetectorFast
 # from text_detector import TextDetector
@@ -59,9 +61,22 @@ class Config(object):
     # OAuth2 client secret from Google Console
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") #or 'http'
+    ENVIRONMENT = os.environ.get("APP_ENVIRONMENT") or 'development'
 
 
 ROOT = os.path.dirname(__file__)
+
+sentry_sdk.init(
+    dsn="https://fb14d5708fc98389a3c3df8358eacbc3@o4505867422138368.ingest.us.sentry.io/4507509190754304",
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+    environment=Config.ENVIRONMENT,
+)
 
 
 app = Flask(__name__,
@@ -106,6 +121,10 @@ def test():
     
     return response
 
+@app.route("/error")
+def hello_world():
+    1/0  # raises an error
+    return "<p>Hello, World!</p>"
 
 @app.route('/signup', methods=['POST'])
 def signup():
@@ -176,81 +195,10 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return super(NumpyEncoder, self).default(obj)
 
-def generate_encoded():
-    # Parameters for the video
-    width, height = 640, 480
-    fps = 24
-    frame_delay = (1 / fps)*4  # Delay to achieve ~24 FPS
-    
-    # Setup memory buffer
-    buffer = BytesIO()
-
-    # Create a video encoder
-    codec_name = 'libx264'  # H.264 codec
-    output = av.open(buffer, mode='w', format='mpegts')
-    stream = output.add_stream(codec_name, rate=fps)
-    stream.width = width
-    stream.height = height
-    stream.pix_fmt = 'yuv420p'
-    
-    while True: # Infinite loop for continuous streaming
-        for angle in range(0, 360, 15):
-            # Create a black image
-            image = np.zeros((height, width, 3), dtype=np.uint8)
-            
-            # Define the square's properties
-            center = (width // 2, height // 2)
-            size = min(width, height) // 4
-            rect_pts = np.array([
-                [-size, -size],
-                [size, -size],
-                [size, size],
-                [-size, size]
-            ], dtype=np.float32)
-            
-            # Rotate the square
-            M = cv2.getRotationMatrix2D(center, angle, 1.0)
-            rotated_pts = cv2.transform(np.array([rect_pts]), M)[0].astype(np.int32)
-            
-            # Draw the rotated square
-            cv2.fillPoly(image, [rotated_pts], (0, 255, 0))
-            
-            # Create frame from the image
-            frame = av.VideoFrame.from_ndarray(image, format='bgr24')
-            for packet in stream.encode(frame):
-                output.mux(packet)
-                buffer.seek(0)
-                chunk = buffer.read()
-                buffer.seek(0)
-                buffer.truncate()
-                yield chunk
-
-        time.sleep(frame_delay)  # Wait to control the frame rate
-
-    # NOTE: this never actually runs due to the infinite loop above
-    # Finalize video stream
-    for packet in stream.encode(None):
-        output.mux(packet)
-        buffer.seek(0)
-        chunk = buffer.read()
-        buffer.seek(0)
-        buffer.truncate()
-        if chunk:
-            yield chunk
-    
-    # Close everything
-    output.close()
-    buffer.close()
-
-
-@app.route('/video')
-def video():
-    return generate_encoded(), 200, { 'mimetype': 'video/mp2t' }
-
 
 #TODO do a better then this, i just want this loaded at boot, but it will slow down if you dont need it lol
 # textDetector = TextDetector('frozen_east_text_detection.pb')
-textDetector = TextDetectorFast("", checkpoint="checkpoints/checkpoint_60ep.pth.tar")    
+textDetector = TextDetectorFast("")
 #TODO do one per user
 lang = "jp" #hard code all options for now
 enable_cache = False
@@ -270,7 +218,8 @@ class VideoTransformTrack(MediaStreamTrack):
         self.inverse_alpha = 1 - self.alpha
         print("making user_video----")
 
-        self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
+        with sentry_sdk.start_transaction(op="task", name="setup user video"):
+            self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
         self.message_queue = message_queue
         self.send_annotations = send_annotations
         self.last_annotations = None
@@ -280,24 +229,28 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
         try:
-            frame = await self.track.recv()
-            #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
-            return self.process_frame(frame)
+            with sentry_sdk.start_transaction(op="task", name="Process Frame"):
+                frame = await self.track.recv()
+                #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
+                return self.process_frame(frame)
         except Exception as e:
             print(f"exception - {e}")
             logging.error("An error occurred: %s", e)
             raise
 
-
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
 
-        frame_cropped = self.user_video.preprocess_frame(frame_img)
-        self.user_video.async_process_frame(frame_cropped.copy())
+        with sentry_sdk.start_span(description='preprocess_frame'):
+            frame_cropped = self.user_video.preprocess_frame(frame_img)
+        with sentry_sdk.start_span(description='async_process_frame'):
+            self.user_video.async_process_frame(frame_cropped.copy())
 
-        new_frame = av.VideoFrame.from_image(self.user_video.print_annotations(frame_cropped))
-        new_frame.pts = frame.pts
-        new_frame.time_base = frame.time_base
+        new_frame = None
+        with sentry_sdk.start_span(description='print_annotation'):
+            new_frame = av.VideoFrame.from_image(self.user_video.print_annotations(frame_cropped))
+            new_frame.pts = frame.pts
+            new_frame.time_base = frame.time_base
 
         if self.disable_dialog == False and self.closest_match is not None and self.user_video.closest_match != self.closest_match and self.user_video.closest_match != 0:
             self.closest_match = self.user_video.closest_match
@@ -315,8 +268,9 @@ class VideoTransformTrack(MediaStreamTrack):
                 self.last_annotations = json_annotations 
                 if self.message_queue != None:
                     # this is normally what we print
-                    annotations_translations = self.user_video.dump_annotations()
-                    self.message_queue.send_message("annotations " + json.dumps(annotations_translations, sort_keys=True, cls=NumpyEncoder))
+                    with sentry_sdk.start_span(description='dump_annotations'):
+                        annotations_translations = self.user_video.dump_annotations()
+                        self.message_queue.send_message("annotations " + json.dumps(annotations_translations, sort_keys=True, cls=NumpyEncoder))
 
         return new_frame
 
@@ -418,9 +372,10 @@ async def handle_offer(params):
                 disable_translation = True
             print(f"disable_translation = {disable_translation}")
 
-            vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height, translate=translate, disable_dialog=disable_dialog, disable_translation=disable_translation)
-            pc.addTrack(vc)
-            recorder.addTrack(relay.subscribe(track))
+            with sentry_sdk.start_transaction(op="task", name="Start Video stream"):
+                vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height, translate=translate, disable_dialog=disable_dialog, disable_translation=disable_translation)
+                pc.addTrack(vc)
+                recorder.addTrack(relay.subscribe(track))
 
         @track.on("ended")
         async def on_ended():
