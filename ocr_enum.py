@@ -24,3 +24,14 @@ class DETEngine(Enum):
             return OCREngine[label.upper()]
         else:
             raise argparse.ArgumentTypeError(f"Invalid value for OCR method: {label}")
+        
+class TranslationEngine(Enum):
+    OPENAI = 1
+    CLAUDE = 2
+
+    @staticmethod
+    def from_str(label):
+        if label.lower() in ('openai', 'claude'):
+            return OCREngine[label.upper()]
+        else:
+            raise argparse.ArgumentTypeError(f"Invalid value for OCR method: {label}")

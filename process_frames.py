@@ -18,17 +18,19 @@ from pathlib import Path
 import pickle
 import imagehash
 from ocr import OCRProcessor
-from ocr_enum import OCREngine, DETEngine
+from ocr_enum import OCREngine, DETEngine, TranslationEngine
 from utils import clean_vision_model_output
 from image_diff import crop_image_by_bboxes, combine_images
+from claude_api import Claude_API, extract_between_tags
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
-    def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR, detection_method=DETEngine.FAST):
+    def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR, detection_method=DETEngine.FAST, translation_method=TranslationEngine.CLAUDE):
         self.counter = 0  # Convert the global variable to an instance attribute
         self.disable_dialog = disable_dialog
         self.method = method
         self.detection_method = detection_method
+        self.translation_method = translation_method
         self.save_outputs = save_outputs
         if self.save_outputs:
             # Create output directories if they do not exist
@@ -62,6 +64,7 @@ class FrameProcessor:
         self.last_annotations = None
 
         self.openai_api = OpenAI_API()
+        self.claude_api = Claude_API()
 
         self.ocr_cache_pkl_path = Path('ocr_cache.pkl')
         self.translation_cache_pkl_path = Path('translation_cache.pkl')
@@ -240,6 +243,15 @@ class FrameProcessor:
         print(f"{cleaned_string=}")
         return cleaned_string, result
     
+    def translate_claude(self, content, target_lang):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        result = self.claude_api.call_translation_api(content, target_lang)
+        
+        cleaned_string = ' '.join(extract_between_tags('translation', result))
+        print(f"{cleaned_string=}")
+        return cleaned_string, result
+    
     def translate_openai_vision(self, image_bytes, target_lang):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         
@@ -250,13 +262,25 @@ class FrameProcessor:
         cleaned_string = clean_vision_model_output(content)
         print(f"{cleaned_string=}")
         return cleaned_string, result
+
+    def translate_claude_vision(self, image_bytes, target_lang):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        result = self.claude_api.call_translation_vision_api(image_bytes, target_lang)
+
+        cleaned_string = ' '.join(extract_between_tags('translation', result))
+        print(f"{cleaned_string=}")
+        return cleaned_string, result
     
     
     def run_translation(self, content, translate):
         start_time = time.time() # Record the start time
 
         target_lang = translate.split(',')[1]
-        str, result = self.translate_openai(content, target_lang)
+        if self.translation_method == TranslationEngine.OPENAI:
+            str, result = self.translate_openai(content, target_lang)
+        if self.translation_method == TranslationEngine.CLAUDE:
+            str, result = self.translate_claude(content, target_lang)
         
         print("---- Translated Text ----")
         print(str)
