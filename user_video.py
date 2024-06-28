@@ -4,6 +4,7 @@ from process_frames import FrameProcessor
 from video_stream_with_annotations import VideoStreamWithAnnotations
 from PIL import Image
 from ocr_enum import OCREngine
+import sentry_sdk
 
 dummy_image = Image.new('RGB', (100, 100), (255, 255, 255))
 
@@ -27,12 +28,13 @@ class UserVideo:
         while True:
             frame = self.video_stream.get_latest_frame()
             if frame is not None:
-                #print("Background task accessing the latest frame...")
-                closest_match = self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
-                if closest_match != None and closest_match != 0:
-                    print("Closest match(uservideo): ", closest_match)
-                    self.closest_match = closest_match 
-                time.sleep(1/24)  # Wait for 1 second
+                with sentry_sdk.start_transaction(op="task", name="Background_process_frame"):
+                    #print("Background task accessing the latest frame...")
+                    closest_match = self.video_stream.process_screenshot(frame, translate=translate, show_image_screen=True, enable_cache=enable_cache) # crop is hard coded make it per user
+                    if closest_match != None and closest_match != 0:
+                        print("Closest match(uservideo): ", closest_match)
+                        self.closest_match = closest_match 
+                    time.sleep(1/24)  # Wait for 1 second
 
     def preprocess_frame(self, frame):
         return self.video_stream.preprocess_image(frame, crop_y_coordinate= self.crop_height) #preprocess all images

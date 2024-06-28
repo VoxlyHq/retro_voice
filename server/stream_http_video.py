@@ -61,6 +61,7 @@ class Config(object):
     # OAuth2 client secret from Google Console
     GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET")
     PREFERRED_URL_SCHEME = os.environ.get("PREFERRED_URL_SCHEME") #or 'http'
+    ENVIRONMENT = os.environ.get("APP_ENVIRONMENT") or 'development'
 
 
 ROOT = os.path.dirname(__file__)
@@ -74,6 +75,7 @@ sentry_sdk.init(
     # of sampled transactions.
     # We recommend adjusting this value in production.
     profiles_sample_rate=1.0,
+    environment=Config.ENVIRONMENT,
 )
 
 
@@ -287,7 +289,8 @@ class VideoTransformTrack(MediaStreamTrack):
         self.inverse_alpha = 1 - self.alpha
         print("making user_video----")
 
-        self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
+        with sentry_sdk.start_transaction(op="task", name="setup user video"):
+            self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
         self.message_queue = message_queue
         self.send_annotations = send_annotations
         self.last_annotations = None
@@ -307,14 +310,22 @@ class VideoTransformTrack(MediaStreamTrack):
 
 
     def process_frame(self, frame):
+        with sentry_sdk.start_transaction(op="task", name="Process Frame"):
+            return self.inner_process_frame(frame)
+
+    def inner_process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
 
-        frame_cropped = self.user_video.preprocess_frame(frame_img)
-        self.user_video.async_process_frame(frame_cropped.copy())
+        with sentry_sdk.start_span(description='preprocess_frame'):
+            frame_cropped = self.user_video.preprocess_frame(frame_img)
+        with sentry_sdk.start_span(description='async_process_frame'):
+            self.user_video.async_process_frame(frame_cropped.copy())
 
-        new_frame = av.VideoFrame.from_image(self.user_video.print_annotations(frame_cropped))
-        new_frame.pts = frame.pts
-        new_frame.time_base = frame.time_base
+        new_frame = None
+        with sentry_sdk.start_span(description='print_annotation'):
+            new_frame = av.VideoFrame.from_image(self.user_video.print_annotations(frame_cropped))
+            new_frame.pts = frame.pts
+            new_frame.time_base = frame.time_base
 
         if self.disable_dialog == False and self.closest_match is not None and self.user_video.closest_match != self.closest_match and self.user_video.closest_match != 0:
             self.closest_match = self.user_video.closest_match
@@ -332,8 +343,9 @@ class VideoTransformTrack(MediaStreamTrack):
                 self.last_annotations = json_annotations 
                 if self.message_queue != None:
                     # this is normally what we print
-                    annotations_translations = self.user_video.dump_annotations()
-                    self.message_queue.send_message("annotations " + json.dumps(annotations_translations, sort_keys=True, cls=NumpyEncoder))
+                    with sentry_sdk.start_span(description='dump_annotations'):
+                        annotations_translations = self.user_video.dump_annotations()
+                        self.message_queue.send_message("annotations " + json.dumps(annotations_translations, sort_keys=True, cls=NumpyEncoder))
 
         return new_frame
 
@@ -435,9 +447,10 @@ async def handle_offer(params):
                 disable_translation = True
             print(f"disable_translation = {disable_translation}")
 
-            vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height, translate=translate, disable_dialog=disable_dialog, disable_translation=disable_translation)
-            pc.addTrack(vc)
-            recorder.addTrack(relay.subscribe(track))
+            with sentry_sdk.start_transaction(op="task", name="Start Video stream"):
+                vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height, translate=translate, disable_dialog=disable_dialog, disable_translation=disable_translation)
+                pc.addTrack(vc)
+                recorder.addTrack(relay.subscribe(track))
 
         @track.on("ended")
         async def on_ended():
