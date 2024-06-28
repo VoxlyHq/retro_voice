@@ -250,7 +250,7 @@ def video():
 
 #TODO do a better then this, i just want this loaded at boot, but it will slow down if you dont need it lol
 # textDetector = TextDetector('frozen_east_text_detection.pb')
-textDetector = TextDetectorFast("", checkpoint="pretrained/fast_base_tt_640_finetune_ic17mlt.pth")    
+textDetector = TextDetectorFast("")
 #TODO do one per user
 lang = "jp" #hard code all options for now
 enable_cache = False
