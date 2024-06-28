@@ -87,27 +87,27 @@ class TestDialogueOverlay(unittest.TestCase):
         self.assertGreaterEqual(IoU, 0.8)
 
 
-    def test_print_annotations_pil(self):
+    def test_print_annotations(self):
         self.video_stream.current_annotations = self.ann
         self.video_stream.current_translations = "Example Translation"
         self.video_stream.background_task_args = {'translate': True}
-        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image = self.video_stream.print_annotations(self.test_bbox_image)
         result_image.save(self.test_data_dir / 'test_print_annotations_pil.jpg')
         self.assertIsInstance(result_image, Image.Image)
 
-    def test_print_annotations_pil_with_no_annotations(self):
+    def test_print_annotations_with_no_annotations(self):
         self.video_stream.current_annotations = []
         self.video_stream.current_translations = ""
         self.video_stream.background_task_args = {'translate': False}
-        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image = self.video_stream.print_annotations(self.test_bbox_image)
         result_image.save(self.test_data_dir / 'test_print_annotations_pil_with_no_annotations.jpg')
         self.assertIsInstance(result_image, Image.Image)
 
-    def test_print_annotations_pil_with_no_translation(self):
+    def test_print_annotations_with_no_translation(self):
         self.video_stream.current_annotations = self.ann
         self.video_stream.current_translations = ""
         self.video_stream.background_task_args = {'translate': False}
-        result_image = self.video_stream.print_annotations_pil(self.test_bbox_image)
+        result_image = self.video_stream.print_annotations(self.test_bbox_image)
         result_image.save(self.test_data_dir / 'test_print_annotations_pil_with_no_translation.jpg')
         self.assertIsInstance(result_image, Image.Image)
 
@@ -198,16 +198,16 @@ class TestDialogueOverlay(unittest.TestCase):
     def test_adjust_translation_text_basic(self):
         translation = "This is a test text to fit within the dialogue box."
         dialogue_box_width = 1016
-        adjusted_text = self.video_stream.adjust_translation_text(translation, self.draw, self.video_stream.font, dialogue_box_width)
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.video_stream.font, dialogue_box_width)
         self.assertIsInstance(adjusted_text, str)
         self.assertEqual("This is a test text to fit within the dialogue box. ", adjusted_text)
 
     def test_adjust_translation_text_long_text(self):
         translation = "This is a very long test text that should span multiple lines within the dialogue box to test the text adjustment functionality."
         dialogue_box_width = 1016
-        adjusted_text = self.video_stream.adjust_translation_text(translation, self.draw, self.video_stream.font, dialogue_box_width)
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.video_stream.font, dialogue_box_width)
         self.assertIsInstance(adjusted_text, str)
-        self.assertEqual('This is a very long test text that should span multiple lines within\nthe dialogue box to test the text adjustment functionality. '
+        self.assertEqual('This is a very long test text that should span multiple lines within the\ndialogue box to test the text adjustment functionality. '
 , adjusted_text)
         self.assertIn("\n", adjusted_text, "Long text should contain newline characters to fit within the dialogue box width.")
 
@@ -216,20 +216,30 @@ class TestDialogueOverlay(unittest.TestCase):
         top_left = (136, 121)
         self.video_stream.current_annotations = self.ann2
         self.video_stream.current_translations = translation
-        result_image = self.video_stream._annotate_translation(self.translate_image.copy(), self.draw, top_left)
-        result_image.save(self.test_data_dir / 'test_annotate_translation_basic.jpg')
-        self.assertIsInstance(result_image, Image.Image)
-        self.assertNotEqual(result_image, self.translate_image, "Image should be different after annotation.")
+        dialogue_box_width = 1016
+        dialogue_text_color = 'white'
+        input_image = self.video_stream._generate_blurred_image(self.translate_image.copy())
+        draw = ImageDraw.Draw(input_image)
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.video_stream.font, dialogue_box_width)
+        self.video_stream._annotate_translation(draw, top_left, adjusted_text, dialogue_text_color)
+        input_image.save(self.test_data_dir / 'test_annotate_translation_basic.jpg')
+        self.assertIsInstance(input_image, Image.Image)
+        self.assertNotEqual(input_image, self.translate_image, "Image should be different after annotation.")
 
     def test_annotate_translation_long_text(self):
         translation = "This is a very long translation text that should span multiple lines within the dialogue box to test the annotation functionality." * 5
         top_left = (136, 121)
         self.video_stream.current_annotations = self.ann2
         self.video_stream.current_translations = translation
-        result_image = self.video_stream._annotate_translation(self.translate_image.copy(), self.draw, top_left)
-        result_image.save(self.test_data_dir / 'test_annotate_translation_long_text.jpg')
-        self.assertIsInstance(result_image, Image.Image)
-        self.assertNotEqual(result_image, self.translate_image, "Image should be different after annotation.")
+        dialogue_box_width = 1016
+        dialogue_text_color = 'white'
+        input_image = self.video_stream._generate_blurred_image(self.translate_image.copy())
+        draw = ImageDraw.Draw(input_image)
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.video_stream.font, dialogue_box_width)
+        self.video_stream._annotate_translation(draw, top_left, adjusted_text, dialogue_text_color)
+        input_image.save(self.test_data_dir / 'test_annotate_translation_long_text.jpg')
+        self.assertIsInstance(input_image, Image.Image)
+        self.assertNotEqual(input_image, self.translate_image, "Image should be different after annotation.")
     
 
     def test_annotate_translation_empty(self):
@@ -237,9 +247,14 @@ class TestDialogueOverlay(unittest.TestCase):
         top_left = (136, 121)
         self.video_stream.current_annotations = self.ann2
         self.video_stream.current_translations = translation
-        result_image = self.video_stream._annotate_translation(self.translate_image.copy(), self.draw, top_left)
-        result_image.save(self.test_data_dir / 'test_annotate_translation_empty.jpg')
-        self.assertIsInstance(result_image, Image.Image)
+        dialogue_box_width = 1016
+        dialogue_text_color = 'white'
+        input_image = self.video_stream._generate_blurred_image(self.translate_image.copy())
+        draw = ImageDraw.Draw(input_image)
+        adjusted_text = self.video_stream.adjust_translation_text(translation, self.video_stream.font, dialogue_box_width)
+        self.video_stream._annotate_translation(draw, top_left, adjusted_text, dialogue_text_color)
+        input_image.save(self.test_data_dir / 'test_annotate_translation_empty.jpg')
+        self.assertIsInstance(input_image, Image.Image)
 
     
 if __name__ == '__main__':
