@@ -195,77 +195,6 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return super(NumpyEncoder, self).default(obj)
 
-def generate_encoded():
-    # Parameters for the video
-    width, height = 640, 480
-    fps = 24
-    frame_delay = (1 / fps)*4  # Delay to achieve ~24 FPS
-    
-    # Setup memory buffer
-    buffer = BytesIO()
-
-    # Create a video encoder
-    codec_name = 'libx264'  # H.264 codec
-    output = av.open(buffer, mode='w', format='mpegts')
-    stream = output.add_stream(codec_name, rate=fps)
-    stream.width = width
-    stream.height = height
-    stream.pix_fmt = 'yuv420p'
-    
-    while True: # Infinite loop for continuous streaming
-        for angle in range(0, 360, 15):
-            # Create a black image
-            image = np.zeros((height, width, 3), dtype=np.uint8)
-            
-            # Define the square's properties
-            center = (width // 2, height // 2)
-            size = min(width, height) // 4
-            rect_pts = np.array([
-                [-size, -size],
-                [size, -size],
-                [size, size],
-                [-size, size]
-            ], dtype=np.float32)
-            
-            # Rotate the square
-            M = cv2.getRotationMatrix2D(center, angle, 1.0)
-            rotated_pts = cv2.transform(np.array([rect_pts]), M)[0].astype(np.int32)
-            
-            # Draw the rotated square
-            cv2.fillPoly(image, [rotated_pts], (0, 255, 0))
-            
-            # Create frame from the image
-            frame = av.VideoFrame.from_ndarray(image, format='bgr24')
-            for packet in stream.encode(frame):
-                output.mux(packet)
-                buffer.seek(0)
-                chunk = buffer.read()
-                buffer.seek(0)
-                buffer.truncate()
-                yield chunk
-
-        time.sleep(frame_delay)  # Wait to control the frame rate
-
-    # NOTE: this never actually runs due to the infinite loop above
-    # Finalize video stream
-    for packet in stream.encode(None):
-        output.mux(packet)
-        buffer.seek(0)
-        chunk = buffer.read()
-        buffer.seek(0)
-        buffer.truncate()
-        if chunk:
-            yield chunk
-    
-    # Close everything
-    output.close()
-    buffer.close()
-
-
-@app.route('/video')
-def video():
-    return generate_encoded(), 200, { 'mimetype': 'video/mp2t' }
-
 
 #TODO do a better then this, i just want this loaded at boot, but it will slow down if you dont need it lol
 # textDetector = TextDetector('frozen_east_text_detection.pb')
@@ -300,20 +229,16 @@ class VideoTransformTrack(MediaStreamTrack):
 
     async def recv(self):
         try:
-            frame = await self.track.recv()
-            #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
-            return self.process_frame(frame)
+            with sentry_sdk.start_transaction(op="task", name="Process Frame"):
+                frame = await self.track.recv()
+                #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
+                return self.process_frame(frame)
         except Exception as e:
             print(f"exception - {e}")
             logging.error("An error occurred: %s", e)
             raise
 
-
     def process_frame(self, frame):
-        with sentry_sdk.start_transaction(op="task", name="Process Frame"):
-            return self.inner_process_frame(frame)
-
-    def inner_process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
 
         with sentry_sdk.start_span(description='preprocess_frame'):
