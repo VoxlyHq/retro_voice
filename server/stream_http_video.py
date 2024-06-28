@@ -21,6 +21,8 @@ from flask import Flask
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
+import sentry_sdk
+from flask import Flask
 
 from text_detector_fast import TextDetectorFast
 # from text_detector import TextDetector
@@ -62,6 +64,17 @@ class Config(object):
 
 
 ROOT = os.path.dirname(__file__)
+
+sentry_sdk.init(
+    dsn="https://fb14d5708fc98389a3c3df8358eacbc3@o4505867422138368.ingest.us.sentry.io/4507509190754304",
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)
 
 
 app = Flask(__name__,
@@ -106,6 +119,10 @@ def test():
     
     return response
 
+@app.route("/error")
+def hello_world():
+    1/0  # raises an error
+    return "<p>Hello, World!</p>"
 
 @app.route('/signup', methods=['POST'])
 def signup():
