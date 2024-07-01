@@ -5,15 +5,16 @@ from PIL import Image, ImageDraw
 import easyocr
 from openai_api import OpenAI_API
 from image_diff import crop_image_by_bboxes, combine_images
-from ocr_enum import OCREngine
+from ocr_enum import OCREngine, DETEngine
 import re
 from utils import clean_vision_model_output
+from text_detector_fast import TextDetectorFast, convert_to_four_points_format
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
 class OCRProcessor:
-    def __init__(self, language='en', method=OCREngine.EASYOCR):
+    def __init__(self, language='en', method=OCREngine.EASYOCR, detection_method=DETEngine.EASYOCR):
         """
         Initialize the OCRProcessor with the specified language and method.
 
@@ -21,9 +22,16 @@ class OCRProcessor:
         :param method: The OCR method to use (easyocr, openai)
         """
         self.lang = language
-        self.reader = easyocr.Reader(['en']) if language == 'en' else easyocr.Reader(['en', 'ja'])
-        self.openai_api = OpenAI_API()
         self.method = method
+        self.detection_method = detection_method
+
+        if self.method == OCREngine.EASYOCR or self.detection_method == DETEngine.EASYOCR:
+            self.reader = easyocr.Reader(['en']) if language == 'en' else easyocr.Reader(['en', 'ja'])
+        
+        self.openai_api = OpenAI_API()
+
+        if self.detection_method == DETEngine.FAST:
+            self.fast = TextDetectorFast("pretrained/fast_tiny_ic15_736_finetune_ic17mlt.pth")
 
     def process_image(self, image):
         """
@@ -88,6 +96,19 @@ class OCRProcessor:
         """
         return self.reformat(self.reader.detect(image_bytes))
     
+    def det_fast(self, image):
+        """
+        Perform text detection using FAST.
+
+        :param image: PIL Image
+        :return: OCR detection results containing bounding boxes
+        """
+        result = self.fast.process_single_image(image)
+        four_points_format = convert_to_four_points_format(result)
+        # reformat to (bbox, text, prob) format
+        final_format = [(bbox, '', 0.0) for bbox in four_points_format]
+        return final_format
+    
     def ocr_openai(self, image_bytes):
         response = self.openai_api.call_vision_api(image_bytes)
         return response
@@ -108,7 +129,10 @@ class OCRProcessor:
             filtered_text = ' '.join([text for _, text, _ in filtered_result])
             return filtered_text, drawable_image, filtered_result, None
         elif self.method == OCREngine.OPENAI:
-            detection_result = self.det_easyocr(image_bytes)
+            if self.detection_method == DETEngine.FAST:
+                detection_result = self.det_fast(image)
+            else:
+                detection_result = self.det_easyocr(image_bytes)
             if detection_result != []:
                 bboxes = [i[0] for i in detection_result]
                 # 4 points to 2 points
@@ -136,7 +160,10 @@ class OCRProcessor:
         :return: Tuple containing the annotated image, and Detection result
         """
         image_bytes = self.process_image(image)
-        result = self.det_easyocr(image_bytes)
+        if self.detection_method == DETEngine.FAST:
+            result = self.det_fast(image)
+        else:
+            result = self.det_easyocr(image_bytes)
         drawable_image = self.draw_highlight(image_bytes, result)
         return drawable_image, result
 

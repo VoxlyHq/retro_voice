@@ -18,16 +18,17 @@ from pathlib import Path
 import pickle
 import imagehash
 from ocr import OCRProcessor
-from ocr_enum import OCREngine
+from ocr_enum import OCREngine, DETEngine
 from utils import clean_vision_model_output
 from image_diff import crop_image_by_bboxes, combine_images
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
-    def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR):
+    def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR, detection_method=DETEngine.FAST):
         self.counter = 0  # Convert the global variable to an instance attribute
         self.disable_dialog = disable_dialog
         self.method = method
+        self.detection_method = detection_method
         self.save_outputs = save_outputs
         if self.save_outputs:
             # Create output directories if they do not exist
@@ -46,7 +47,7 @@ class FrameProcessor:
             self.dialog_file_path = "dialogues_jp_v2.json"
         else:   
             raise("Invalid language")   
-        self.ocr_processor =  OCRProcessor(self.lang, self.method) # comment this if you aren't using easy ocr
+        self.ocr_processor =  OCRProcessor(self.lang, self.method, self.detection_method) # comment this if you aren't using easy ocr
 
         if disable_dialog:
             self.dialogues = None
@@ -271,7 +272,7 @@ class FrameProcessor:
         
         if len(detection_result) >= 1:
 
-
+            
             bboxes = [i[0] for i in detection_result]
             # 4 points to 2 points
             # bboxes = [[i[0], i[2]] for i in bboxes]
