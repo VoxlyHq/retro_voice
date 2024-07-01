@@ -3,20 +3,23 @@ import time
 from process_frames import FrameProcessor
 from video_stream_with_annotations import VideoStreamWithAnnotations
 from PIL import Image
-from ocr_enum import OCREngine
+from ocr_enum import OCREngine, DETEngine, TranslationEngine
 import sentry_sdk
 
 dummy_image = Image.new('RGB', (100, 100), (255, 255, 255))
 
 #This handles per user video processing
 class UserVideo:
-    def __init__(self, lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None, debug_bbox=False, crop_height=None):
+    def __init__(self, lang="jp", disable_dialog=False, disable_translation=False, enable_cache=False, translate="", textDetector=None, debug_bbox=False, crop_height=None, method=OCREngine.CLAUDE, detection_method=DETEngine.FAST, translation_method=TranslationEngine.CLAUDE):
         self.last_inboard_frame = None
         self.last_frame_count = 0
         self.crop_height = crop_height
+        self.method = method
+        self.detection_method = detection_method
+        self.translation_method = translation_method
         self.closest_match = [] #this can be a list of items
 
-        self.frameProcessor = FrameProcessor(lang, disable_dialog, method=OCREngine.OCR_TRANSLATE)
+        self.frameProcessor = FrameProcessor(lang, disable_dialog, method=self.method, detection_method=self.detection_method, translation_method=self.translation_method)
 
         self.video_stream = VideoStreamWithAnnotations(background_task=self.process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
                                                     show_fps=True, crop_y_coordinate=crop_height, frameProcessor=self.frameProcessor, textDetector=textDetector, debug_bbox=debug_bbox) #TODO crop should be set later by user
