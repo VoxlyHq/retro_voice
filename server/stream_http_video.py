@@ -374,9 +374,9 @@ async def handle_offer(params):
                 disable_translation = True
             print(f"disable_translation = {disable_translation}")
 
-            method = OCREngine.CLAUDE
+            method = OCREngine.EASYOCR
             detection_method = DETEngine.FAST
-            translation_method = TranslationEngine.CLAUDE
+            translation_method = TranslationEngine.OPENAI
             
 
             with sentry_sdk.start_transaction(op="task", name="Start Video stream"):
