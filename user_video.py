@@ -23,13 +23,18 @@ class UserVideo:
 
         self.video_stream = VideoStreamWithAnnotations(background_task=self.process_video_thread, background_task_args={"translate" : translate, 'enable_cache' : enable_cache},
                                                     show_fps=True, crop_y_coordinate=crop_height, frameProcessor=self.frameProcessor, textDetector=textDetector, debug_bbox=debug_bbox) #TODO crop should be set later by user
-        #video_stream.stop()
+        self.RunThread = True
 
+
+    def cleanup(self):
+        self.RunThread = False
+        self.video_stream.stop()
 
     def process_video_thread(self, translate="", enable_cache=False):
         time.sleep(1)  # Wait for 1 second, threading ordering issue, this is not the correct way to fix it
-        while True:
+        while self.RunThread:
             frame = self.video_stream.get_latest_frame()
+            self.video_stream.set_latest_frame(None)
             if frame is not None:
                 with sentry_sdk.start_transaction(op="task", name="Background_process_frame"):
                     #print("Background task accessing the latest frame...")

@@ -246,6 +246,14 @@ class VideoTransformTrack(MediaStreamTrack):
             logging.error("An error occurred: %s", e)
             raise
 
+    def cleanup(self):
+        print("Cleaning up VideoTransformTrack")
+        #Turn off any threads 
+        if self.user_video != None:
+            self.user_video.cleanup()
+            self.user_video = None
+
+
     def process_frame(self, frame):
         frame_img = av.VideoFrame.to_image(frame)
 
@@ -345,6 +353,7 @@ async def handle_offer(params):
         if pc.connectionState == 'failed':
             await pc.close()
             pcs.discard(pc)
+            
 
     @pc.on("track")
     def on_track(track):
@@ -394,6 +403,8 @@ async def handle_offer(params):
         async def on_ended():
             log_info('Track %s ended', track.kind)
             await recorder.stop()
+            if vc and track.kind == 'video':
+                vc.cleanup()
     
     # handle offer
     await pc.setRemoteDescription(offer)
