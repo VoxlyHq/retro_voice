@@ -200,7 +200,7 @@ class NumpyEncoder(json.JSONEncoder):
 
 #TODO do a better then this, i just want this loaded at boot, but it will slow down if you dont need it lol
 # textDetector = TextDetector('frozen_east_text_detection.pb')
-textDetector = TextDetectorFast("", checkpoint="checkpoints/checkpoint_60ep.pth.tar")    
+textDetector = TextDetectorFast("")
 #TODO do one per user
 lang = "jp" #hard code all options for now
 enable_cache = False
@@ -233,6 +233,12 @@ class VideoTransformTrack(MediaStreamTrack):
         try:
             with sentry_sdk.start_transaction(op="task", name="Process Frame"):
                 frame = await self.track.recv()
+
+                # Consume all available frames.
+                # If we don't do this, we'll bloat indefinitely.
+                while not self.track._queue.empty():
+                    frame = await self.track.recv()
+
                 #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
                 return self.process_frame(frame)
         except Exception as e:
