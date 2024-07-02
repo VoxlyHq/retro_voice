@@ -40,6 +40,8 @@ import copy
 import json
 import numpy as np
 
+from ocr_enum import OCREngine, DETEngine, TranslationEngine
+
 
 
 WSGIEnviron = Dict[str, Any]
@@ -209,7 +211,7 @@ class VideoTransformTrack(MediaStreamTrack):
     """
     kind = "video"
 
-    def __init__(self, track, watermark_data, message_queue=None,crop_height=None,send_annotations=True, disable_dialog=False, disable_translation=False, translate="jp,en"):
+    def __init__(self, track, watermark_data, message_queue=None,crop_height=None,send_annotations=True, disable_dialog=False, disable_translation=False, translate="jp,en",method=OCREngine.CLAUDE, detection_method=DETEngine.FAST, translation_method=TranslationEngine.CLAUDE):
         global textDetector
         super().__init__()
         self.track = track
@@ -219,7 +221,7 @@ class VideoTransformTrack(MediaStreamTrack):
         print("making user_video----")
 
         with sentry_sdk.start_transaction(op="task", name="setup user video"):
-            self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height)
+            self.user_video =  UserVideo(lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox=debug_bbox, crop_height=crop_height, method=method, detection_method=detection_method, translation_method=translation_method)
         self.message_queue = message_queue
         self.send_annotations = send_annotations
         self.last_annotations = None
@@ -231,6 +233,12 @@ class VideoTransformTrack(MediaStreamTrack):
         try:
             with sentry_sdk.start_transaction(op="task", name="Process Frame"):
                 frame = await self.track.recv()
+
+                # Consume all available frames.
+                # If we don't do this, we'll bloat indefinitely.
+                while not self.track._queue.empty():
+                    frame = await self.track.recv()
+
                 #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
                 return self.process_frame(frame)
         except Exception as e:
@@ -372,8 +380,13 @@ async def handle_offer(params):
                 disable_translation = True
             print(f"disable_translation = {disable_translation}")
 
+            method = OCREngine.CLAUDE
+            detection_method = DETEngine.FAST
+            translation_method = TranslationEngine.CLAUDE
+            
+
             with sentry_sdk.start_transaction(op="task", name="Start Video stream"):
-                vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height, translate=translate, disable_dialog=disable_dialog, disable_translation=disable_translation)
+                vc = VideoTransformTrack(relay.subscribe(track), watermark_data, message_queue, crop_height=crop_height, translate=translate, disable_dialog=disable_dialog, disable_translation=disable_translation, method=method, detection_method=detection_method, translation_method=translation_method)
                 pc.addTrack(vc)
                 recorder.addTrack(relay.subscribe(track))
 
