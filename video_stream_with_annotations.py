@@ -37,6 +37,7 @@ class VideoStreamWithAnnotations:
         self.fps_counter_start_time = time.time()
         self.frameProcessor = frameProcessor
         self.textDetector = textDetector
+        self.background_image = None
         self.debug_bbox = debug_bbox
 
         # Check the operating system, and language these two are for japanese
@@ -195,7 +196,10 @@ class VideoStreamWithAnnotations:
                     if pil_image:
                         dialogue_text_color = 'white'
 
-                        pil_image = self._generate_blurred_image(pil_image)
+                        if self.background_image is None:
+                            pil_image = self._generate_blurred_image(pil_image)
+                        else:
+                            pil_image = self.background_image
                         draw = ImageDraw.Draw(pil_image)
 
                         # calculate allowed width for translation text (top left x position to 100 pixel before edge of image)
@@ -353,6 +357,9 @@ class VideoStreamWithAnnotations:
         with self.frame_lock:
             self.current_translations = translation
 
+    def set_background_image(self, img):
+        with self.frame_lock:
+            self.background_image = img
 
     def stop(self):
         if self.cap != None and self.cap.isOpened():
@@ -376,14 +383,16 @@ class VideoStreamWithAnnotations:
             print("No text Found in this frame. Skipping run_image")
             if show_image_screen:
                 self.set_annotations([])
+                self.set_background_image(None)
         else:
         
-            closest_match, previous_image, highlighted_image, annotations, translation = self.frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
+            closest_match, previous_image, highlighted_image, annotations, translation, background_image = self.frameProcessor.run_image(img, translate=translate,enable_cache=enable_cache)
 
             if annotations != None:
                 if show_image_screen:
                     self.set_annotations(annotations)
                     self.set_translation(translation)
+                    self.set_background_image(background_image)
 #            if closest_match == None: #TODO remember why this code exists? i think for dialogues
 #                if show_image_screen:
 #                    self.set_annotations(None)

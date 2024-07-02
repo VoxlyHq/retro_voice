@@ -40,7 +40,7 @@ class TestFrameProcessor(unittest.TestCase):
     
     def test_save_outputs(self):
         # Run the image through the processor
-        last_played, previous_image, highlighted_image, annotations, translation = self.processor.run_image(self.input_image)
+        last_played, previous_image, highlighted_image, annotations, translation,background_image = self.processor.run_image(self.input_image)
         
         # # Save the outputs to disk
         # self.processor.save_outputs_to_disk(self.input_image, highlighted_image, annotations, translation)
