@@ -200,7 +200,7 @@ class NumpyEncoder(json.JSONEncoder):
 
 #TODO do a better then this, i just want this loaded at boot, but it will slow down if you dont need it lol
 # textDetector = TextDetector('frozen_east_text_detection.pb')
-textDetector = TextDetectorFast("", checkpoint="checkpoints/checkpoint_60ep.pth.tar")    
+textDetector = TextDetectorFast("")
 #TODO do one per user
 lang = "jp" #hard code all options for now
 enable_cache = False
