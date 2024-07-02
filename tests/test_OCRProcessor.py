@@ -2,7 +2,7 @@ import unittest
 from PIL import Image
 from ocr import OCRProcessor  
 from thefuzz import fuzz
-from ocr_enum import OCREngine
+from ocr_enum import OCREngine, DETEngine
 from pathlib import Path
 
 class TestOCRProcessor(unittest.TestCase):
@@ -54,6 +54,21 @@ class TestOCRProcessor(unittest.TestCase):
         """
         image_bytes = self.ocr_processor.process_image(self.dialogue_image)
         detection_results = self.ocr_processor.det_easyocr(image_bytes)
+
+        # Check if the detection results are formatted correctly
+        self.assertIsInstance(detection_results[0], tuple)
+        self.assertEqual(len(detection_results[0]), 3)
+        self.assertIsInstance(detection_results[0][0], list)
+        self.assertIsInstance(detection_results[0][0][0], list)
+        self.assertEqual(len(detection_results[0][0][0]), 2)
+        self.assertEqual(detection_results[0][0][0], [97, 203])
+
+    def test_det_fast(self):
+        """
+        Test the det_easyocr method 
+        """
+        self.ocr_processor = OCRProcessor(language='en', detection_method=DETEngine.FAST)
+        detection_results = self.ocr_processor.det_easyocr(self.dialogue_image)
 
         # Check if the detection results are formatted correctly
         self.assertIsInstance(detection_results[0], tuple)

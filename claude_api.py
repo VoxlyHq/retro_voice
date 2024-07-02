@@ -3,6 +3,8 @@ import requests
 import base64
 import os
 import json
+import io
+from PIL import Image
 
 load_dotenv()
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY")
@@ -21,11 +23,12 @@ class Claude_API:
         }
 
     def preprocess(self, image):
-        with open(image, "rb") as image_file:
-            binary_data = image_file.read()
-            base_64_encoded_data = base64.b64encode(binary_data)
-            base64_string = base_64_encoded_data.decode('utf-8')
-        return base64_string
+        image = image.convert('RGB')
+        
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")
+        img_str = base64.b64encode(buffered.getvalue())
+        return img_str.decode('utf-8')
 
     def call_api(self, payload):
         response = requests.post(self.base_url, headers=self.headers, json=payload)
@@ -58,6 +61,18 @@ class Claude_API:
         }
 
         return self.call_api(payload)
+    
+    def call_vision_api(self, base64_string):
+        self.set_vision_payload(base64_string)
+
+        payload = {
+            "model": self.vision_model,
+            "max_tokens": 1000,
+            "temperature": 0,
+            "messages": self.vision_payload
+        }
+
+        return self.call_api(payload)
 
     def set_translation_vision_payload(self, base64_string):
         self.translation_vision_payload = [
@@ -66,6 +81,17 @@ class Claude_API:
                 "content": [
                     {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64_string}},
                     {"type": "text", "text": "You are an AI assistant tasked with performing Optical Character Recognition (OCR) on images, particularly those from retro games or containing pixel-based text. The image may contain text in any language, not just English. Your goal is to accurately identify and transcribe any text present in the image.\n\nHere is the image you need to analyze:\n\nPlease follow these steps to complete the OCR task:\n\n1. Carefully examine the image for any visible text. This may include menu items, dialogue, on-screen instructions, or any other textual elements.\n\n2. If the text appears to be in a pixel font or low resolution, pay extra attention to the shape and arrangement of the pixels to discern the characters accurately.\n\n3. Identify the language of the text if possible. If you're unsure about the language, make your best guess and note your uncertainty.\n\n4. Transcribe all text you can identify in the image. If the text is not in English, provide both the original text and an English translation if you're able to translate it.\n\n5. If there are multiple separate text elements in the image (e.g., a title and a menu), transcribe them separately and indicate their relative positions in the image (e.g., \"top center\", \"bottom right\").\n\n6. If any text is partially obscured or ambiguous, make your best guess and indicate your uncertainty.\n\n7. If you cannot identify any text in the image, state this clearly.\n\nPresent your findings in the following format:\n\n<ocr_results>\n<text_element1>\n<position>Position in the image</position>\n<original_text>Text as it appears in the image</original_text>\n<language>Identified or suspected language</language>\n<translation>English translation (if applicable)</translation>\n</text_element1>\n<!-- Repeat for each separate text element -->\n<notes>Any additional observations or uncertainties</notes>\n</ocr_results>\n\nIf you cannot identify any text in the image, respond with:\n\n<ocr_results>\n<no_text_found>No text could be identified in this image.</no_text_found>\n</ocr_results>\n\nRemember, accuracy is crucial. If you're unsure about any aspect of the text, it's better to express your uncertainty than to make an incorrect transcription."}
+                ]
+            }
+        ]
+
+    def set_vision_payload(self, base64_string):
+        self.vision_payload = [
+            {
+                "role": 'user',
+                "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64_string}},
+                    {"type": "text", "text": "You are an AI assistant tasked with performing Optical Character Recognition (OCR) on images, particularly those from retro games or containing pixel-based text. The image may contain text in any language, not just English. Your goal is to accurately identify and transcribe any text present in the image.\n\nHere is the image you need to analyze:\n\n<image>\n{{IMAGE}}\n</image>\n\nPlease follow these steps to complete the OCR task:\n\n1. Carefully examine the image for any visible text. This may include menu items, dialogue, on-screen instructions, or any other textual elements.\n\n2. If the text appears to be in a pixel font or low resolution, pay extra attention to the shape and arrangement of the pixels to discern the characters accurately.\n\n3. Identify the language of the text if possible. If you're unsure about the language, make your best guess and note your uncertainty.\n\n4. Transcribe all text you can identify in the image. If the text is not in English, provide both the original text and an English translation if you're able to translate it.\n\n5. If there are multiple separate text elements in the image (e.g., a title and a menu), transcribe them separately and indicate their relative positions in the image (e.g., \"top center\", \"bottom right\").\n\n6. If any text is partially obscured or ambiguous, make your best guess and indicate your uncertainty.\n\n7. If you cannot identify any text in the image, state this clearly.\n\nPresent your findings in the following format:\n\n<ocr_results>\n<text_element1>\n\n<original_text>Text as it appears in the image</original_text>\n<language>Identified or suspected language</language>\n</text_element1>\n<!-- Repeat for each separate text element -->\n<notes>Any additional observations or uncertainties</notes>\n</ocr_results>\n\nIf you cannot identify any text in the image, respond with:\n\n<ocr_results>\n<no_text_found>No text could be identified in this image.</no_text_found>\n</ocr_results>\n\nRemember, accuracy is crucial. If you're unsure about any aspect of the text, it's better to express your uncertainty than to make an incorrect transcription."}
                 ]
             }
         ]
@@ -99,11 +125,21 @@ if __name__ == "__main__":
     print(result)
     print(extract_between_tags('translation', result))
 
+    print("\nOCR from image")
+    print("======================================")
+    image = Image.open('eval_data/images/FF4_JP_1.jpg')
+    base64_string = claude.preprocess(image)
+    result = claude.call_vision_api(base64_string)
+    print(result)
+    print(extract_between_tags('original_text', result))
+
     print("\nOCR and Translation from image")
     print("======================================")
-    image = 'eval_data/images/FF4_JP_1.jpg'
+    image = Image.open('eval_data/images/FF4_JP_1.jpg')
     base64_string = claude.preprocess(image)
     result = claude.call_translation_vision_api(base64_string)
     print(result)
     print(extract_between_tags('original_text', result))
     print(extract_between_tags('translation', result))
+
+

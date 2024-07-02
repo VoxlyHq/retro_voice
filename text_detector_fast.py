@@ -18,10 +18,9 @@ class TextDetectorFast:
         self.height = height
         self.padding = padding
 
-        self.graph = self.load_model()
         self.fast = fast.FAST(config="test_detector_configs/fast_tiny_ic15_736_finetune_ic17mlt.py", checkpoint=checkpoint,ema=True)
         # self.fast = fast.FAST(config="test_detector_configs/tt_fast_base_tt_640_finetune_ic17mlt.py", checkpoint=checkpoint,ema=True)
-
+    
     def load_image(self, image_path):
         image = Image.open(image_path).convert('RGB')
         orig = np.array(image)
@@ -64,6 +63,40 @@ def convert_to_top_left_bottom_right(coordinate_sets):
         bottom_right = (max(x_coords), max(y_coords))
         converted_sets.append((top_left, bottom_right))
     return converted_sets
+
+def convert_to_four_points_format(coordinate_sets):
+    four_points_format = []
+    for coords in coordinate_sets:
+        x_coords = coords[0::2]
+        y_coords = coords[1::2]
+        top_left = (min(x_coords), min(y_coords))
+        bottom_right = (max(x_coords), max(y_coords))
+        
+        # Calculate the other two points
+        x1, y1 = top_left
+        x2, y2 = bottom_right
+        top_right = (x2, y1)
+        bottom_left = (x1, y2)
+        
+        # Append all four points to the result list
+        four_points_format.append([top_left, top_right, bottom_right, bottom_left])
+    
+    return four_points_format
+
+def two_points_to_four_points_bbox(top_left, bottom_right):
+    x1, y1 = top_left
+    x2, y2 = bottom_right
+
+    # Calculate the other two points
+    top_right = (x2, y1)
+    bottom_left = (x1, y2)
+
+    # Return all four points in the desired format
+    four_points = [top_left, top_right, bottom_right, bottom_left]
+    
+    return four_points
+
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -111,7 +144,6 @@ if __name__ == "__main__":
         image.save(output)
 
     print(f"Output images are saved in {output_dir}")
-    detector.close_session()
 
     average_duration = total_duration / 100
     print(f"Average duration: {average_duration:.4f} seconds")
