@@ -236,8 +236,11 @@ class VideoTransformTrack(MediaStreamTrack):
 
                 # Consume all available frames.
                 # If we don't do this, we'll bloat indefinitely.
-                while not self.track._queue.empty():
-                    frame = await self.track.recv()
+                with sentry_sdk.start_span(description='cleanup_old_frames'):
+                    while not self.track._queue.empty():
+                        del frame
+                        #gc.collect() should we force garbage collection? cause we can eat all our ram here
+                        frame = await self.track.recv()
 
                 #return self.overlay_watermark(frame, self.watermark_data, self.alpha, self.inverse_alpha)
                 return self.process_frame(frame)
