@@ -23,6 +23,9 @@ from utils import clean_vision_model_output
 from image_diff import crop_image_by_bboxes, combine_images
 from claude_api import Claude_API, extract_between_tags
 
+import cv2
+import numpy as np
+
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
     def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR, detection_method=DETEngine.FAST, translation_method=TranslationEngine.CLAUDE):
@@ -316,21 +319,21 @@ class FrameProcessor:
             return '', {}
         
     def _generate_blurred_image(self, pil_image):
-        # Blurring the background text
-        blurred_image = pil_image.filter(ImageFilter.GaussianBlur(10))
+        frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+        blurred = cv2.GaussianBlur(frame, (35, 35), 0)
 
-        mask = Image.new("L", pil_image.size, 0)
+        mask = np.zeros(frame.shape[:2], dtype=np.uint8)
 
-        draw_mask = ImageDraw.Draw(mask)
+        for annotation in self.last_annotations:
+            bbox = annotation[0]
+            (x1, y1), (x2, y2) = bbox
+            mask[y1:y2, x1:x2] = 255    
 
-        for res_ in self.last_annotations:
-            # Draw the rectangle on the mask
-            draw_mask.rectangle(res_[0], fill=255)
+        result = np.where(mask[:,:,None] != 255, frame, blurred)
 
-        image_with_blur = Image.composite(blurred_image, pil_image, mask)
+        pil_image = Image.fromarray(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
 
-        return image_with_blur
-
+        return pil_image
 
     def process_frame(self, frame_pil, frame_count, fps):
         """
