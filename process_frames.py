@@ -13,21 +13,27 @@ from image_diff import calculate_image_difference, calculate_image_hash_differen
 from openai_api import OpenAI_API
 import time
 from thread_safe import shared_data_put_data, shared_data_put_line, ThreadSafeData
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
 from pathlib import Path
 import pickle
 import imagehash
 from ocr import OCRProcessor
-from ocr_enum import OCREngine
+from ocr_enum import OCREngine, DETEngine, TranslationEngine
 from utils import clean_vision_model_output
 from image_diff import crop_image_by_bboxes, combine_images
+from claude_api import Claude_API, extract_between_tags
+
+import cv2
+import numpy as np
 
 lang_dict = {'en' : 'english', 'jp' : 'japanese'}
 class FrameProcessor:
-    def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR):
+    def __init__(self, language='en', disable_dialog=False, save_outputs=False, method=OCREngine.EASYOCR, detection_method=DETEngine.FAST, translation_method=TranslationEngine.CLAUDE):
         self.counter = 0  # Convert the global variable to an instance attribute
         self.disable_dialog = disable_dialog
         self.method = method
+        self.detection_method = detection_method
+        self.translation_method = translation_method
         self.save_outputs = save_outputs
         if self.save_outputs:
             # Create output directories if they do not exist
@@ -46,7 +52,7 @@ class FrameProcessor:
             self.dialog_file_path = "dialogues_jp_v2.json"
         else:   
             raise("Invalid language")   
-        self.ocr_processor =  OCRProcessor(self.lang, self.method) # comment this if you aren't using easy ocr
+        self.ocr_processor =  OCRProcessor(self.lang, self.method, self.detection_method) # comment this if you aren't using easy ocr
 
         if disable_dialog:
             self.dialogues = None
@@ -55,12 +61,14 @@ class FrameProcessor:
         #print(self.dialogues)
         #TODO remove this from this class and store this somewhere else, so its multi user
         self.previous_image = Image.new('RGB', (100, 100), (255, 255, 255))
+        self.background_image = Image.new('RGB', (100, 100), (255, 255, 255))
         self.last_played = -1 #TODO this should be per user
 
         
         self.last_annotations = None
 
         self.openai_api = OpenAI_API()
+        self.claude_api = Claude_API()
 
         self.ocr_cache_pkl_path = Path('ocr_cache.pkl')
         self.translation_cache_pkl_path = Path('translation_cache.pkl')
@@ -239,6 +247,15 @@ class FrameProcessor:
         print(f"{cleaned_string=}")
         return cleaned_string, result
     
+    def translate_claude(self, content, target_lang):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        result = self.claude_api.call_translation_api(content, target_lang)
+        
+        cleaned_string = ' '.join(extract_between_tags('translation', result))
+        print(f"{cleaned_string=}")
+        return cleaned_string, result
+    
     def translate_openai_vision(self, image_bytes, target_lang):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         
@@ -249,13 +266,25 @@ class FrameProcessor:
         cleaned_string = clean_vision_model_output(content)
         print(f"{cleaned_string=}")
         return cleaned_string, result
+
+    def translate_claude_vision(self, image_bytes, target_lang):
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        result = self.claude_api.call_translation_vision_api(image_bytes, target_lang)
+
+        cleaned_string = ' '.join(extract_between_tags('translation', result))
+        print(f"{cleaned_string=}")
+        return cleaned_string, result
     
     
     def run_translation(self, content, translate):
         start_time = time.time() # Record the start time
 
         target_lang = translate.split(',')[1]
-        str, result = self.translate_openai(content, target_lang)
+        if self.translation_method == TranslationEngine.OPENAI:
+            str, result = self.translate_openai(content, target_lang)
+        if self.translation_method == TranslationEngine.CLAUDE:
+            str, result = self.translate_claude(content, target_lang)
         
         print("---- Translated Text ----")
         print(str)
@@ -271,7 +300,7 @@ class FrameProcessor:
         
         if len(detection_result) >= 1:
 
-
+            
             bboxes = [i[0] for i in detection_result]
             # 4 points to 2 points
             # bboxes = [[i[0], i[2]] for i in bboxes]
@@ -288,6 +317,23 @@ class FrameProcessor:
             return str, result
         else:
             return '', {}
+        
+    def _generate_blurred_image(self, pil_image):
+        frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
+        blurred = cv2.GaussianBlur(frame, (35, 35), 0)
+
+        mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+
+        for annotation in self.last_annotations:
+            bbox = annotation[0]
+            (x1, y1), (x2, y2) = bbox
+            mask[y1:y2, x1:x2] = 255    
+
+        result = np.where(mask[:,:,None] != 255, frame, blurred)
+
+        pil_image = Image.fromarray(cv2.cvtColor(result, cv2.COLOR_BGR2RGB))
+
+        return pil_image
 
     def process_frame(self, frame_pil, frame_count, fps):
         """
@@ -327,8 +373,9 @@ class FrameProcessor:
 
                 self.previous_image = img
                 self.last_annotations = annotations
+                self.background_image = self._generate_blurred_image(img)
                 
-                return last_played, self.previous_image, highlighted_image, annotations, translation
+                return last_played, self.previous_image, highlighted_image, annotations, translation, self.background_image
 
             # crop the image to top half
             img_crop = image_crop_in_top_half(img)
@@ -399,12 +446,13 @@ class FrameProcessor:
 
             self.previous_image = img
             self.last_annotations = annotations
+            self.background_image = self._generate_blurred_image(img)
             
-            return last_played, self.previous_image, highlighted_image, annotations, translation
+            return last_played, self.previous_image, highlighted_image, annotations, translation, self.background_image
         else:
             print("Difference is less than 10%. No need to call OCR again.")
             
-            return None, None, None, self.last_annotations, None
+            return None, None, None, self.last_annotations, None, self.background_image
         
     def create_output_dirs(self):
 
