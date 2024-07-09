@@ -7,9 +7,10 @@ from openai_api import OpenAI_API
 from image_diff import crop_image_by_bboxes, combine_images
 from ocr_enum import OCREngine, DETEngine
 import re
-from utils import clean_vision_model_output
+from utils import clean_vision_model_output, convert_bbox_horizontal_list
 from text_detector_fast import TextDetectorFast, convert_to_four_points_format
 from claude_api import Claude_API, extract_between_tags
+from easyocr.utils import reformat_input
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +28,11 @@ class OCRProcessor:
         self.detection_method = detection_method
 
         if self.method == OCREngine.EASYOCR or self.detection_method == DETEngine.EASYOCR:
-            self.reader = easyocr.Reader(['en']) if language == 'en' else easyocr.Reader(['en', 'ja'])
+            if self.lang == 'en':
+                self.reader = easyocr.Reader(['en'])
+                # self.reader = easyocr.Reader(['en'], model_storage_directory='./en_fine_tuned_ff2',  user_network_directory='./en_fine_tuned_ff2', recog_network='en_fine_tuned_ff2')
+            if self.lang == 'jp':
+                self.reader = easyocr.Reader(['en', 'ja'])
         
         self.openai_api = OpenAI_API()
         self.claude_api = Claude_API()
@@ -118,6 +123,19 @@ class OCRProcessor:
     def ocr_claude(self, image_bytes):
         response = self.claude_api.call_vision_api(image_bytes)
         return response
+    
+    def reg_easyocr(self, image_bytes, bboxes):
+        _, img_cv_grey = reformat_input(image_bytes)
+
+        result = self.reader.recognize(img_cv_grey, bboxes, free_list=[],\
+                            decoder='greedy', beamWidth=5, batch_size=1,\
+                            workers=0, allowlist=None, blocklist=None, detail=0, rotation_info=None,\
+                            paragraph=True, contrast_ths=0.1, adjust_contrast=0.5,\
+                            filter_ths=0.003, y_ths=0.5, x_ths=1.0, reformat=False, output_format='standard')
+        if len(result) >= 1:
+            return ' '.join(result)
+        else:
+            return ''
 
 
     def ocr_and_highlight(self, image):
@@ -128,21 +146,18 @@ class OCRProcessor:
         :return: Tuple containing the concatenated detected text, annotated image, and OCR result
         """
         image_bytes = self.process_image(image)
-        if self.method == OCREngine.EASYOCR:
+
+        if self.method == OCREngine.EASYOCR and self.detection_method == DETEngine.EASYOCR:
             result = self.ocr_easyocr(image_bytes, detail=1)
             filtered_result = self.filter_ocr_result(result)
             drawable_image = self.draw_highlight(image_bytes, filtered_result)
             filtered_text = ' '.join([text for _, text, _ in filtered_result])
             return filtered_text, drawable_image, filtered_result, None
         else:
-            if self.detection_method == DETEngine.FAST:
-                detection_result = self.det_fast(image)
-            else:
-                detection_result = self.det_easyocr(image_bytes)
+            drawable_image, detection_result = self.run_det(image)
+
             if detection_result != []:
-                drawable_image = self.draw_highlight(image_bytes, detection_result)
                 if self.method == OCREngine.OPENAI:
-                    image_bytes = self.process_image(image)
                     response = self.ocr_openai(image_bytes)
                     if response.get('choices', None) is None:
                         reg_result = ''
@@ -154,6 +169,10 @@ class OCRProcessor:
                     image_bytes = self.claude_api.preprocess(image)
                     response = self.ocr_claude(image_bytes)
                     filtered_text = ' '.join(extract_between_tags('original_text', response))
+                if self.method == OCREngine.EASYOCR:
+                    horizontal_list = [convert_bbox_horizontal_list(i[0]) for i in detection_result]
+                    filtered_text = self.reg_easyocr(image_bytes, horizontal_list)
+                    response = None
                 return filtered_text, drawable_image, detection_result, response
             return '', None, [], {}
 
@@ -294,7 +313,7 @@ class OCRProcessor:
         """
         start_time = time.time()
         output_text, highlighted_image, annotations, reg_result = self.ocr_and_highlight(image)
-        annotations = self.postprocess_bbox(annotations)
+        # annotations = self.postprocess_bbox(annotations)
         end_time = time.time()
         logging.info(f"OCR found text: {output_text}")
         logging.info(f"Time taken: {end_time - start_time} seconds")

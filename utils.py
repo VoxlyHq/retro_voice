@@ -145,3 +145,8 @@ def clean_vision_model_output(response):
         return ""
     cleaned_ocr_text = ocr_text.replace(' ', ' ')
     return cleaned_ocr_text
+
+def convert_bbox_horizontal_list(bbox):
+    x1, y1, x2, y2 = bbox[0][0], bbox[0][1], bbox[1][0], bbox[1][1]
+
+    return [x1, x2, y1, y2]
