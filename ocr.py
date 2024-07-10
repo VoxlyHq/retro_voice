@@ -11,6 +11,7 @@ from utils import clean_vision_model_output, convert_bbox_horizontal_list
 from text_detector_fast import TextDetectorFast, convert_to_four_points_format
 from claude_api import Claude_API, extract_between_tags
 from easyocr.utils import reformat_input
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,11 +29,15 @@ class OCRProcessor:
         self.detection_method = detection_method
 
         if self.method == OCREngine.EASYOCR or self.detection_method == DETEngine.EASYOCR:
+
             if self.lang == 'en':
-                self.reader = easyocr.Reader(['en'])
-                # self.reader = easyocr.Reader(['en'], model_storage_directory='./en_fine_tuned_ff2',  user_network_directory='./en_fine_tuned_ff2', recog_network='en_fine_tuned_ff2')
+
+                self.reader = easyocr.Reader(['en'], 
+                                             recog_network="en_fine_tuned_ff2")
             if self.lang == 'jp':
-                self.reader = easyocr.Reader(['en', 'ja'])
+
+                self.reader = easyocr.Reader(['ja'],  
+                                             recog_network="jp_fine_tuned_ff4")
         
         self.openai_api = OpenAI_API()
         self.claude_api = Claude_API()
