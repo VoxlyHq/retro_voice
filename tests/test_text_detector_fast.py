@@ -11,7 +11,7 @@ class TestTextDetectorFast(unittest.TestCase):
         self.width = 240
         self.height = 240
         self.padding = 0.0
-        self.checkpoint = "checkpoints/checkpoint_60ep.pth.tar"
+        self.checkpoint = "checkpoints/checkpoint.pth.tar"
         self.text_detector = TextDetectorFast(self.model_path, self.min_confidence, self.width, self.height, self.padding, self.checkpoint)
 
         self.test_data_dir = Path("tests/unit_test_data")

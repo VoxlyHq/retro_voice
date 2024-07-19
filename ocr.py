@@ -43,7 +43,7 @@ class OCRProcessor:
         self.claude_api = Claude_API()
 
         if self.detection_method == DETEngine.FAST:
-            self.fast = TextDetectorFast('pretrained/fast_tiny_ic15_736_finetune_ic17mlt.pth',checkpoint='checkpoints/checkpoint_60ep.pth.tar')
+            self.fast = TextDetectorFast('pretrained/fast_tiny_ic15_736_finetune_ic17mlt.pth',checkpoint='checkpoints/checkpoint.pth.tar')
 
     def process_image(self, image):
         """
