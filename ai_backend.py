@@ -1,7 +1,7 @@
 from flask import Flask, request
 import time
 from urllib.parse import urlparse
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 import base64
 import io
 import json
@@ -18,8 +18,14 @@ def load_image(image_data):
         return image_data
     byte_data = base64.b64decode(image_data)
     image = Image.open(io.BytesIO(byte_data))
-    image = image.convert("RGB")
+    image = image.convert("RGBA")
     return image
+
+def image_to_string(img):
+    output = io.BytesIO()
+    img.save(output, format="png")
+    string = output.getvalue()
+    return base64.b64encode(string).decode('utf-8')
 
 @app.route("/", methods=["GET"])
 def index():
@@ -46,11 +52,14 @@ def process_request():
     print('output_format:\t', output_format)
 
     data = request.get_data()
+    
     data = json.loads(data)
+    
+    print('coords', data['coords'])
+    print('viewport', data['viewport'])
 
     result = _process_request(data, output_format)
     print('Request took: ', time.time() - start_time)
-    print('result:\t', result)
     if result.get('text', None):
         print('result:\t', result['text'])
 
@@ -68,13 +77,18 @@ def _process_request(body, output_format):
 
     image_data = body.get("image")
 
-    image = load_image(image_data)
+    image = load_image(image_data).convert('RGB')
+    image = image.resize((1162, 895))
+    print('image width and height', image.width, image.height)
 
-    image.save('tmp_input.jpg')
+    image.save('tmp_input.png')
 
     if 'text' in output_format['output']:
         output = ai_service.process_text_mode(image)
         return_output = {"text" : output, "auto" : "auto"}
+    if 'image' in output_format['output']:
+        output = ai_service.process_image_mode1(image)
+        return_output = {"image": output, "auto" : "auto"}
 
     return return_output
 
@@ -106,6 +120,23 @@ class AI_SERVICE:
                                              crop_y_coordinate=self.crop_height)
         translation = self.video_stream.current_translations.replace('\n', ' ')
         return translation
+    
+    def process_image_mode1(self, image):
+        """
+        no background image and transparent becomes background image
+        """
+        image_object = Image.new("RGBA",
+                            (image.width, image.height),
+                            (0,0,0,0))
+        
+        self.video_stream.set_latest_frame(image_object)
+        self.video_stream.background_image = None
+        self.video_stream.process_screenshot(image, self.translate, show_image_screen=True, enable_cache=self.enable_cache, 
+                                             crop_y_coordinate=self.crop_height)
+
+        annotated_image = self.video_stream.print_annotations(image_object)
+        annotated_image.save("tmp_output.png")
+        return image_to_string(annotated_image)
 
 if __name__ == "__main__":
     local_server_host = "localhost"
