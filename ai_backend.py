@@ -6,6 +6,11 @@ import base64
 import io
 import json
 
+from ocr_enum import OCREngine, DETEngine, TranslationEngine
+from text_detector_fast import TextDetectorFast
+from process_frames import FrameProcessor
+from video_stream_with_annotations import VideoStreamWithAnnotations
+
 app = Flask(__name__)
 
 def load_image(image_data):
@@ -36,7 +41,7 @@ def process_request():
     print('query :\t', query)
 
     if query:
-        output_format = query.split('=')[1].split(',')
+        output_format = dict(q.split('=') for q in query.split("&"))
 
     print('output_format:\t', output_format)
 
@@ -45,7 +50,7 @@ def process_request():
 
     result = _process_request(data, output_format)
     print('Request took: ', time.time() - start_time)
-
+    print('result:\t', result)
     if result.get('text', None):
         print('result:\t', result['text'])
 
@@ -59,7 +64,7 @@ def process_request():
 
     return response
 
-def _process_request(body, query):
+def _process_request(body, output_format):
 
     image_data = body.get("image")
 
@@ -67,13 +72,61 @@ def _process_request(body, query):
 
     image.save('tmp_input.jpg')
 
-    place_holder_text_strings = ["PLACEHOLDER 1"]
+    if 'text' in output_format['output']:
+        output = ai_service.process_text_mode(image)
+        return_output = {"text" : output, "auto" : "auto"}
 
-    return_output = {"text" : place_holder_text_strings[0], "auto" : "auto"}
     return return_output
+
+class AI_SERVICE:
+    def __init__(self, lang, disable_dialog, disable_translation, enable_cache, translate, textDetector, debug_bbox, show_fps, crop_height, method, detection_method, translation_method):
+        self.lang = lang
+        self.disable_dialog = disable_dialog
+        self.disable_translation = disable_translation
+        self.enable_cache = enable_cache
+        self.translate = translate
+        self.textDetector = textDetector
+        self.debug_bbox = debug_bbox
+        self.show_fps = show_fps
+        self.crop_height = crop_height
+        self.method = method
+        self.detection_method = detection_method
+        self.translation_method = translation_method
+
+        self.frameProcessor = FrameProcessor(self.lang, self.disable_dialog, method=self.method, detection_method=self.detection_method, translation_method=self.translation_method)
+
+        self.video_stream = VideoStreamWithAnnotations(background_task=None,
+                                              background_task_args={"translate" : self.translate, 'enable_cache' : self.enable_cache, 'crop_y_coordinate' : self.crop_height},
+                                              show_fps=self.show_fps, crop_y_coordinate=self.crop_height, frameProcessor=self.frameProcessor,
+                                              textDetector=self.textDetector, debug_bbox=self.debug_bbox)
+        
+    def process_text_mode(self, image):
+        self.video_stream.set_latest_frame(image)
+        self.video_stream.process_screenshot(image, self.translate, show_image_screen=True, enable_cache=self.enable_cache, 
+                                             crop_y_coordinate=self.crop_height)
+        translation = self.video_stream.current_translations.replace('\n', ' ')
+        return translation
 
 if __name__ == "__main__":
     local_server_host = "localhost"
     local_server_port = 4404
+
+    lang = "jp"
+    disable_dialog = True
+    disable_translation = False
+    enable_cache = False
+    translate = "jp,en"
+    textDetector = TextDetectorFast("")
+    debug_bbox = False
+    show_fps = True
+    crop_height = 0
+    method = OCREngine.EASYOCR
+    detection_method = DETEngine.FAST
+    translation_method = TranslationEngine.OPENAI
+
+    ai_service = AI_SERVICE(lang=lang, disable_dialog=disable_dialog, disable_translation=disable_translation, 
+               enable_cache=enable_cache, translate=translate, textDetector=textDetector, 
+               debug_bbox=debug_bbox, show_fps=show_fps, crop_height=crop_height, 
+               method=method, detection_method=detection_method, translation_method=translation_method)
 
     app.run(host=local_server_host, port=local_server_port, debug=True)

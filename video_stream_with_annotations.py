@@ -383,6 +383,7 @@ class VideoStreamWithAnnotations:
             print("No text Found in this frame. Skipping run_image")
             if show_image_screen:
                 self.set_annotations([])
+                self.set_translation('')
                 self.set_background_image(None)
         else:
         
