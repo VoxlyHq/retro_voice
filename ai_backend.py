@@ -87,7 +87,7 @@ def _process_request(body, output_format):
         output = ai_service.process_text_mode(image)
         return_output = {"text" : output, "auto" : "auto"}
     if 'image' in output_format['output']:
-        output = ai_service.process_image_mode1(image)
+        output = ai_service.process_image_mode2(image)
         return_output = {"image": output, "auto" : "auto"}
 
     return return_output
@@ -137,6 +137,55 @@ class AI_SERVICE:
         annotated_image = self.video_stream.print_annotations(image_object)
         annotated_image.save("tmp_output.png")
         return image_to_string(annotated_image)
+    
+    def process_image_mode2(self, image):
+        """
+        """
+        image_object = Image.new("RGBA",
+                            (image.width, image.height),
+                            (0,0,0,0))
+        
+        self.video_stream.set_latest_frame(image_object)
+        self.video_stream.background_image = None
+        self.video_stream.process_screenshot(image, self.translate, show_image_screen=True, enable_cache=self.enable_cache, 
+                                             crop_y_coordinate=self.crop_height)
+
+        annotated_image = self.video_stream.print_annotations(image_object)
+        annotated_image.save('tmp_before_output.png')
+        if self.video_stream.current_annotations:
+            # get text bbox
+            text_position = self.video_stream._calculate_annotation_bounds(self.video_stream.current_annotations)
+            translation_adjusted = self.video_stream.adjust_translation_text(self.video_stream.current_translations, self.video_stream.font, self.video_stream.dialogue_bbox_width)
+            draw = ImageDraw.Draw(annotated_image)
+            font_size = self.video_stream.calculate_font_size(self.video_stream.dialogue_bbox_width, self.video_stream.dialogue_bbox_height, self.video_stream.current_translations)
+            bbox = draw.textbbox(text_position, translation_adjusted, font=self.video_stream.font,font_size=font_size)
+            print('bbox', bbox)
+            bboxes_to_extract = [bbox]
+            annotated_image = extract_blur_rectangles(annotated_image, bboxes_to_extract)
+        annotated_image.save("tmp_output.png")
+        return image_to_string(annotated_image)
+    
+
+def extract_blur_rectangles(original_image, bboxes_to_extract):
+
+    # Ensure the image has an alpha channel
+    if original_image.mode != 'RGBA':
+        original_image = original_image.convert('RGBA')
+
+    # Create a new transparent image of the same size as the original
+    result = Image.new('RGBA', original_image.size, (0, 0, 0, 0))
+
+    for rect in bboxes_to_extract:
+        # Extract the specified rectangle
+        extracted_area = original_image.crop(rect)
+
+        # Apply Gaussian blur
+        # blurred_area = extracted_area.filter(ImageFilter.GaussianBlur(radius=5))
+
+        # Paste the blurred area back onto the result image at its original position
+        result.paste(extracted_area, (rect[0], rect[1]))
+
+    return result
 
 if __name__ == "__main__":
     local_server_host = "localhost"
