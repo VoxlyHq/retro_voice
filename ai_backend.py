@@ -159,8 +159,11 @@ class AI_SERVICE:
             draw = ImageDraw.Draw(annotated_image)
             font_size = self.video_stream.calculate_font_size(self.video_stream.dialogue_bbox_width, self.video_stream.dialogue_bbox_height, self.video_stream.current_translations)
             bbox = draw.textbbox(text_position, translation_adjusted, font=self.video_stream.font,font_size=font_size)
-            print('bbox', bbox)
             bboxes_to_extract = [bbox]
+            for bbox in self.video_stream.current_annotations:
+                bbox = bbox[0]
+                x1, y1, x2, y2 = bbox[0][0], bbox[0][1], bbox[1][0], bbox[1][1]
+                bboxes_to_extract.append([x1, y1, x2, y2])
             annotated_image = extract_blur_rectangles(annotated_image, bboxes_to_extract)
         annotated_image.save("tmp_output.png")
         return image_to_string(annotated_image)
