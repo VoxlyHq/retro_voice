@@ -78,9 +78,9 @@ def _process_request(body, output_format):
     image_data = body.get("image")
 
     image = load_image(image_data).convert('RGB')
-    x,y,w,h = body.get("coords")
+    coords = body.get("coords")
     viewport = body.get("viewport")
-    image = image.resize((w, h))
+    image = image.resize((coords[2], coords[3])) # width, height
     print('image width and height', image.width, image.height)
 
     image.save('tmp_input.png')
@@ -89,7 +89,7 @@ def _process_request(body, output_format):
         output = ai_service.process_text_mode(image)
         return_output = {"text" : output, "auto" : "auto"}
     if 'image' in output_format['output']:
-        output = ai_service.process_image_mode2(image)
+        output = ai_service.process_image_mode2(image, viewport, coords)
         return_output = {"image": output, "auto" : "auto"}
 
     return return_output
@@ -143,7 +143,7 @@ class AI_SERVICE:
         annotated_image.save("tmp_output.png")
         return image_to_string(annotated_image)
     
-    def process_image_mode2(self, image):
+    def process_image_mode2(self, image, viewport, coords):
         """
         """
         image_object = Image.new("RGBA",
@@ -157,7 +157,7 @@ class AI_SERVICE:
 
         annotated_image = self.video_stream.print_annotations(image_object)
         annotated_image.save('tmp_before_output.png')
-        print(self.video_stream.current_translations)
+        
         # no text found in the image
         if self.video_stream.current_translations is None:
             return image_to_string(image_object)
@@ -181,9 +181,14 @@ class AI_SERVICE:
                 bboxes_to_extract.append([x1, y1, x2, y2])
             bboxes_to_extract.append(text_bbox)
             annotated_image = extract_blur_rectangles(annotated_image, bboxes_to_extract)
-        annotated_image.save("tmp_output.png")
-        self.prev_image = annotated_image
-        return image_to_string(annotated_image)
+        viewport_img = Image.new('RGBA', 
+                                (viewport[0], viewport[1]),
+                                (0,0,0,0))
+        viewport_img.paste(annotated_image, (coords[0], coords[1]))
+
+        viewport_img.save("tmp_output.png")
+        self.prev_image = viewport_img
+        return image_to_string(viewport_img)
     
     
 def extract_blur_rectangles(original_image, bboxes_to_extract):
