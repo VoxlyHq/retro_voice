@@ -78,7 +78,9 @@ def _process_request(body, output_format):
     image_data = body.get("image")
 
     image = load_image(image_data).convert('RGB')
-    image = image.resize((1162, 895))
+    x,y,w,h = body.get("coords")
+    viewport = body.get("viewport")
+    image = image.resize((w, h))
     print('image width and height', image.width, image.height)
 
     image.save('tmp_input.png')
@@ -106,6 +108,9 @@ class AI_SERVICE:
         self.method = method
         self.detection_method = detection_method
         self.translation_method = translation_method
+        self.prev_image = None
+
+        self.prev_translation = None
 
         self.frameProcessor = FrameProcessor(self.lang, self.disable_dialog, method=self.method, detection_method=self.detection_method, translation_method=self.translation_method)
 
@@ -152,23 +157,35 @@ class AI_SERVICE:
 
         annotated_image = self.video_stream.print_annotations(image_object)
         annotated_image.save('tmp_before_output.png')
+        print(self.video_stream.current_translations)
+        # no text found in the image
+        if self.video_stream.current_translations is None:
+            return image_to_string(image_object)
+        
+        if self.video_stream.current_annotations == self.prev_translation:
+            return image_to_string(self.prev_image)
+
         if self.video_stream.current_annotations:
+
+            self.prev_translation = self.video_stream.current_annotations
             # get text bbox
             text_position = self.video_stream._calculate_annotation_bounds(self.video_stream.current_annotations)
             translation_adjusted = self.video_stream.adjust_translation_text(self.video_stream.current_translations, self.video_stream.font, self.video_stream.dialogue_bbox_width)
             draw = ImageDraw.Draw(annotated_image)
             font_size = self.video_stream.calculate_font_size(self.video_stream.dialogue_bbox_width, self.video_stream.dialogue_bbox_height, self.video_stream.current_translations)
-            bbox = draw.textbbox(text_position, translation_adjusted, font=self.video_stream.font,font_size=font_size)
-            bboxes_to_extract = [bbox]
+            text_bbox = draw.textbbox(text_position, translation_adjusted, font=self.video_stream.font,font_size=font_size)
+            bboxes_to_extract = []
             for bbox in self.video_stream.current_annotations:
                 bbox = bbox[0]
                 x1, y1, x2, y2 = bbox[0][0], bbox[0][1], bbox[1][0], bbox[1][1]
                 bboxes_to_extract.append([x1, y1, x2, y2])
+            bboxes_to_extract.append(text_bbox)
             annotated_image = extract_blur_rectangles(annotated_image, bboxes_to_extract)
         annotated_image.save("tmp_output.png")
+        self.prev_image = annotated_image
         return image_to_string(annotated_image)
     
-
+    
 def extract_blur_rectangles(original_image, bboxes_to_extract):
 
     # Ensure the image has an alpha channel
@@ -179,13 +196,7 @@ def extract_blur_rectangles(original_image, bboxes_to_extract):
     result = Image.new('RGBA', original_image.size, (0, 0, 0, 0))
 
     for rect in bboxes_to_extract:
-        # Extract the specified rectangle
         extracted_area = original_image.crop(rect)
-
-        # Apply Gaussian blur
-        # blurred_area = extracted_area.filter(ImageFilter.GaussianBlur(radius=5))
-
-        # Paste the blurred area back onto the result image at its original position
         result.paste(extracted_area, (rect[0], rect[1]))
 
     return result
