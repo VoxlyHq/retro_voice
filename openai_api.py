@@ -106,7 +106,7 @@ class OpenAI_API:
                     "content": [
                         {
                         "type": "text",
-                        "text": f"Translate this sentence into {target_lang}.\n{content}"
+                        "text": f"Translate this sentence into {target_lang}."
                         },
 
                         {
