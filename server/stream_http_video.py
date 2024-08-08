@@ -17,7 +17,7 @@ import cv2
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack, RTCConfiguration, RTCIceServer
 from aiortc.contrib.media import MediaRelay, MediaBlackhole
 import flask
-from flask import Flask
+from flask import Flask, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -41,7 +41,8 @@ import json
 import numpy as np
 
 from ocr_enum import OCREngine, DETEngine, TranslationEngine
-
+from ai_backend import AI_SERVICE, load_image, image_to_string
+from urllib.parse import urlparse
 
 
 WSGIEnviron = Dict[str, Any]
@@ -186,6 +187,48 @@ def protected():
 def script_json():
     return flask.send_from_directory('../static', 'dialogues_jp_web.json')
 
+@app.route("/", methods=["POST"])
+def process_request():
+    start_time = time.time()
+    print('URL : ', end = '\t')
+    print(request.url)
+    query = urlparse(request.url).query
+    print('query :\t', query)
+    if query:
+        output_format = dict(q.split('=') for q in query.split("&"))
+    print('output_format:\t', output_format)
+    data = request.get_data()
+    data = json.loads(data)
+    print('coords', data['coords'])
+    print('viewport', data['viewport'])
+    result = _process_request(data, output_format)
+    print('Request took: ', time.time() - start_time)
+    if result.get('text', None):
+        print('result:\t', result['text'])
+    output = json.dumps(result)
+    response = app.response_class(
+        response=output,
+        status=200,
+        mimetype='application/json'
+    )
+    return response
+
+def _process_request(body, output_format):
+    image_data = body.get("image")
+    image = load_image(image_data).convert('RGB')
+    coords = body.get("coords")
+    viewport = body.get("viewport")
+    image = image.resize((coords[2], coords[3])) # width, height
+    print('image width and height', image.width, image.height)
+    image.save('tmp_input.png')
+    if 'text' in output_format['output']:
+        output = ai_service.process_text_mode(image)
+        return_output = {"text" : output, "auto" : "auto"}
+    if 'image' in output_format['output']:
+        output = ai_service.process_image_mode2(image, viewport, coords)
+        return_output = {"image": output, "auto" : "auto"}
+    return return_output
+
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -309,6 +352,21 @@ class VideoTransformTrack(MediaStreamTrack):
         new_frame.time_base = frame.time_base
         return new_frame
 
+# Initialize AI Service
+ai_service = AI_SERVICE(
+    lang=lang, 
+    disable_dialog=True, 
+    disable_translation=False, 
+    enable_cache=enable_cache, 
+    translate="jp,en", 
+    textDetector=textDetector, 
+    debug_bbox=debug_bbox, 
+    show_fps=True, 
+    crop_height=0, 
+    method=OCREngine.EASYOCR, 
+    detection_method=DETEngine.FAST, 
+    translation_method=TranslationEngine.OPENAI
+)
 
 logger = logging.getLogger("pc")
 pcs = set() # current WebRTC  peer connections
@@ -570,4 +628,4 @@ def make_aiohttp_app(flask_app):
 aioapp = make_aiohttp_app(app)
 
 if __name__ == '__main__':
-    web.run_app(aioapp, host='localhost', port=5001)
+    web.run_app(aioapp, host='localhost', port=4404)
