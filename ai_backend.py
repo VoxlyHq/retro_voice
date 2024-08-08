@@ -83,7 +83,7 @@ def _process_request(body, output_format):
     image = image.resize((coords[2], coords[3])) # width, height
     print('image width and height', image.width, image.height)
 
-    image.save('tmp_input.png')
+    # image.save('tmp_input.png')
 
     if 'text' in output_format['output']:
         output = ai_service.process_text_mode(image)
@@ -140,7 +140,7 @@ class AI_SERVICE:
                                              crop_y_coordinate=self.crop_height)
 
         annotated_image = self.video_stream.print_annotations(image_object)
-        annotated_image.save("tmp_output.png")
+        # annotated_image.save("tmp_output.png")
         return image_to_string(annotated_image)
     
     def process_image_mode2(self, image, viewport, coords):
@@ -156,7 +156,7 @@ class AI_SERVICE:
                                              crop_y_coordinate=self.crop_height)
 
         annotated_image = self.video_stream.print_annotations(image_object)
-        annotated_image.save('tmp_before_output.png')
+        # annotated_image.save('tmp_before_output.png')
         
         # no text found in the image
         if self.video_stream.current_translations is None:
@@ -186,7 +186,7 @@ class AI_SERVICE:
                                 (0,0,0,0))
         viewport_img.paste(annotated_image, (coords[0], coords[1]))
 
-        viewport_img.save("tmp_output.png")
+        # viewport_img.save("tmp_output.png")
         self.prev_image = viewport_img
         return image_to_string(viewport_img)
     
