@@ -17,11 +17,12 @@ from PIL import Image, ImageDraw, ImageFilter
 from pathlib import Path
 import pickle
 import imagehash
-from ocr import OCRProcessor
+from ocr import OCRProcessor, convert_bbox_horizontal_list
 from ocr_enum import OCREngine, DETEngine, TranslationEngine
 from utils import clean_vision_model_output
 from image_diff import crop_image_by_bboxes, combine_images
 from claude_api import Claude_API, extract_between_tags
+from cache import OCRCache, TranscriptCache
 
 import cv2
 import numpy as np
@@ -70,54 +71,8 @@ class FrameProcessor:
         self.openai_api = OpenAI_API()
         self.claude_api = Claude_API()
 
-        self.ocr_cache_pkl_path = Path('ocr_cache.pkl')
-        self.translation_cache_pkl_path = Path('translation_cache.pkl')
-        self.ocr_cache = self.load_cache('ocr')
-        self.translation_cache = self.load_cache('translation')
-    
-    def load_cache(self, cache_type):
-        if cache_type == "ocr":
-            file = self.ocr_cache_pkl_path
-        if cache_type == "translation":
-            file = self.translation_cache_pkl_path
-        if file.exists():
-            with open(file, 'rb') as f:
-                cache = pickle.load(f)
-        else:
-            cache = []
-        return cache
-    
-    def update_cache(self, cache_type):
-        if cache_type == "ocr":
-            file = self.ocr_cache_pkl_path
-            cache = self.ocr_cache
-        if cache_type == "translation":
-            file = self.translation_cache_pkl_path
-            cache = self.translation_cache
-
-        with open(file, 'wb') as f:
-            pickle.dump(cache, f)
-    
-    def run_cache(self, img, cache_type):
-
-        if cache_type == "ocr":
-            cache = self.ocr_cache
-        if cache_type == "translation":
-            cache = self.translation_cache
-
-        min_diff = 10000
-        closest_entry = None
-        current = imagehash.average_hash(img, 16)
-        for index, value in enumerate(cache):
-            diff = current - value['hash']
-            if diff <= min_diff:
-                min_diff = diff
-                closest_entry = index
-        if min_diff < 7:
-            return closest_entry
-        else:
-            return None
-
+        self.ocr_cache = OCRCache(cache_dir='./ocr_cache', hash_method='average', threshold=5)
+        self.cache_preprocessing = [('grayscale', None), ('resize', (100, 100))]
 
 
     def load_dialogues(self):
@@ -211,21 +166,21 @@ class FrameProcessor:
 
         output_text, highlighted_image, annotations, reg_result = self.ocr_processor.run_ocr(image)
         
-        print("found text ocr----")
-        print(output_text)
-        print("----")
+        # print("found text ocr----")
+        # print(output_text)
+        # print("----")
     
     
         end_time = time.time()
-        print(f"Time taken: {end_time - start_time} seconds")
+        # print(f"Time taken: {end_time - start_time} seconds")
         if self.disable_dialog:
             return output_text, highlighted_image, annotations, reg_result
         
         #thefuzz_test(text)
         res = self.find_closest_entry(output_text)
         if  res != [] and res[0] != None:
-            print("found entry ")
-            print(res)
+            # print("found entry ")
+            # print(res)
             if res == self.last_played:
                 print("Already played this entry")
             else:
@@ -235,6 +190,32 @@ class FrameProcessor:
         else:
             print("No entry found")        
         return res, highlighted_image, annotations, reg_result
+    
+    def run_ocr_with_cache(self, image):
+        image_bytes = self.ocr_processor.process_image(image)
+        drawable_image, detection_result = self.ocr_processor.run_det(image)
+        ocr_results = []
+        if detection_result != []:
+            for bbox in detection_result:
+                bbox = bbox[0]
+                (x1, y1), (x2, y2) = bbox
+                bbox_to_crop = (x1, y1, x2, y2)
+
+                cropped_image = image.crop(bbox_to_crop)
+                cached_text = self.ocr_cache.get_cached_ocr(cropped_image, self.cache_preprocessing)
+
+                if cached_text is None:
+                    horizontal_list = [convert_bbox_horizontal_list(bbox)]
+                    text = self.ocr_processor.reg_easyocr(image_bytes, horizontal_list)
+                    self.ocr_cache.cache_ocr(cropped_image, text, self.cache_preprocessing)
+                else:
+                    text = cached_text
+                    print("Cache Hit!", text)
+                
+                ocr_results.append((bbox, text))
+        output_text = ' '.join([i[1] for i in ocr_results])
+        
+        return output_text, drawable_image, ocr_results, output_text
 
     def translate_openai(self, content, target_lang):
         timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -244,7 +225,7 @@ class FrameProcessor:
         content =  result['choices'][0]['message']['content'] 
         
         cleaned_string = clean_vision_model_output(content)
-        print(f"{cleaned_string=}")
+        # print(f"{cleaned_string=}")
         return cleaned_string, result
     
     def translate_claude(self, content, target_lang):
@@ -253,7 +234,7 @@ class FrameProcessor:
         result = self.claude_api.call_translation_api(content, target_lang)
         
         cleaned_string = ' '.join(extract_between_tags('translation', result))
-        print(f"{cleaned_string=}")
+        # print(f"{cleaned_string=}")
         return cleaned_string, result
     
     def translate_openai_vision(self, image_bytes, target_lang):
@@ -264,7 +245,7 @@ class FrameProcessor:
         content =  result['choices'][0]['message']['content'] 
         
         cleaned_string = clean_vision_model_output(content)
-        print(f"{cleaned_string=}")
+        # print(f"{cleaned_string=}")
         return cleaned_string, result
 
     def translate_claude_vision(self, image_bytes, target_lang):
@@ -273,7 +254,7 @@ class FrameProcessor:
         result = self.claude_api.call_translation_vision_api(image_bytes, target_lang)
 
         cleaned_string = ' '.join(extract_between_tags('translation', result))
-        print(f"{cleaned_string=}")
+        # print(f"{cleaned_string=}")
         return cleaned_string, result
     
     
@@ -286,12 +267,12 @@ class FrameProcessor:
         if self.translation_method == TranslationEngine.CLAUDE:
             str, result = self.translate_claude(content, target_lang)
         
-        print("---- Translated Text ----")
-        print(str)
-        print("-----------------------")
+        # print("---- Translated Text ----")
+        # print(str)
+        # print("-----------------------")
 
         end_time = time.time()
-        print(f"Time taken: {end_time - start_time} seconds")
+        # print(f"Time taken: {end_time - start_time} seconds")
                   
         return str, result
 
@@ -310,9 +291,9 @@ class FrameProcessor:
             dialogue_box_image_bytes = self.ocr_processor.process_image(dialogue_box_img)
 
             str, result = self.translate_openai_vision(dialogue_box_image_bytes, target_lang)
-            print("---- Translated Text ----")
-            print(str)
-            print("-----------------------")
+            # print("---- Translated Text ----")
+            # print(str)
+            # print("-----------------------")
 
             return str, result
         else:
@@ -383,66 +364,33 @@ class FrameProcessor:
             # cache
             then = time.time()
             
-            if enable_cache:
-                closest_entry = self.run_cache(img_crop, 'ocr')
-            else:
-                closest_entry = None
-            if closest_entry:
-                print('---run_cache_ocr---')
-                data = self.ocr_cache[closest_entry]
-                last_played = data['string']
-                annotations = data['annotations']
-                highlighted_image = None
-                print(f'Time Taken {time.time() - then}')
-            else:
-                last_played, highlighted_image, annotations, vision_model_output = self.run_ocr(img) # vision model response only returns a response if the method used here is OPENAI otherwise returns None.
-                
-                # save outputs to disk
-                if self.save_outputs and translate is None:
-                    self.save_outputs_to_disk(img, highlighted_image, annotations, None, vision_model_output)
-                self.ocr_cache.append({'string' : last_played, 'annotations' : annotations, 'hash' : imagehash.average_hash(img_crop, 16)})
-                self.update_cache('ocr')
-
-            print(f"finished ocr - {last_played} ")
+            last_played, highlighted_image, annotations, vision_model_output = self.run_ocr_with_cache(img) # vision model response only returns a response if the method used here is OPENAI otherwise returns None.
+            
+            # save outputs to disk
+            if self.save_outputs and translate is None:
+                self.save_outputs_to_disk(img, highlighted_image, annotations, None, vision_model_output)
+            # print(f"finished ocr - {last_played} ")
             
             
             translation = ""
             if translate:
-                # cache
-                then = time.time()
-                if enable_cache:
-                    closest_entry = self.run_cache(img_crop, 'translation')
+                if not self.disable_dialog:
+                    print("looking for entry")
+                    content_to_translate = []
+                    for entry in last_played:
+                        content = self.dialogues[entry]
+                        content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
+                        content_to_translate.append(content)
+                    content_to_translate = " ".join(content_to_translate)
+
+                    translation, result = self.run_translation(content_to_translate, translate)
                 else:
-                    closest_entry = None
-                if closest_entry:
-                    print('---run_cache_translation---')
-                    data = self.translation_cache[closest_entry]
-                    translation = data['translation']
-                    print(f'Time Taken {time.time() - then}')
-                    
-                if closest_entry is None and last_played:
-                    if self.disable_dialog:
-                        print("disable_dialog")
-                        translation, result = self.run_translation(last_played, translate)
-                    else:
-                        print("looking for entry")
-                        content_to_translate = []
-                        for entry in last_played:
-                            content = self.dialogues[entry]
-                            content = content if type(content) is str else f"{content.get('name', '')} : {content.get('dialogue', '')}"
-                            content_to_translate.append(content)
-                        content_to_translate = " ".join(content_to_translate)
-
-                        translation, result = self.run_translation(content_to_translate, translate)
-
-                    # save outputs to disk
-                    if self.save_outputs:
-                        self.save_outputs_to_disk(img, highlighted_image, annotations, result, vision_model_output)
-
-                    self.translation_cache.append({'translation' : translation,'hash' : imagehash.average_hash(img_crop, 16)})
-                    self.update_cache('translation')
-                    
-                    print("finished translation")
+                    translation, result = self.run_translation(last_played, translate)
+                # save outputs to disk
+                if self.save_outputs:
+                    self.save_outputs_to_disk(img, highlighted_image, annotations, result, vision_model_output)
+                
+                # print("finished translation")
 
             self.previous_image = img
             self.last_annotations = annotations
