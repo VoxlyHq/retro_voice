@@ -23,7 +23,7 @@ class OpenAI_API:
         }
 
         response = requests.post(self.openai_url, headers=headers, json=payload)
-        print(response.json())
+        # print(response.json())
         return response.json()
 
     def call_translation_api(self, content, target_lang):

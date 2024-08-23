@@ -40,28 +40,28 @@ def index():
 def process_request():
     start_time = time.time()
 
-    print('URL : ', end = '\t')
-    print(request.url)
+    # print('URL : ', end = '\t')
+    # print(request.url)
 
     query = urlparse(request.url).query
-    print('query :\t', query)
+    # print('query :\t', query)
 
     if query:
         output_format = dict(q.split('=') for q in query.split("&"))
 
-    print('output_format:\t', output_format)
+    # print('output_format:\t', output_format)
 
     data = request.get_data()
     
     data = json.loads(data)
     
-    print('coords', data['coords'])
-    print('viewport', data['viewport'])
+    # print('coords', data['coords'])
+    # print('viewport', data['viewport'])
 
     result = _process_request(data, output_format)
-    print('Request took: ', time.time() - start_time)
-    if result.get('text', None):
-        print('result:\t', result['text'])
+    # print('Request took: ', time.time() - start_time)
+    # if result.get('text', None):
+    #     print('result:\t', result['text'])
 
     output = json.dumps(result)
 
@@ -81,7 +81,7 @@ def _process_request(body, output_format):
     coords = body.get("coords")
     viewport = body.get("viewport")
     image = image.resize((coords[2], coords[3])) # width, height
-    print('image width and height', image.width, image.height)
+    # print('image width and height', image.width, image.height)
 
     # image.save('tmp_input.png')
 

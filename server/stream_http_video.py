@@ -219,7 +219,7 @@ def _process_request(body, output_format):
     coords = body.get("coords")
     viewport = body.get("viewport")
     image = image.resize((coords[2], coords[3])) # width, height
-    print('image width and height', image.width, image.height)
+    # print('image width and height', image.width, image.height)
     image.save('tmp_input.png')
     if 'text' in output_format['output']:
         output = ai_service.process_text_mode(image)
